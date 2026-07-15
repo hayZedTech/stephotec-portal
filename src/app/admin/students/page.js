@@ -6,8 +6,9 @@ import StudentForm from "@/components/students/StudentForm";
 import StudentsTable from "@/components/students/StudentsTable";
 import StudentDialog from "@/components/students/StudentDialog";
 import StudentFilters from "@/components/students/StudentFilters";
+import StudentViewModal from "@/components/students/StudentViewModal";
 
-import {Paper, Typography, TextField, InputAdornment, Button, Box, CircularProgress, Backdrop,
+import {Paper, Typography, TextField, InputAdornment, Button, Box, CircularProgress, Backdrop, Menu, MenuItem, Chip,
 } from "@mui/material";
 
 import { Search, Add } from "@mui/icons-material";
@@ -33,6 +34,8 @@ export default function StudentsPage() {
 
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
+    const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+    const [statusMenuStudent, setStatusMenuStudent] = useState(null);
 
     async function loadStudents() {
         try {
@@ -99,8 +102,13 @@ export default function StudentsPage() {
         setOpenDialog(true);
     }
 
+    function handleViewStudent(student) {
+        setSelectedStudent({ ...student, isViewing: true });
+        setOpenDialog(true);
+    }
+
     function handleEditStudent(student) {
-        setSelectedStudent({ ...student, isEditing: true });
+        setSelectedStudent({ ...student, isEditing: true, isViewing: false });
         setOpenDialog(true);
     }
 
@@ -131,6 +139,39 @@ export default function StudentsPage() {
     async function handleFormSuccess() {
         closeStudentDialog();
         await loadStudents();
+    }
+
+    function handleStatusClick(student, event) {
+        setStatusMenuStudent(student);
+        setStatusMenuAnchor(event.currentTarget);
+    }
+
+    function closeStatusMenu() {
+        setStatusMenuAnchor(null);
+        setStatusMenuStudent(null);
+    }
+
+    async function handleStatusChange(newStatus) {
+        try {
+            await updateStudent(statusMenuStudent.id, { status: newStatus });
+            successToast(`Status changed to ${newStatus}`);
+            await loadStudents();
+        } catch (error) {
+            errorToast(error, "Failed to update status.");
+        } finally {
+            closeStatusMenu();
+        }
+    }
+
+    async function handleModalStatusChange(studentId, newStatus) {
+        try {
+            await updateStudent(studentId, { status: newStatus });
+            successToast(`Status changed to ${newStatus}`);
+            setSelectedStudent(prev => ({ ...prev, status: newStatus }));
+            await loadStudents();
+        } catch (error) {
+            errorToast(error, "Failed to update status.");
+        }
     }
 
     return (
@@ -224,31 +265,118 @@ export default function StudentsPage() {
                     <StudentsTable
                         rows={filteredStudents}
                         loading={loading}
+                        onView={handleViewStudent}
                         onEdit={handleEditStudent}
                         onDelete={openDeleteDialog}
+                        onStatusClick={handleStatusClick}
                     />
                 </Paper>
             </Box>
 
-            {/* CREATE / EDIT DIALOG */}
-            <StudentDialog
-                open={openDialog}
-                onClose={closeStudentDialog}
-                title={
-                    !selectedStudent
-                        ? "Add Student"
-                        : selectedStudent.isEditing
-                        ? "Edit Student"
-                        : "View Student"
-                }
+            {/* STATUS MENU */}
+            <Menu
+                anchorEl={statusMenuAnchor}
+                open={Boolean(statusMenuAnchor)}
+                onClose={closeStatusMenu}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            borderRadius: 2,
+                            minWidth: 200,
+                            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.15)",
+                        },
+                    },
+                    backdrop: {
+                        sx: {
+                            backgroundColor: "rgba(0, 0, 0, 0.2)",
+                        },
+                    },
+                }}
             >
-                <StudentForm
-                    defaultValues={selectedStudent}
-                    isEditing={selectedStudent?.isEditing}
-                    onCancel={closeStudentDialog}
-                    onSuccess={handleFormSuccess}
+                <MenuItem
+                    onClick={() => handleStatusChange("ACTIVE")}
+                    sx={{
+                        py: 1.5,
+                        px: 2,
+                        display: "flex",
+                        gap: 1.5,
+                        alignItems: "center",
+                        "&:hover": { bgcolor: "#f0f9ff" },
+                    }}
+                >
+                    <Chip size="small" label="ACTIVE" color="success" variant="filled" />
+                </MenuItem>
+                <MenuItem
+                    onClick={() => handleStatusChange("SUSPENDED")}
+                    sx={{
+                        py: 1.5,
+                        px: 2,
+                        display: "flex",
+                        gap: 1.5,
+                        alignItems: "center",
+                        "&:hover": { bgcolor: "#fffbeb" },
+                    }}
+                >
+                    <Chip size="small" label="SUSPENDED" color="warning" variant="filled" />
+                </MenuItem>
+                <MenuItem
+                    onClick={() => handleStatusChange("GRADUATED")}
+                    sx={{
+                        py: 1.5,
+                        px: 2,
+                        display: "flex",
+                        gap: 1.5,
+                        alignItems: "center",
+                        "&:hover": { bgcolor: "#f0f9ff" },
+                    }}
+                >
+                    <Chip size="small" label="GRADUATED" color="info" variant="filled" />
+                </MenuItem>
+                <MenuItem
+                    onClick={() => handleStatusChange("INACTIVE")}
+                    sx={{
+                        py: 1.5,
+                        px: 2,
+                        display: "flex",
+                        gap: 1.5,
+                        alignItems: "center",
+                        "&:hover": { bgcolor: "#f3f4f6" },
+                    }}
+                >
+                    <Chip size="small" label="INACTIVE" variant="filled" />
+                </MenuItem>
+            </Menu>
+
+            {/* CREATE / EDIT DIALOG */}
+            {selectedStudent?.isViewing ? (
+                <StudentViewModal
+                    open={openDialog}
+                    onClose={closeStudentDialog}
+                    student={selectedStudent}
+                    onEdit={() => handleEditStudent(selectedStudent)}
+                    onDelete={() => openDeleteDialog(selectedStudent)}
+                    onStatusChange={handleModalStatusChange}
                 />
-            </StudentDialog>
+            ) : (
+                <StudentDialog
+                    open={openDialog}
+                    onClose={closeStudentDialog}
+                    title={
+                        !selectedStudent
+                            ? "Add Student"
+                            : selectedStudent.isEditing
+                            ? "Edit Student"
+                            : "View Student"
+                    }
+                >
+                    <StudentForm
+                        defaultValues={selectedStudent}
+                        isEditing={selectedStudent?.isEditing}
+                        onCancel={closeStudentDialog}
+                        onSuccess={handleFormSuccess}
+                    />
+                </StudentDialog>
+            )}
 
         </>
     );

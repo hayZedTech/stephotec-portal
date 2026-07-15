@@ -15,6 +15,14 @@ const api = axios.create({
     },
 });
 
+const safeGetRefreshToken = () => {
+    try {
+        return getRefreshToken();
+    } catch {
+        return null;
+    }
+};
+
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -77,19 +85,22 @@ api.interceptors.response.use(
         isRefreshing = true;
 
         try {
-            const refresh = getRefreshToken();
+            const refresh = safeGetRefreshToken();
 
             if (!refresh) {
                 throw new Error("No refresh token");
             }
 
-            // ✅ FIXED: correct refresh endpoint
             const { data } = await axios.post(
                 `${process.env.NEXT_PUBLIC_API_URL}/auth/token/refresh/`,
                 {
                     refresh,
                 }
             );
+
+            if (!data?.access) {
+                throw new Error("Refresh response missing access token");
+            }
 
             saveSession({
                 access: data.access,

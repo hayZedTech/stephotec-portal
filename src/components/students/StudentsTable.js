@@ -89,7 +89,7 @@ export default function StudentsTable({
             align: "center",
             headerAlign: "center",
             renderCell: ({ row }) => (
-                <Box sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} onClick={() => onStatusClick?.(row)}>
+                <Box sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} onClick={(e) => onStatusClick?.(row, e)}>
                     <Chip size="small" color={row.status === "ACTIVE" ? "success" : row.status === "SUSPENDED" ? "warning" : row.status === "GRADUATED" ? "info" : "default"} label={row.status || "UNKNOWN"} clickable />
                 </Box>
             ),
@@ -105,12 +105,30 @@ export default function StudentsTable({
             renderCell: ({ row }) => (
                 <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
                     <Tooltip title="View">
-                        <IconButton size="small" onClick={() => router.push(`/admin/students/${row.id}`)}>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                if (onView) {
+                                    onView(row);
+                                    return;
+                                }
+                                router.push(`/admin/students/${row.id}`);
+                            }}
+                        >
                             <VisibilityOutlined fontSize="small" />
                         </IconButton>
                     </Tooltip>
                     <Tooltip title="Edit">
-                        <IconButton size="small" onClick={() => router.push(`/admin/students/${row.id}`)}>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                if (onEdit) {
+                                    onEdit(row);
+                                    return;
+                                }
+                                router.push(`/admin/students/${row.id}`);
+                            }}
+                        >
                             <EditOutlined fontSize="small" />
                         </IconButton>
                     </Tooltip>

@@ -16,6 +16,7 @@ import {
     Assignment,
     Mail,
     History,
+    Lock,
 } from "@mui/icons-material";
 
 export default function SidebarNav({ user, collapsed }) {
@@ -56,6 +57,11 @@ export default function SidebarNav({ user, collapsed }) {
                     icon: <History fontSize="small" />,
                 },
                 {
+                    label: "Change Password",
+                    href: "/admin/change-password",
+                    icon: <Lock fontSize="small" />,
+                },
+                {
                     label: "Profile",
                     href: "/admin/profile",
                     icon: <Person fontSize="small" />,
@@ -86,6 +92,11 @@ export default function SidebarNav({ user, collapsed }) {
                     label: "Profile",
                     href: "/dashboard/profile",
                     icon: <Person fontSize="small" />,
+                },
+                {
+                    label: "Change Password",
+                    href: "/dashboard/change-password",
+                    icon: <Lock fontSize="small" />,
                 },
                 {
                     label: "Notifications",

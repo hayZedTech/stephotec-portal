@@ -14,6 +14,8 @@ import {
     Avatar,
     Tabs,
     Tab,
+    Menu,
+    MenuItem,
 } from "@mui/material";
 
 import { Close } from "@mui/icons-material";
@@ -27,11 +29,18 @@ export default function StudentViewModal({
     onEdit,
     onDelete,
     onDeactivate,
+    onStatusChange,
 }) {
     const [refreshKey, setRefreshKey] = useState(0);
     const [tabValue, setTabValue] = useState(0);
+    const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
 
     if (!student) return null;
+
+    const fullName = [student.first_name, student.last_name].filter(Boolean).join(" ").trim() || "—";
+    const primaryCourse = student.courses?.find((course) => course.is_primary)?.course?.name || "—";
+    const courseNames = student.courses?.map((course) => course.course?.name).filter(Boolean) || [];
+    const temporaryPassword = student.temporary_password || student.temp_password || "";
 
     const handleCoursesUpdated = () => {
         setRefreshKey((prev) => prev + 1);
@@ -39,6 +48,19 @@ export default function StudentViewModal({
 
     const handleTabChange = (event, newValue) => {
         setTabValue(newValue);
+    };
+
+    const handleStatusClick = (event) => {
+        setStatusMenuAnchor(event.currentTarget);
+    };
+
+    const closeStatusMenu = () => {
+        setStatusMenuAnchor(null);
+    };
+
+    const handleStatusMenuChange = (newStatus) => {
+        onStatusChange?.(student.id, newStatus);
+        closeStatusMenu();
     };
 
     return (
@@ -75,6 +97,7 @@ export default function StudentViewModal({
                 {/* Avatar and Name */}
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3, p: 3, pb: 0 }}>
                     <Avatar
+                        src={student.profile_picture_url}
                         sx={{
                             width: 64,
                             height: 64,
@@ -114,38 +137,72 @@ export default function StudentViewModal({
                     {/* Info Tab */}
                     {tabValue === 0 && (
                         <Box>
-                            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" }, gap: 2 }}>
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+                                        Full Name
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {fullName}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+                                        Username
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {student.username || "—"}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
                                         Email
                                     </Typography>
-                                    <Typography variant="body2" sx={{ mt: 0.5 }}>
-                                        {student.email}
+                                    <Typography variant="body2" fontWeight={600} sx={{ wordBreak: "break-word" }}>
+                                        {student.email || "—"}
                                     </Typography>
                                 </Box>
 
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+                                        Phone
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {student.phone || "—"}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+                                        Additional Phone
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {student.additional_phone || "—"}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
                                         Admission Year
                                     </Typography>
-                                    <Typography variant="body2" sx={{ mt: 0.5 }}>
-                                        {student.admission_year}
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {student.admission_year || "—"}
                                     </Typography>
                                 </Box>
 
-                                {student.temporary_password && (
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                            Temporary Password
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ mt: 0.5, fontFamily: "monospace", fontWeight: 600, color: "#dc2626" }}>
-                                            {student.temporary_password}
-                                        </Typography>
-                                    </Box>
-                                )}
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+                                        Primary Course
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {primaryCourse}
+                                    </Typography>
+                                </Box>
 
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
                                         Status
                                     </Typography>
                                     <Box sx={{ mt: 0.5 }}>
@@ -161,12 +218,15 @@ export default function StudentViewModal({
                                                     : "default"
                                             }
                                             label={student.status || "UNKNOWN"}
+                                            onClick={handleStatusClick}
+                                            clickable
+                                            sx={{ cursor: "pointer" }}
                                         />
                                     </Box>
                                 </Box>
 
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
                                         Industrial Training
                                     </Typography>
                                     <Box sx={{ mt: 0.5 }}>
@@ -176,6 +236,69 @@ export default function StudentViewModal({
                                             label={student.is_industrial_training ? "Yes" : "No"}
                                         />
                                     </Box>
+                                </Box>
+
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+                                        Gender
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {student.gender || "—"}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+                                        Date of Birth
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {student.date_of_birth || "—"}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+                                        State of Origin
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {student.state_of_origin || "—"}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+                                        Courses
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {courseNames.length ? courseNames.join(", ") : "—"}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ gridColumn: { xs: "span 1", md: "span 2" }, p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+                                        Address
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {student.address || "—"}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ gridColumn: { xs: "span 1", md: "span 2" }, p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+                                        Bio
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {student.bio || "—"}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ gridColumn: { xs: "span 1", md: "span 2" }, p: 2, borderRadius: 2, border: "1px solid", borderColor: temporaryPassword ? "#f59e0b" : "grey.200", bgcolor: temporaryPassword ? "#fff7ed" : "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+                                        Temporary Password
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontFamily: "monospace", fontWeight: 700, color: temporaryPassword ? "#b45309" : "text.secondary" }}>
+                                        {temporaryPassword || "No temporary password available."}
+                                    </Typography>
                                 </Box>
                             </Box>
                         </Box>
@@ -261,27 +384,87 @@ export default function StudentViewModal({
                 </Box>
             </DialogContent>
 
+            {/* STATUS MENU */}
+            <Menu
+                anchorEl={statusMenuAnchor}
+                open={Boolean(statusMenuAnchor)}
+                onClose={closeStatusMenu}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            borderRadius: 2,
+                            minWidth: 200,
+                            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.15)",
+                        },
+                    },
+                    backdrop: {
+                        sx: {
+                            backgroundColor: "rgba(0, 0, 0, 0.2)",
+                        },
+                    },
+                }}
+            >
+                <MenuItem
+                    onClick={() => handleStatusMenuChange("ACTIVE")}
+                    sx={{
+                        py: 1.5,
+                        px: 2,
+                        display: "flex",
+                        gap: 1.5,
+                        alignItems: "center",
+                        "&:hover": { bgcolor: "#f0f9ff" },
+                    }}
+                >
+                    <Chip size="small" label="ACTIVE" color="success" variant="filled" />
+                </MenuItem>
+                <MenuItem
+                    onClick={() => handleStatusMenuChange("SUSPENDED")}
+                    sx={{
+                        py: 1.5,
+                        px: 2,
+                        display: "flex",
+                        gap: 1.5,
+                        alignItems: "center",
+                        "&:hover": { bgcolor: "#fffbeb" },
+                    }}
+                >
+                    <Chip size="small" label="SUSPENDED" color="warning" variant="filled" />
+                </MenuItem>
+                <MenuItem
+                    onClick={() => handleStatusMenuChange("GRADUATED")}
+                    sx={{
+                        py: 1.5,
+                        px: 2,
+                        display: "flex",
+                        gap: 1.5,
+                        alignItems: "center",
+                        "&:hover": { bgcolor: "#f0f9ff" },
+                    }}
+                >
+                    <Chip size="small" label="GRADUATED" color="info" variant="filled" />
+                </MenuItem>
+                <MenuItem
+                    onClick={() => handleStatusMenuChange("INACTIVE")}
+                    sx={{
+                        py: 1.5,
+                        px: 2,
+                        display: "flex",
+                        gap: 1.5,
+                        alignItems: "center",
+                        "&:hover": { bgcolor: "#f3f4f6" },
+                    }}
+                >
+                    <Chip size="small" label="INACTIVE" variant="filled" />
+                </MenuItem>
+            </Menu>
+
             <DialogActions sx={{ p: 2, gap: 1 }}>
-                <Button onClick={onClose}>Close</Button>
-
-                {student.status !== "GRADUATED" && student.status !== "WITHDRAWN" && (
-                    <>
-                        <Button
-                            variant="outlined"
-                            color={student.status === "ACTIVE" ? "warning" : "success"}
-                            onClick={() => onDeactivate?.(student)}
-                        >
-                            {student.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                        </Button>
-
-                        <Button
-                            variant="contained"
-                            onClick={() => onEdit?.(student)}
-                        >
-                            Edit
-                        </Button>
-                    </>
-                )}
+                <Button
+                    variant="contained"
+                    onClick={() => onEdit?.(student)}
+                >
+                    Edit
+                </Button>
 
                 <Button
                     variant="contained"

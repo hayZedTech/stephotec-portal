@@ -155,6 +155,14 @@ export default function ProfilePage() {
 
             const updatedUser = { ...user, profilePictureUrl: response.data.url };
             setUser(updatedUser);
+            
+            // Save to localStorage
+            const { saveSession, getAccessToken, getRefreshToken } = await import("@/utils/storage");
+            saveSession({
+                access: getAccessToken(),
+                refresh: getRefreshToken(),
+                user: updatedUser,
+            });
             setProfilePictureFile(null);
             setProfilePicturePreview(null);
             setShowPictureDialog(false);

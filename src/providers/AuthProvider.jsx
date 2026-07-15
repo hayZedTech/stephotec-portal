@@ -13,22 +13,67 @@ import { loginUser } from "@/services/auth";
 import { successToast } from "@/lib/toast";
 
 const AuthContext = createContext(null);
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [inactivityTimer, setInactivityTimer] = useState(null);
 
     const router = useRouter();
+
+    const handleInactivity = () => {
+        clearSession();
+        setUser(null);
+        router.push("/login");
+    };
+
+    const resetInactivityTimer = () => {
+        if (inactivityTimer) {
+            clearTimeout(inactivityTimer);
+        }
+
+        if (user) {
+            const timer = setTimeout(handleInactivity, INACTIVITY_TIMEOUT);
+            setInactivityTimer(timer);
+        }
+    };
 
     useEffect(() => {
         const storedUser = getUser();
 
         if (storedUser) {
             setUser(storedUser);
+            refreshUser();
         }
 
         setLoading(false);
     }, []);
+
+    useEffect(() => {
+        if (!user) return;
+
+        resetInactivityTimer();
+
+        const events = ["mousedown", "keydown", "scroll", "touchstart", "click"];
+
+        const handleActivity = () => {
+            resetInactivityTimer();
+        };
+
+        events.forEach((event) => {
+            window.addEventListener(event, handleActivity);
+        });
+
+        return () => {
+            events.forEach((event) => {
+                window.removeEventListener(event, handleActivity);
+            });
+            if (inactivityTimer) {
+                clearTimeout(inactivityTimer);
+            }
+        };
+    }, [user]);
 
     const login = async (credentials) => {
         const data = await loginUser(credentials);
@@ -76,6 +121,9 @@ export function AuthProvider({ children }) {
     const logout = () => {
         clearSession();
         setUser(null);
+        if (inactivityTimer) {
+            clearTimeout(inactivityTimer);
+        }
         successToast("Signed out successfully.");
         router.push("/login");
     };
@@ -88,6 +136,8 @@ export function AuthProvider({ children }) {
             const { getAccessToken } = await import("@/utils/storage");
             const token = getAccessToken();
             if (!token) return;
+            
+            if (storedUser.role !== "STUDENT") return;
             
             const { default: api } = await import("@/lib/axios");
             const response = await api.get("/student/profile/");
@@ -113,7 +163,10 @@ export function AuthProvider({ children }) {
                 courses: response.data.courses || [],
             };
             
+            const { getRefreshToken } = await import("@/utils/storage");
             saveSession({
+                access: token,
+                refresh: getRefreshToken(),
                 user: userData,
             });
             
