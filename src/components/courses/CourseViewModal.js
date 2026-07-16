@@ -36,7 +36,10 @@ export default function CourseViewModal({
             slotProps={{
                 paper: {
                     sx: {
-                        borderRadius: 4,
+                        borderRadius: { xs: 2, sm: 3 },
+                        m: { xs: 1, sm: 2 },
+                        maxHeight: { xs: "95vh", sm: "90vh" },
+                        width: { xs: "calc(100% - 16px)", sm: "auto" },
                     },
                 },
             }}
@@ -46,17 +49,21 @@ export default function CourseViewModal({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
+                    fontWeight: 700,
+                    py: { xs: 2, sm: 2.5 },
+                    px: { xs: 2, sm: 3 },
+                    fontSize: { xs: "1.25rem", sm: "1.5rem" },
                 }}
             >
                 Course Details
 
-                <IconButton onClick={onClose}>
+                <IconButton onClick={onClose} size="small">
                     <Close />
                 </IconButton>
             </DialogTitle>
 
-            <DialogContent dividers>
-                <Grid container spacing={3}>
+            <DialogContent dividers sx={{ py: { xs: 2, sm: 3 }, px: { xs: 2, sm: 3 } }}>
+                <Grid container spacing={{ xs: 2, sm: 3 }}>
                     <Grid size={{ xs: 12 }}>
                         <TextField
                             label="Course Name"
@@ -67,10 +74,15 @@ export default function CourseViewModal({
                                     readOnly: true,
                                 },
                             }}
+                            sx={{
+                                "& .MuiInputBase-input": {
+                                    fontSize: { xs: "0.875rem", sm: "1rem" },
+                                },
+                            }}
                         />
                     </Grid>
 
-                    <Grid size={{ xs: 6 }}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Code Prefix"
                             value={course.code_prefix}
@@ -80,10 +92,15 @@ export default function CourseViewModal({
                                     readOnly: true,
                                 },
                             }}
+                            sx={{
+                                "& .MuiInputBase-input": {
+                                    fontSize: { xs: "0.875rem", sm: "1rem" },
+                                },
+                            }}
                         />
                     </Grid>
 
-                    <Grid size={{ xs: 6 }}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Students"
                             value={course.student_count}
@@ -91,6 +108,11 @@ export default function CourseViewModal({
                             slotProps={{
                                 input: {
                                     readOnly: true,
+                                },
+                            }}
+                            sx={{
+                                "& .MuiInputBase-input": {
+                                    fontSize: { xs: "0.875rem", sm: "1rem" },
                                 },
                             }}
                         />
@@ -108,13 +130,16 @@ export default function CourseViewModal({
                                     ? "ACTIVE"
                                     : "INACTIVE"
                             }
+                            sx={{
+                                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                            }}
                         />
                     </Grid>
                 </Grid>
             </DialogContent>
 
-            <DialogActions sx={{ px: 3, py: 2 }}>
-                <Button onClick={onClose}>
+            <DialogActions sx={{ p: { xs: 1.5, sm: 2 }, gap: 1, display: "flex", justifyContent: "flex-end" }}>
+                <Button onClick={onClose} size="small">
                     Close
                 </Button>
 
@@ -122,6 +147,7 @@ export default function CourseViewModal({
                     startIcon={<Edit />}
                     variant="outlined"
                     onClick={() => onEdit(course)}
+                    size="small"
                 >
                     Edit
                 </Button>
@@ -131,6 +157,7 @@ export default function CourseViewModal({
                     variant="contained"
                     startIcon={<Delete />}
                     onClick={() => onDelete(course)}
+                    size="small"
                 >
                     Delete
                 </Button>

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { DataGrid } from "@mui/x-data-grid";
-import { Chip, Avatar, IconButton, Tooltip, Box } from "@mui/material";
+import { Chip, Avatar, IconButton, Tooltip, Box, Card, CardContent, Typography, Stack, useMediaQuery, useTheme, Pagination } from "@mui/material";
 import { VisibilityOutlined, EditOutlined, DeleteOutlineOutlined } from "@mui/icons-material";
 
 export default function StudentsTable({
@@ -21,6 +21,9 @@ export default function StudentsTable({
     onRowSelectionChange,
 }) {
     const router = useRouter();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
     const columns = [
         {
             field: "student",
@@ -89,7 +92,7 @@ export default function StudentsTable({
             align: "center",
             headerAlign: "center",
             renderCell: ({ row }) => (
-                <Box sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} onClick={(e) => onStatusClick?.(row, e)}>
+                <Box sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} onClick={() => onStatusClick?.(row)}>
                     <Chip size="small" color={row.status === "ACTIVE" ? "success" : row.status === "SUSPENDED" ? "warning" : row.status === "GRADUATED" ? "info" : "default"} label={row.status || "UNKNOWN"} clickable />
                 </Box>
             ),
@@ -141,6 +144,123 @@ export default function StudentsTable({
             ),
         },
     ];
+
+    const renderMobileCards = () => (
+        <Stack spacing={2}>
+            {rows.map((row) => {
+                const primaryCourse = row.courses?.find(c => c.is_primary);
+                return (
+                    <Card key={row.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                        <CardContent sx={{ pb: 2 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+                                <Avatar sx={{ width: 48, height: 48, bgcolor: "#2563eb", fontSize: 18, fontWeight: 700 }}>
+                                    {row.first_name?.charAt(0)?.toUpperCase() || "S"}
+                                </Avatar>
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography variant="subtitle2" fontWeight={700} sx={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                        {row.first_name} {row.last_name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
+                                        {row.email}
+                                    </Typography>
+                                </Box>
+                            </Box>
+
+                            <Stack spacing={1.5} sx={{ mb: 2 }}>
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                        Username
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {row.username}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                        Course
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600} sx={{ textAlign: "right", maxWidth: "50%" }}>
+                                        {primaryCourse?.course?.name || "-"}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                        Training
+                                    </Typography>
+                                    <Chip size="small" color={row.is_industrial_training ? "success" : "default"} label={row.is_industrial_training ? "Yes" : "No"} />
+                                </Box>
+
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                        Status
+                                    </Typography>
+                                    <Chip
+                                        size="small"
+                                        color={row.status === "ACTIVE" ? "success" : row.status === "SUSPENDED" ? "warning" : row.status === "GRADUATED" ? "info" : "default"}
+                                        label={row.status || "UNKNOWN"}
+                                        onClick={() => onStatusClick?.(row)}
+                                        clickable
+                                    />
+                                </Box>
+                            </Stack>
+
+                            <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                                <Tooltip title="View">
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => {
+                                            if (onView) {
+                                                onView(row);
+                                                return;
+                                            }
+                                            router.push(`/admin/students/${row.id}`);
+                                        }}
+                                    >
+                                        <VisibilityOutlined fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit">
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => {
+                                            if (onEdit) {
+                                                onEdit(row);
+                                                return;
+                                            }
+                                            router.push(`/admin/students/${row.id}`);
+                                        }}
+                                    >
+                                        <EditOutlined fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Delete">
+                                    <IconButton size="small" color="error" onClick={() => onDelete?.(row)}>
+                                        <DeleteOutlineOutlined fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            </Box>
+                        </CardContent>
+                    </Card>
+                );
+            })}
+
+            {page !== undefined && (
+                <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+                    <Pagination
+                        count={Math.ceil(rowCount / pageSize)}
+                        page={page + 1}
+                        onChange={(e, value) => onPageChange?.(value - 1)}
+                    />
+                </Box>
+            )}
+        </Stack>
+    );
+
+    if (isMobile) {
+        return renderMobileCards();
+    }
 
     return (
         <DataGrid

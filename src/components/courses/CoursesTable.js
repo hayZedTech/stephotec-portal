@@ -6,6 +6,12 @@ import {
     IconButton,
     Stack,
     Tooltip,
+    Card,
+    CardContent,
+    Typography,
+    Box,
+    useMediaQuery,
+    useTheme,
 } from "@mui/material";
 import {
     VisibilityOutlined,
@@ -20,6 +26,9 @@ export default function CoursesTable({
     onEdit,
     onDelete,
 }) {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
     const columns = [
         {
             field: "name",
@@ -104,6 +113,79 @@ export default function CoursesTable({
             ),
         },
     ];
+
+    const renderMobileCards = () => (
+        <Stack spacing={2}>
+            {rows.map((row) => (
+                <Card key={row.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                    <CardContent sx={{ pb: 2 }}>
+                        <Typography variant="subtitle2" fontWeight={700} mb={2}>
+                            {row.name}
+                        </Typography>
+
+                        <Stack spacing={1.5} sx={{ mb: 2 }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                    Code
+                                </Typography>
+                                <Typography variant="body2" fontWeight={600}>
+                                    {row.code_prefix}
+                                </Typography>
+                            </Box>
+
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                    Students
+                                </Typography>
+                                <Typography variant="body2" fontWeight={600}>
+                                    {row.student_count}
+                                </Typography>
+                            </Box>
+
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                    Status
+                                </Typography>
+                                <Chip
+                                    size="small"
+                                    color={row.is_active ? "success" : "default"}
+                                    label={row.is_active ? "ACTIVE" : "INACTIVE"}
+                                />
+                            </Box>
+                        </Stack>
+
+                        <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                            <Tooltip title="View">
+                                <IconButton size="small" onClick={() => onView?.(row)}>
+                                    <VisibilityOutlined fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Edit">
+                                <IconButton size="small" onClick={() => onEdit?.(row)}>
+                                    <EditOutlined fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Delete">
+                                <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={() => onDelete?.(row)}
+                                >
+                                    <DeleteOutlineOutlined fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
+                    </CardContent>
+                </Card>
+            ))}
+        </Stack>
+    );
+
+    if (isMobile) {
+        return renderMobileCards();
+    }
 
     return (
         <DataGrid

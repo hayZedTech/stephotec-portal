@@ -229,10 +229,10 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
 
     return (
         <form onSubmit={handleSubmit(onSubmit)}>
-            <Grid container spacing={3}>
+            <Grid container spacing={{ xs: 2, sm: 3 }}>
 
                 {/* FIRST NAME */}
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                     <Controller
                         name="first_name"
                         control={control}
@@ -243,7 +243,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                 </Grid>
 
                 {/* LAST NAME */}
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                     <Controller
                         name="last_name"
                         control={control}
@@ -281,7 +281,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
 
                 {/* COURSE - Only for new students */}
                 {!defaultValues?.id && (
-                    <Grid size={{ xs: 12, md: 6 }}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <Controller
                             name="course_id"
                             control={control}
@@ -307,7 +307,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                 )}
 
                 {/* ADMISSION YEAR */}
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                     <Controller
                         name="admission_year_write"
                         control={control}
@@ -332,7 +332,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                 </Grid>
 
                 {/* STATUS */}
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                     <Controller
                         name="status"
                         control={control}
@@ -356,7 +356,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                 </Grid>
 
                 {/* INDUSTRIAL TRAINING */}
-                <Grid size={{ xs: 12, md: 6 }}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                     <Controller
                         name="is_industrial_training"
                         control={control}
@@ -393,7 +393,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
 
                 {/* ADDITIONAL FIELDS - COLLAPSIBLE */}
                 <Collapse in={expandMore} timeout="auto" unmountOnExit sx={{ width: "100%" }}>
-                    <Grid container spacing={3} sx={{ width: "100%" }}>
+                    <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ width: "100%" }}>
                         {/* PROFILE PICTURE */}
                         <Grid size={{ xs: 12 }}>
                             <Typography variant="subtitle2" fontWeight={600} mb={2}>
@@ -501,7 +501,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                         </Grid>
 
                         {/* PHONE */}
-                        <Grid size={{ xs: 12, md: 6 }}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <Controller
                                 name="phone"
                                 control={control}
@@ -518,7 +518,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                         </Grid>
 
                         {/* ADDITIONAL PHONE */}
-                        <Grid size={{ xs: 12, md: 6 }}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <Controller
                                 name="additional_phone"
                                 control={control}
@@ -535,7 +535,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                         </Grid>
 
                         {/* DATE OF BIRTH */}
-                        <Grid size={{ xs: 12, md: 6 }}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <Controller
                                 name="date_of_birth"
                                 control={control}
@@ -558,7 +558,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                         </Grid>
 
                         {/* GENDER */}
-                        <Grid size={{ xs: 12, md: 6 }}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <Controller
                                 name="gender"
                                 control={control}
@@ -580,7 +580,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                         </Grid>
 
                         {/* STATE OF ORIGIN */}
-                        <Grid size={{ xs: 12, md: 6 }}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <Controller
                                 name="state_of_origin"
                                 control={control}

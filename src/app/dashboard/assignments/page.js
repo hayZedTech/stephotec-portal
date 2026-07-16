@@ -371,51 +371,119 @@ export default function AssignmentsPage() {
                 </Grid>
             </Grid>
 
-            {/* Assignments Table */}
+            {/* Assignments Table/Cards */}
             {filteredAssignments.length > 0 ? (
-                <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-                    <Table>
-                        <TableHead sx={{ bgcolor: "grey.50" }}>
-                            <TableRow>
-                                <TableCell fontWeight={700}>Title</TableCell>
-                                <TableCell>Due Date</TableCell>
-                                <TableCell>Max Score</TableCell>
-                                <TableCell align="right">Actions</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {filteredAssignments.map((assignment) => {
-                                const isSubmitted = submissions[assignment.id];
-                                return (
-                                    <TableRow key={assignment.id} hover>
-                                        <TableCell fontWeight={500}>{assignment.title}</TableCell>
-                                        <TableCell>
-                                            <Box>
-                                                <Typography variant="body2">
-                                                    {new Date(assignment.due_date).toLocaleDateString()}
-                                                </Typography>
-                                                {isOverdue(assignment.due_date) && (
-                                                    <Chip label="Overdue" color="error" size="small" sx={{ mt: 0.5 }} />
-                                                )}
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell>{assignment.max_score}</TableCell>
-                                        <TableCell align="right">
-                                            <Button
-                                                size="small"
-                                                startIcon={isSubmitted ? <CheckCircle /> : <Visibility />}
-                                                onClick={() => handleViewAssignment(assignment)}
-                                                color={isSubmitted ? "success" : "primary"}
-                                            >
-                                                {isSubmitted ? "Submitted" : "View"}
-                                            </Button>
-                                        </TableCell>
+                <>
+                    {/* Desktop Table */}
+                    <Box sx={{ display: { xs: "none", md: "block" } }}>
+                        <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+                            <Table>
+                                <TableHead sx={{ bgcolor: "grey.50" }}>
+                                    <TableRow>
+                                        <TableCell fontWeight={700}>Title</TableCell>
+                                        <TableCell>Due Date</TableCell>
+                                        <TableCell>Max Score</TableCell>
+                                        <TableCell align="right">Actions</TableCell>
                                     </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                                </TableHead>
+                                <TableBody>
+                                    {filteredAssignments.map((assignment) => {
+                                        const isSubmitted = submissions[assignment.id];
+                                        return (
+                                            <TableRow key={assignment.id} hover>
+                                                <TableCell fontWeight={500}>{assignment.title}</TableCell>
+                                                <TableCell>
+                                                    <Box>
+                                                        <Typography variant="body2">
+                                                            {new Date(assignment.due_date).toLocaleDateString()}
+                                                        </Typography>
+                                                        {isOverdue(assignment.due_date) && (
+                                                            <Chip label="Overdue" color="error" size="small" sx={{ mt: 0.5 }} />
+                                                        )}
+                                                    </Box>
+                                                </TableCell>
+                                                <TableCell>{assignment.max_score}</TableCell>
+                                                <TableCell align="right">
+                                                    <Button
+                                                        size="small"
+                                                        startIcon={isSubmitted ? <CheckCircle /> : <Visibility />}
+                                                        onClick={() => handleViewAssignment(assignment)}
+                                                        color={isSubmitted ? "success" : "primary"}
+                                                    >
+                                                        {isSubmitted ? "Submitted" : "View"}
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Box>
+
+                    {/* Mobile Cards */}
+                    <Stack spacing={2} sx={{ display: { xs: "flex", md: "none" } }}>
+                        {filteredAssignments.map((assignment) => {
+                            const isSubmitted = submissions[assignment.id];
+                            return (
+                                <Card key={assignment.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                    <CardContent sx={{ pb: 2 }}>
+                                        <Typography variant="subtitle2" fontWeight={700} mb={2}>
+                                            {assignment.title}
+                                        </Typography>
+
+                                        <Stack spacing={1.5} sx={{ mb: 2 }}>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                                    Due Date
+                                                </Typography>
+                                                <Box sx={{ textAlign: "right" }}>
+                                                    <Typography variant="body2" fontWeight={600}>
+                                                        {new Date(assignment.due_date).toLocaleDateString()}
+                                                    </Typography>
+                                                    {isOverdue(assignment.due_date) && (
+                                                        <Chip label="Overdue" color="error" size="small" sx={{ mt: 0.5 }} />
+                                                    )}
+                                                </Box>
+                                            </Box>
+
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                                    Max Score
+                                                </Typography>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {assignment.max_score}
+                                                </Typography>
+                                            </Box>
+
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                                    Status
+                                                </Typography>
+                                                <Chip
+                                                    size="small"
+                                                    color={isSubmitted ? "success" : "warning"}
+                                                    label={isSubmitted ? "Submitted" : "Pending"}
+                                                />
+                                            </Box>
+                                        </Stack>
+
+                                        <Button
+                                            fullWidth
+                                            size="small"
+                                            startIcon={isSubmitted ? <CheckCircle /> : <Visibility />}
+                                            onClick={() => handleViewAssignment(assignment)}
+                                            color={isSubmitted ? "success" : "primary"}
+                                            variant="outlined"
+                                        >
+                                            {isSubmitted ? "View Submission" : "View & Submit"}
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </Stack>
+                </>
             ) : (
                 <Paper
                     elevation={0}

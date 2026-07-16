@@ -36,9 +36,9 @@ export default function CourseDialog({
                     alignItems: "center",
                     justifyContent: "space-between",
                     fontWeight: 700,
-                    py: { xs: 1.5, sm: 2 },
+                    py: { xs: 2, sm: 2.5 },
                     px: { xs: 2, sm: 3 },
-                    fontSize: { xs: "1.125rem", sm: "1.25rem" },
+                    fontSize: { xs: "1.25rem", sm: "1.5rem" },
                 }}
             >
                 {title}
@@ -52,7 +52,7 @@ export default function CourseDialog({
                 dividers
                 sx={{ 
                     py: { xs: 2, sm: 3 },
-                    px: { xs: 1.5, sm: 3 },
+                    px: { xs: 2, sm: 3 },
                     overflowY: "auto",
                 }}
             >
