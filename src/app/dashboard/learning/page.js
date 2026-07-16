@@ -58,7 +58,6 @@ export default function LearningPage() {
             });
             console.log("Learning content response:", res.data);
             const data = res.data.results || res.data || [];
-            // Use the enriched response directly
             const transformed = Array.isArray(data) ? data.map(item => ({
                 id: item.learning_content,
                 title: item.learning_content_title,
@@ -125,14 +124,6 @@ export default function LearningPage() {
         setViewOpen(true);
     };
 
-    if (loading) {
-        return (
-            <div className="flex h-[60vh] items-center justify-center">
-                <CircularProgress />
-            </div>
-        );
-    }
-
     const courses = user?.courses || [];
     const videoContents = filteredContents.filter((c) => c.content_type === "VIDEO");
     const documentContents = filteredContents.filter((c) => c.content_type === "DOCUMENT");
@@ -140,6 +131,43 @@ export default function LearningPage() {
 
     return (
         <div className="space-y-6">
+            {/* LOADING OVERLAY */}
+            {loading && (
+                <Box
+                    sx={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        bgcolor: "rgba(0, 0, 0, 0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        backdropFilter: "blur(2px)",
+                    }}
+                >
+                    <Box
+                        sx={{
+                            bgcolor: "background.paper",
+                            borderRadius: 3,
+                            p: 4,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
+                            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                        }}
+                    >
+                        <CircularProgress size={48} />
+                        <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                            Loading learning materials...
+                        </Typography>
+                    </Box>
+                </Box>
+            )}
+
             {/* Header */}
             <div>
                 <Typography variant="h4" fontWeight={700}>

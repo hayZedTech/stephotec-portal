@@ -37,11 +37,11 @@ const NIGERIAN_STATES = [
 ];
 
 const InfoCard = ({ label, value }) => (
-    <Card elevation={0} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200", p: 2.5, height: "100%" }}>
-        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1 }}>
+    <Card elevation={0} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200", p: { xs: 1.5, sm: 2 }, height: "100%", overflow: "hidden" }}>
+        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1, fontSize: { xs: "0.65rem", sm: "0.75rem" } }}>
             {label}
         </Typography>
-        <Typography variant="body1" fontWeight={600} sx={{ wordBreak: "break-word" }}>
+        <Typography variant="body2" fontWeight={600} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" }, wordBreak: "break-word", overflow: "hidden" }}>
             {value || "—"}
         </Typography>
     </Card>
@@ -202,24 +202,53 @@ export default function ProfilePage() {
         setShowEditModal(true);
     };
 
-    if (!user) {
-        return (
-            <div className="flex h-[60vh] items-center justify-center">
-                <CircularProgress />
-            </div>
-        );
-    }
-
-    const primaryCourse = user.courses?.find((c) => c.is_primary);
-    const activeCourses = user.courses?.filter((c) => c.status === "ACTIVE") || [];
+    const primaryCourse = user?.courses?.find((c) => c.is_primary);
+    const activeCourses = user?.courses?.filter((c) => c.status === "ACTIVE") || [];
 
     return (
         <div className="space-y-6">
+            {/* LOADING OVERLAY */}
+            {loading && (
+                <Box
+                    sx={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        bgcolor: "rgba(0, 0, 0, 0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        backdropFilter: "blur(2px)",
+                    }}
+                >
+                    <Box
+                        sx={{
+                            bgcolor: "background.paper",
+                            borderRadius: 3,
+                            p: 4,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
+                            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                        }}
+                    >
+                        <CircularProgress size={48} />
+                        <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                            Loading profile...
+                        </Typography>
+                    </Box>
+                </Box>
+            )}
+
             <div>
-                <Typography variant="h4" fontWeight={700}>
+                <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}>
                     My Profile
                 </Typography>
-                <Typography color="text.secondary">
+                <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                     View and manage your profile information.
                 </Typography>
             </div>
@@ -230,18 +259,18 @@ export default function ProfilePage() {
                     borderRadius: 4,
                     border: "1px solid",
                     borderColor: "grey.200",
-                    p: 4,
+                    p: { xs: 2, sm: 4 },
                 }}
             >
-                <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start", mb: 3 }}>
+                <Box sx={{ display: "flex", gap: { xs: 2, sm: 3 }, alignItems: "flex-start", mb: 3, flexDirection: { xs: "column", sm: "row" } }}>
                     <Box sx={{ position: "relative" }}>
                         <Avatar
                             src={user?.profilePictureUrl}
                             sx={{
-                                width: 100,
-                                height: 100,
+                                width: { xs: 80, sm: 100 },
+                                height: { xs: 80, sm: 100 },
                                 bgcolor: "#2563eb",
-                                fontSize: 40,
+                                fontSize: { xs: 32, sm: 40 },
                                 fontWeight: 700,
                             }}
                         >
@@ -266,10 +295,10 @@ export default function ProfilePage() {
                     </Box>
 
                     <Box sx={{ flex: 1 }}>
-                        <Typography variant="h5" fontWeight={700} mb={1}>
+                        <Typography variant="h5" fontWeight={700} mb={1} sx={{ fontSize: { xs: "1.125rem", sm: "1.5rem" } }}>
                             {user?.firstName} {user?.lastName}
                         </Typography>
-                        <Typography color="text.secondary" mb={2}>
+                        <Typography color="text.secondary" mb={2} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" }, wordBreak: "break-word" }}>
                             {user?.email}
                         </Typography>
                         <Chip
@@ -283,8 +312,8 @@ export default function ProfilePage() {
                 <Divider sx={{ my: 3 }} />
 
                 <Box sx={{ mb: 3 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-                        <Typography variant="h6" fontWeight={700}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, flexDirection: { xs: "column", sm: "row" }, gap: { xs: 2, sm: 0 } }}>
+                        <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
                             Personal Information
                         </Typography>
                         <Button
@@ -296,7 +325,7 @@ export default function ProfilePage() {
                         </Button>
                     </Box>
 
-                    <Grid container spacing={2}>
+                    <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                         <Grid xs={12} sm={6} md={4}>
                             <InfoCard label="Student ID" value={formData.username} />
                         </Grid>
@@ -324,11 +353,11 @@ export default function ProfilePage() {
                 <Divider sx={{ my: 3 }} />
 
                 <Box>
-                    <Typography variant="h6" fontWeight={700} mb={3}>
+                    <Typography variant="h6" fontWeight={700} mb={3} sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
                         Additional Information
                     </Typography>
 
-                    <Grid container spacing={2}>
+                    <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                         <Grid xs={12}>
                             <InfoCard label="Address" value={formData.address} />
                         </Grid>
@@ -346,11 +375,11 @@ export default function ProfilePage() {
             </Paper>
 
             <div>
-                <Typography variant="h6" fontWeight={700} mb={2}>
+                <Typography variant="h6" fontWeight={700} mb={2} sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
                     Course Information
                 </Typography>
 
-                <Grid container spacing={3}>
+                <Grid container spacing={{ xs: 2, sm: 3 }}>
                     <Grid xs={12} sm={6} md={3}>
                         <Card
                             elevation={0}
@@ -360,12 +389,12 @@ export default function ProfilePage() {
                                 borderColor: "grey.200",
                             }}
                         >
-                            <CardContent sx={{ textAlign: "center" }}>
-                                <School sx={{ fontSize: 32, color: "#2563eb", mb: 1 }} />
-                                <Typography variant="h4" fontWeight={700}>
+                            <CardContent sx={{ textAlign: "center", p: { xs: 2, sm: 3 } }}>
+                                <School sx={{ fontSize: { xs: 28, sm: 32 }, color: "#2563eb", mb: 1 }} />
+                                <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
                                     {user?.courses?.length || 0}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
                                     Total Courses
                                 </Typography>
                             </CardContent>
@@ -381,12 +410,12 @@ export default function ProfilePage() {
                                 borderColor: "grey.200",
                             }}
                         >
-                            <CardContent sx={{ textAlign: "center" }}>
-                                <School sx={{ fontSize: 32, color: "#16a34a", mb: 1 }} />
-                                <Typography variant="h4" fontWeight={700}>
+                            <CardContent sx={{ textAlign: "center", p: { xs: 2, sm: 3 } }}>
+                                <School sx={{ fontSize: { xs: 28, sm: 32 }, color: "#16a34a", mb: 1 }} />
+                                <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
                                     {activeCourses.length}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
                                     Active Courses
                                 </Typography>
                             </CardContent>
@@ -402,12 +431,12 @@ export default function ProfilePage() {
                                 borderColor: "grey.200",
                             }}
                         >
-                            <CardContent sx={{ textAlign: "center" }}>
-                                <DateRange sx={{ fontSize: 32, color: "#0ea5e9", mb: 1 }} />
-                                <Typography variant="h4" fontWeight={700}>
+                            <CardContent sx={{ textAlign: "center", p: { xs: 2, sm: 3 } }}>
+                                <DateRange sx={{ fontSize: { xs: 28, sm: 32 }, color: "#0ea5e9", mb: 1 }} />
+                                <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
                                     {primaryCourse ? "✓" : "—"}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
                                     Primary Course
                                 </Typography>
                             </CardContent>
@@ -423,12 +452,12 @@ export default function ProfilePage() {
                                 borderColor: "grey.200",
                             }}
                         >
-                            <CardContent sx={{ textAlign: "center" }}>
-                                <Badge sx={{ fontSize: 32, color: "#8b5cf6", mb: 1 }} />
-                                <Typography variant="h4" fontWeight={700}>
+                            <CardContent sx={{ textAlign: "center", p: { xs: 2, sm: 3 } }}>
+                                <Badge sx={{ fontSize: { xs: 28, sm: 32 }, color: "#8b5cf6", mb: 1 }} />
+                                <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
                                     {user?.status === "ACTIVE" ? "✓" : "—"}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
                                     Account Status
                                 </Typography>
                             </CardContent>
@@ -444,36 +473,36 @@ export default function ProfilePage() {
                         borderRadius: 4,
                         border: "2px solid",
                         borderColor: "#2563eb",
-                        p: 4,
+                        p: { xs: 2, sm: 4 },
                     }}
                 >
-                    <Typography variant="h6" fontWeight={700} mb={2}>
+                    <Typography variant="h6" fontWeight={700} mb={2} sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
                         Primary Course Details
                     </Typography>
 
                     <Stack spacing={2}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                            <Typography color="text.secondary">Course Name:</Typography>
-                            <Typography fontWeight={600}>{primaryCourse.course.name}</Typography>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+                            <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>Course Name:</Typography>
+                            <Typography fontWeight={600} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" }, textAlign: "right" }}>{primaryCourse.course.name}</Typography>
                         </Box>
 
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                            <Typography color="text.secondary">Course Code:</Typography>
-                            <Typography fontWeight={600}>{primaryCourse.course.code_prefix}</Typography>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+                            <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>Course Code:</Typography>
+                            <Typography fontWeight={600} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" }, textAlign: "right" }}>{primaryCourse.course.code_prefix}</Typography>
                         </Box>
 
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                            <Typography color="text.secondary">Enrollment ID:</Typography>
-                            <Typography fontWeight={600}>{primaryCourse.enrollment_id}</Typography>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+                            <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>Enrollment ID:</Typography>
+                            <Typography fontWeight={600} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" }, textAlign: "right" }}>{primaryCourse.enrollment_id}</Typography>
                         </Box>
 
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                            <Typography color="text.secondary">Admission Year:</Typography>
-                            <Typography fontWeight={600}>{primaryCourse.admission_year}</Typography>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+                            <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>Admission Year:</Typography>
+                            <Typography fontWeight={600} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" }, textAlign: "right" }}>{primaryCourse.admission_year}</Typography>
                         </Box>
 
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                            <Typography color="text.secondary">Status:</Typography>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+                            <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>Status:</Typography>
                             <Chip
                                 label={primaryCourse.status}
                                 color={primaryCourse.status === "ACTIVE" ? "success" : "info"}
@@ -481,17 +510,17 @@ export default function ProfilePage() {
                             />
                         </Box>
 
-                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                            <Typography color="text.secondary">Started:</Typography>
-                            <Typography fontWeight={600}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+                            <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>Started:</Typography>
+                            <Typography fontWeight={600} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" }, textAlign: "right" }}>
                                 {new Date(primaryCourse.started_at).toLocaleDateString()}
                             </Typography>
                         </Box>
 
                         {primaryCourse.completed_at && (
-                            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                <Typography color="text.secondary">Completed:</Typography>
-                                <Typography fontWeight={600}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+                                <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>Completed:</Typography>
+                                <Typography fontWeight={600} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" }, textAlign: "right" }}>
                                     {new Date(primaryCourse.completed_at).toLocaleDateString()}
                                 </Typography>
                             </Box>
@@ -500,8 +529,8 @@ export default function ProfilePage() {
                 </Paper>
             )}
 
-            <Dialog open={showPictureDialog} onClose={() => setShowPictureDialog(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>
+            <Dialog open={showPictureDialog} onClose={() => setShowPictureDialog(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: { xs: 2, sm: 3 }, m: { xs: 1, sm: 2 } } } }}>
+                <DialogTitle sx={{ py: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 3 }, fontSize: { xs: "1.125rem", sm: "1.25rem" } }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         Change Profile Picture
                         <IconButton onClick={() => setShowPictureDialog(false)} size="small">
@@ -509,7 +538,7 @@ export default function ProfilePage() {
                         </IconButton>
                     </Box>
                 </DialogTitle>
-                <DialogContent>
+                <DialogContent sx={{ py: { xs: 2, sm: 3 }, px: { xs: 2, sm: 3 } }}>
                     <Box sx={{ pt: 2 }}>
                         {profilePicturePreview ? (
                             <Box sx={{ mb: 2, textAlign: "center" }}>
@@ -522,7 +551,7 @@ export default function ProfilePage() {
                                         mb: 2,
                                     }}
                                 />
-                                <Typography variant="body2" color="text.secondary" mb={2}>
+                                <Typography variant="body2" color="text.secondary" mb={2} sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" }, wordBreak: "break-word" }}>
                                     {profilePictureFile?.name}
                                 </Typography>
                             </Box>
@@ -551,29 +580,30 @@ export default function ProfilePage() {
                                 disabled={uploading}
                             />
                             <CloudUpload sx={{ fontSize: 40, color: "primary.main", mb: 1 }} />
-                            <Typography variant="body2" fontWeight={500}>
+                            <Typography variant="body2" fontWeight={500} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                                 Click to upload or drag and drop
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
                                 PNG, JPG, WebP up to 5MB
                             </Typography>
                         </Box>
                     </Box>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setShowPictureDialog(false)}>Cancel</Button>
+                <DialogActions sx={{ p: { xs: 1.5, sm: 2 }, gap: 1 }}>
+                    <Button onClick={() => setShowPictureDialog(false)} size="small">Cancel</Button>
                     <Button
                         onClick={uploadProfilePicture}
                         variant="contained"
                         disabled={!profilePictureFile || uploading}
+                        size="small"
                     >
                         {uploading ? "Uploading..." : "Upload"}
                     </Button>
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>
+            <Dialog open={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: { xs: 2, sm: 3 }, m: { xs: 1, sm: 2 } } } }}>
+                <DialogTitle sx={{ py: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 3 }, fontSize: { xs: "1.125rem", sm: "1.25rem" } }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         Edit Profile
                         <IconButton onClick={() => setShowEditModal(false)} size="small">
@@ -581,7 +611,7 @@ export default function ProfilePage() {
                         </IconButton>
                     </Box>
                 </DialogTitle>
-                <DialogContent>
+                <DialogContent sx={{ py: { xs: 2, sm: 3 }, px: { xs: 2, sm: 3 } }}>
                     <Box sx={{ pt: 2 }}>
                         <Stack spacing={3}>
                             <TextField
@@ -592,6 +622,7 @@ export default function ProfilePage() {
                                 onChange={handleEditChange}
                                 multiline
                                 rows={2}
+                                size="small"
                             />
 
                             <TextField
@@ -601,6 +632,7 @@ export default function ProfilePage() {
                                 type="tel"
                                 value={editFormData.additional_phone}
                                 onChange={handleEditChange}
+                                size="small"
                             />
 
                             <TextField
@@ -612,20 +644,22 @@ export default function ProfilePage() {
                                 multiline
                                 rows={3}
                                 placeholder="Tell us about yourself"
+                                size="small"
                             />
 
-                            <Alert severity="info">
+                            <Alert severity="info" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
                                 To change your state of origin, name, email, phone number, date of birth, or gender, please contact the admin.
                             </Alert>
                         </Stack>
                     </Box>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setShowEditModal(false)}>Cancel</Button>
+                <DialogActions sx={{ p: { xs: 1.5, sm: 2 }, gap: 1 }}>
+                    <Button onClick={() => setShowEditModal(false)} size="small">Cancel</Button>
                     <Button
                         onClick={handleSaveProfile}
                         variant="contained"
                         disabled={loading}
+                        size="small"
                     >
                         {loading ? "Saving..." : "Save Changes"}
                     </Button>

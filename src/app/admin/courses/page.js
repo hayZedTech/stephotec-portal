@@ -14,6 +14,7 @@ import {
     Button,
     InputAdornment,
     Box,
+    CircularProgress,
 } from "@mui/material";
 
 import {
@@ -131,6 +132,43 @@ export default function CoursesPage() {
 
     return (
         <>
+            {/* LOADING OVERLAY */}
+            {loading && (
+                <Box
+                    sx={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        bgcolor: "rgba(0, 0, 0, 0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        backdropFilter: "blur(2px)",
+                    }}
+                >
+                    <Box
+                        sx={{
+                            bgcolor: "background.paper",
+                            borderRadius: 3,
+                            p: 4,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
+                            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                        }}
+                    >
+                        <CircularProgress size={48} />
+                        <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                            Loading courses...
+                        </Typography>
+                    </Box>
+                </Box>
+            )}
+
             <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 3, md: 6 } }}>
                 <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: { xs: 3, lg: 5 }, lg: { alignItems: "center", justifyContent: "space-between" } }}>
                     <Box>

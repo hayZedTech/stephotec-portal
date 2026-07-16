@@ -6,6 +6,7 @@ import Grid from "@mui/material/Grid";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
+import { Box } from "@mui/material";
 
 import {
     People,
@@ -46,15 +47,7 @@ export default function AdminDashboard() {
         loadDashboard();
     }, []);
 
-    if (loading) {
-        return (
-            <div className="flex h-[60vh] items-center justify-center">
-                <CircularProgress />
-            </div>
-        );
-    }
-
-    if (!dashboard) {
+    if (!dashboard && !loading) {
         return (
             <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-600">
                 Failed to load dashboard data.
@@ -64,13 +57,49 @@ export default function AdminDashboard() {
 
     return (
         <div className="space-y-8">
+            {/* LOADING OVERLAY */}
+            {loading && (
+                <Box
+                    sx={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        bgcolor: "rgba(0, 0, 0, 0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        backdropFilter: "blur(2px)",
+                    }}
+                >
+                    <Box
+                        sx={{
+                            bgcolor: "background.paper",
+                            borderRadius: 3,
+                            p: 4,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
+                            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                        }}
+                    >
+                        <CircularProgress size={48} />
+                        <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                            Loading dashboard...
+                        </Typography>
+                    </Box>
+                </Box>
+            )}
 
             <Grid container spacing={3}>
 
                 <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                     <StatCard
                         title="Students"
-                        value={dashboard.stats.totalStudents}
+                        value={dashboard?.stats.totalStudents}
                         icon={<People />}
                         color="#2563eb"
                     />
@@ -79,7 +108,7 @@ export default function AdminDashboard() {
                 <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                     <StatCard
                         title="Courses"
-                        value={dashboard.stats.totalCourses}
+                        value={dashboard?.stats.totalCourses}
                         icon={<School />}
                         color="#7c3aed"
                     />
@@ -88,7 +117,7 @@ export default function AdminDashboard() {
                 <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                     <StatCard
                         title="Industrial Training"
-                        value={dashboard.stats.industrialTraining}
+                        value={dashboard?.stats.industrialTraining}
                         icon={<Workspaces />}
                         color="#ea580c"
                     />
@@ -97,7 +126,7 @@ export default function AdminDashboard() {
                 <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                     <StatCard
                         title="Active Students"
-                        value={`${dashboard.stats.profileCompletion}%`}
+                        value={`${dashboard?.stats.profileCompletion}%`}
                         icon={<CheckCircle />}
                         color="#16a34a"
                     />
@@ -133,7 +162,7 @@ export default function AdminDashboard() {
                             height="90%"
                         >
                             <BarChart
-                                data={dashboard.chartData}
+                                data={dashboard?.chartData}
                             >
                                 <CartesianGrid strokeDasharray="3 3" />
 
@@ -177,7 +206,7 @@ export default function AdminDashboard() {
 
                         <div className="space-y-3">
 
-                            {dashboard.recentStudents.map((student) => (
+                            {dashboard?.recentStudents.map((student) => (
 
                                 <div
                                     key={student.id}

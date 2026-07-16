@@ -18,6 +18,7 @@ import { getStudentNotifications, markNotificationAsRead } from "@/services/noti
 export default function NotificationsPage() {
     const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState([]);
+    const [markingAsReadId, setMarkingAsReadId] = useState(null);
 
     useEffect(() => {
         loadNotifications();
@@ -37,24 +38,21 @@ export default function NotificationsPage() {
     }
 
     async function handleMarkAsRead(notificationId) {
-        const success = await markNotificationAsRead(notificationId);
-        if (success) {
-            setNotifications((prev) =>
-                prev.map((notif) =>
-                    notif.id === notificationId
-                        ? { ...notif, is_read: true }
-                        : notif
-                )
-            );
+        try {
+            setMarkingAsReadId(notificationId);
+            const success = await markNotificationAsRead(notificationId);
+            if (success) {
+                setNotifications((prev) =>
+                    prev.map((notif) =>
+                        notif.id === notificationId
+                            ? { ...notif, is_read: true }
+                            : notif
+                    )
+                );
+            }
+        } finally {
+            setMarkingAsReadId(null);
         }
-    }
-
-    if (loading) {
-        return (
-            <div className="flex h-[60vh] items-center justify-center">
-                <CircularProgress />
-            </div>
-        );
     }
 
     const getIcon = (type) => {
@@ -85,11 +83,48 @@ export default function NotificationsPage() {
 
     return (
         <div className="space-y-6">
+            {/* LOADING OVERLAY */}
+            {loading && (
+                <Box
+                    sx={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        bgcolor: "rgba(0, 0, 0, 0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        backdropFilter: "blur(2px)",
+                    }}
+                >
+                    <Box
+                        sx={{
+                            bgcolor: "background.paper",
+                            borderRadius: 3,
+                            p: 4,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
+                            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                        }}
+                    >
+                        <CircularProgress size={48} />
+                        <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                            Loading notifications...
+                        </Typography>
+                    </Box>
+                </Box>
+            )}
+
             <div>
-                <Typography variant="h4" fontWeight={700}>
+                <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}>
                     Notifications
                 </Typography>
-                <Typography color="text.secondary">
+                <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                     Stay updated with important announcements.
                 </Typography>
             </div>
@@ -119,13 +154,13 @@ export default function NotificationsPage() {
                                         {getIcon(notification.type)}
                                     </Box>
                                     <Box sx={{ flex: 1 }}>
-                                        <Typography fontWeight={600} sx={{ mb: 0.5 }}>
+                                        <Typography fontWeight={600} sx={{ mb: 0.5, fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                                             {notification.title}
                                         </Typography>
                                         <Typography
                                             variant="body2"
                                             color="text.secondary"
-                                            sx={{ mb: 1.5 }}
+                                            sx={{ mb: 1.5, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
                                         >
                                             {notification.message}
                                         </Typography>
@@ -136,20 +171,24 @@ export default function NotificationsPage() {
                                                     notification.created_at
                                                 ).toLocaleDateString()}
                                                 variant="outlined"
+                                                sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }}
                                             />
                                             <Chip
                                                 size="small"
                                                 label={notification.type}
                                                 color={getTypeColor(notification.type)}
                                                 variant="outlined"
+                                                sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }}
                                             />
                                             {!notification.is_read && (
                                                 <Button
                                                     size="small"
                                                     onClick={() => handleMarkAsRead(notification.id)}
-                                                    sx={{ ml: "auto" }}
+                                                    disabled={markingAsReadId === notification.id}
+                                                    startIcon={markingAsReadId === notification.id ? <CircularProgress size={14} /> : undefined}
+                                                    sx={{ ml: "auto", fontSize: { xs: "0.65rem", sm: "0.75rem" } }}
                                                 >
-                                                    Mark as Read
+                                                    {markingAsReadId === notification.id ? "Marking..." : "Mark as Read"}
                                                 </Button>
                                             )}
                                             {notification.is_read && (
@@ -158,6 +197,7 @@ export default function NotificationsPage() {
                                                     label="Read"
                                                     variant="outlined"
                                                     color="success"
+                                                    sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }}
                                                 />
                                             )}
                                         </Box>
@@ -172,7 +212,7 @@ export default function NotificationsPage() {
                     </List>
                 ) : (
                     <Box sx={{ p: 4, textAlign: "center" }}>
-                        <Typography color="text.secondary">
+                        <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                             No notifications yet.
                         </Typography>
                     </Box>

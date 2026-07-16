@@ -8,7 +8,7 @@ import StudentDialog from "@/components/students/StudentDialog";
 import StudentFilters from "@/components/students/StudentFilters";
 import StudentViewModal from "@/components/students/StudentViewModal";
 
-import {Paper, Typography, TextField, InputAdornment, Button, Box, CircularProgress, Backdrop, Menu, MenuItem, Chip,
+import {Paper, Typography, TextField, InputAdornment, Button, Box, CircularProgress, Menu, MenuItem, Chip,
 } from "@mui/material";
 
 import { Search, Add } from "@mui/icons-material";
@@ -177,21 +177,41 @@ export default function StudentsPage() {
     return (
         <>
             {/* LOADING OVERLAY */}
-            <Backdrop
-                sx={{
-                    color: "#fff",
-                    zIndex: (theme) => theme.zIndex.drawer + 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                }}
-                open={loading}
-            >
-                <CircularProgress color="inherit" size={100} />
-                <Typography variant="body1" fontWeight={500}>
-                    Loading students...
-                </Typography>
-            </Backdrop>
+            {loading && (
+                <Box
+                    sx={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        bgcolor: "rgba(0, 0, 0, 0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        backdropFilter: "blur(2px)",
+                    }}
+                >
+                    <Box
+                        sx={{
+                            bgcolor: "background.paper",
+                            borderRadius: 3,
+                            p: 4,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
+                            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                        }}
+                    >
+                        <CircularProgress size={48} />
+                        <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                            Loading students...
+                        </Typography>
+                    </Box>
+                </Box>
+            )}
 
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
 

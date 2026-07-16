@@ -30,7 +30,7 @@ import api from "@/lib/axios";
 import { Send, Delete, Visibility } from "@mui/icons-material";
 
 export default function AdminNotificationsPage() {
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState([]);
     const [students, setStudents] = useState([]);
     const [courses, setCourses] = useState([]);
@@ -42,6 +42,7 @@ export default function AdminNotificationsPage() {
     const [selectedNotification, setSelectedNotification] = useState(null);
     const [notificationRecipients, setNotificationRecipients] = useState([]);
     const [loadingRecipients, setLoadingRecipients] = useState(false);
+    const [loadingNotificationId, setLoadingNotificationId] = useState(null);
 
     const {
         control,
@@ -61,10 +62,21 @@ export default function AdminNotificationsPage() {
     const targetType = watch("target_type");
 
     useEffect(() => {
-        loadNotifications();
-        loadStudents();
-        loadCourses();
+        loadInitialData();
     }, []);
+
+    async function loadInitialData() {
+        try {
+            setLoading(true);
+            await Promise.all([
+                loadNotifications(),
+                loadStudents(),
+                loadCourses(),
+            ]);
+        } finally {
+            setLoading(false);
+        }
+    }
 
     async function loadNotifications() {
         try {
@@ -95,7 +107,6 @@ export default function AdminNotificationsPage() {
 
     async function onSubmit(values) {
         try {
-            setLoading(true);
             const payload = {
                 title: values.title,
                 message: values.message,
@@ -117,8 +128,6 @@ export default function AdminNotificationsPage() {
             loadNotifications();
         } catch (error) {
             errorToast(error, "Failed to send notification");
-        } finally {
-            setLoading(false);
         }
     }
 
@@ -140,6 +149,7 @@ export default function AdminNotificationsPage() {
 
     async function viewNotificationHistory(notification) {
         try {
+            setLoadingNotificationId(notification.id);
             setLoadingRecipients(true);
             setSelectedNotification(notification);
             const { data } = await api.get(`/notifications/${notification.id}/`);
@@ -149,11 +159,49 @@ export default function AdminNotificationsPage() {
             errorToast(error, "Failed to load notification details");
         } finally {
             setLoadingRecipients(false);
+            setLoadingNotificationId(null);
         }
     }
 
     return (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 3, md: 6 } }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 3, md: 6 }, position: "relative" }}>
+            {/* LOADING OVERLAY */}
+            {loading && (
+                <Box
+                    sx={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        bgcolor: "rgba(0, 0, 0, 0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        backdropFilter: "blur(2px)",
+                    }}
+                >
+                    <Box
+                        sx={{
+                            bgcolor: "background.paper",
+                            borderRadius: 3,
+                            p: 4,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
+                            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                        }}
+                    >
+                        <CircularProgress size={48} />
+                        <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                            Loading notifications...
+                        </Typography>
+                    </Box>
+                </Box>
+            )}
+
             <Box>
                 <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}>
                     Send Notifications
@@ -313,11 +361,11 @@ export default function AdminNotificationsPage() {
                             type="submit"
                             variant="contained"
                             startIcon={<Send />}
-                            disabled={isSubmitting || loading}
+                            disabled={isSubmitting}
                             fullWidth
                             size="small"
                         >
-                            {isSubmitting || loading ? "Sending..." : "Send Notification"}
+                            {isSubmitting ? "Sending..." : "Send Notification"}
                         </Button>
                     </Stack>
                 </form>
@@ -372,11 +420,12 @@ export default function AdminNotificationsPage() {
                                             <Button
                                                 size="small"
                                                 variant="outlined"
-                                                startIcon={<Visibility />}
+                                                startIcon={loadingNotificationId === notification.id ? <CircularProgress size={16} /> : <Visibility />}
                                                 onClick={() => viewNotificationHistory(notification)}
+                                                disabled={loadingNotificationId === notification.id}
                                                 sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }}
                                             >
-                                                View
+                                                {loadingNotificationId === notification.id ? "Loading..." : "View"}
                                             </Button>
                                         </TableCell>
                                     </TableRow>

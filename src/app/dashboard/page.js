@@ -23,9 +23,17 @@ import {
     CheckCircle,
     Info,
 } from "@mui/icons-material";
+import { useState, useEffect } from "react";
 
 export default function StudentDashboardPage() {
     const { user } = useAuth();
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (user) {
+            setLoading(false);
+        }
+    }, [user]);
 
     if (!user) {
         return (
@@ -65,6 +73,43 @@ export default function StudentDashboardPage() {
 
     return (
         <div className="space-y-6">
+            {/* LOADING OVERLAY */}
+            {loading && (
+                <Box
+                    sx={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        bgcolor: "rgba(0, 0, 0, 0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        backdropFilter: "blur(2px)",
+                    }}
+                >
+                    <Box
+                        sx={{
+                            bgcolor: "background.paper",
+                            borderRadius: 3,
+                            p: 4,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
+                            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+                        }}
+                    >
+                        <CircularProgress size={48} />
+                        <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                            Loading dashboard...
+                        </Typography>
+                    </Box>
+                </Box>
+            )}
+
             {/* Header */}
             <div>
                 <Typography variant="h4" fontWeight={700}>

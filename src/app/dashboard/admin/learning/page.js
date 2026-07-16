@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Box,
     Tabs,
     Tab,
     Paper,
     Typography,
+    CircularProgress,
 } from "@mui/material";
 import {
     School,
@@ -38,6 +39,11 @@ function TabPanel(props) {
 
 export default function AdminLearningPage() {
     const [tabValue, setTabValue] = useState(0);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        setLoading(false);
+    }, []);
 
     const handleTabChange = (event, newValue) => {
         setTabValue(newValue);
@@ -45,11 +51,45 @@ export default function AdminLearningPage() {
 
     return (
         <div className="space-y-6">
+            {loading && (
+                <Box
+                    sx={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: "rgba(0, 0, 0, 0.5)",
+                        backdropFilter: "blur(2px)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                    }}
+                >
+                    <Box
+                        sx={{
+                            backgroundColor: "white",
+                            borderRadius: 3,
+                            p: 4,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
+                        }}
+                    >
+                        <CircularProgress size={48} />
+                        <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                            Loading learning materials...
+                        </Typography>
+                    </Box>
+                </Box>
+            )}
             <div>
-                <Typography variant="h4" fontWeight={700}>
+                <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}>
                     Learning Management
                 </Typography>
-                <Typography color="text.secondary">
+                <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                     Manage courses, assignments, attendance, certificates, and handouts.
                 </Typography>
             </div>
@@ -69,11 +109,21 @@ export default function AdminLearningPage() {
                     sx={{
                         borderBottom: "1px solid",
                         borderColor: "grey.200",
-                        px: 3,
+                        px: { xs: 1, sm: 3 },
+                        "& .MuiTab-root": {
+                            fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                            minHeight: { xs: 48, sm: 56 },
+                            py: { xs: 1, sm: 1.5 },
+                            px: { xs: 1, sm: 2 },
+                            textTransform: "none",
+                            fontWeight: 500,
+                        },
                     }}
+                    variant="scrollable"
+                    scrollButtons="auto"
                 >
                     <Tab
-                        label="Learning Content"
+                        label="Learning"
                         icon={<School />}
                         iconPosition="start"
                         id="tab-0"
@@ -104,7 +154,7 @@ export default function AdminLearningPage() {
                     />
                 </Tabs>
 
-                <Box sx={{ p: 3 }}>
+                <Box sx={{ p: { xs: 2, sm: 3 } }}>
                     <TabPanel value={tabValue} index={0}>
                         <LearningContentManager />
                     </TabPanel>

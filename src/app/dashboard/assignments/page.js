@@ -219,9 +219,38 @@ export default function AssignmentsPage() {
 
     if (loading) {
         return (
-            <div className="flex h-[60vh] items-center justify-center">
-                <CircularProgress />
-            </div>
+            <Box
+                sx={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    backdropFilter: "blur(2px)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 9999,
+                }}
+            >
+                <Box
+                    sx={{
+                        backgroundColor: "white",
+                        borderRadius: 3,
+                        p: 4,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 2,
+                    }}
+                >
+                    <CircularProgress size={48} />
+                    <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                        Loading assignments...
+                    </Typography>
+                </Box>
+            </Box>
         );
     }
 
@@ -235,16 +264,16 @@ export default function AssignmentsPage() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <Typography variant="h4" fontWeight={700}>
+                <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}>
                     Assignments
                 </Typography>
-                <Typography color="text.secondary">
+                <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                     View and submit your assigned assignments.
                 </Typography>
             </div>
 
             {/* Filters */}
-            <Paper sx={{ p: 2, borderRadius: 2 }}>
+            <Paper sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 2 }}>
                 <Stack spacing={2}>
                     <TextField
                         fullWidth
@@ -297,14 +326,14 @@ export default function AssignmentsPage() {
                             borderRadius: 3,
                             border: "1px solid",
                             borderColor: "grey.200",
-                            p: 3,
+                            p: { xs: 2, sm: 3 },
                             textAlign: "center",
                         }}
                     >
-                        <Typography variant="h4" fontWeight={700} color="#2563eb">
+                        <Typography variant="h4" fontWeight={700} color="#2563eb" sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
                             {publishedAssignments.length}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" mt={1}>
+                        <Typography variant="body2" color="text.secondary" mt={1} sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
                             Total Assignments
                         </Typography>
                     </Paper>
@@ -317,14 +346,14 @@ export default function AssignmentsPage() {
                             borderRadius: 3,
                             border: "1px solid",
                             borderColor: "grey.200",
-                            p: 3,
+                            p: { xs: 2, sm: 3 },
                             textAlign: "center",
                         }}
                     >
-                        <Typography variant="h4" fontWeight={700} color="#16a34a">
+                        <Typography variant="h4" fontWeight={700} color="#16a34a" sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
                             {upcomingAssignments.length}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" mt={1}>
+                        <Typography variant="body2" color="text.secondary" mt={1} sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
                             Upcoming
                         </Typography>
                     </Paper>
@@ -337,14 +366,14 @@ export default function AssignmentsPage() {
                             borderRadius: 3,
                             border: "1px solid",
                             borderColor: "grey.200",
-                            p: 3,
+                            p: { xs: 2, sm: 3 },
                             textAlign: "center",
                         }}
                     >
-                        <Typography variant="h4" fontWeight={700} color="#ef4444">
+                        <Typography variant="h4" fontWeight={700} color="#ef4444" sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
                             {overdueAssignments.length}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" mt={1}>
+                        <Typography variant="body2" color="text.secondary" mt={1} sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
                             Overdue
                         </Typography>
                     </Paper>
@@ -357,14 +386,14 @@ export default function AssignmentsPage() {
                             borderRadius: 3,
                             border: "1px solid",
                             borderColor: "grey.200",
-                            p: 3,
+                            p: { xs: 2, sm: 3 },
                             textAlign: "center",
                         }}
                     >
-                        <Typography variant="h4" fontWeight={700} color="#0ea5e9">
+                        <Typography variant="h4" fontWeight={700} color="#0ea5e9" sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
                             {filteredAssignments.length}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" mt={1}>
+                        <Typography variant="body2" color="text.secondary" mt={1} sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
                             Filtered
                         </Typography>
                     </Paper>
@@ -428,17 +457,17 @@ export default function AssignmentsPage() {
                             return (
                                 <Card key={assignment.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
                                     <CardContent sx={{ pb: 2 }}>
-                                        <Typography variant="subtitle2" fontWeight={700} mb={2}>
+                                        <Typography variant="subtitle2" fontWeight={700} mb={2} sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                                             {assignment.title}
                                         </Typography>
 
                                         <Stack spacing={1.5} sx={{ mb: 2 }}>
                                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                                     Due Date
                                                 </Typography>
                                                 <Box sx={{ textAlign: "right" }}>
-                                                    <Typography variant="body2" fontWeight={600}>
+                                                    <Typography variant="body2" fontWeight={600} sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
                                                         {new Date(assignment.due_date).toLocaleDateString()}
                                                     </Typography>
                                                     {isOverdue(assignment.due_date) && (
@@ -448,16 +477,16 @@ export default function AssignmentsPage() {
                                             </Box>
 
                                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                                     Max Score
                                                 </Typography>
-                                                <Typography variant="body2" fontWeight={600}>
+                                                <Typography variant="body2" fontWeight={600} sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
                                                     {assignment.max_score}
                                                 </Typography>
                                             </Box>
 
                                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                                     Status
                                                 </Typography>
                                                 <Chip
@@ -503,9 +532,11 @@ export default function AssignmentsPage() {
             )}
 
             {/* Assignment Details Dialog */}
-            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Assignment Details</DialogTitle>
-                <DialogContent sx={{ pt: 2 }}>
+            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: { xs: 2, sm: 3 }, m: { xs: 1, sm: 2 } } } }}>
+                <DialogTitle sx={{ py: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 3 }, fontSize: { xs: "1.125rem", sm: "1.25rem" } }}>
+                    Assignment Details
+                </DialogTitle>
+                <DialogContent sx={{ py: { xs: 2, sm: 3 }, px: { xs: 2, sm: 3 } }}>
                     {selectedAssignment && (
                         <Stack spacing={2}>
                             {submissions[selectedAssignment.id] && (
@@ -513,17 +544,17 @@ export default function AssignmentsPage() {
                                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                         <CheckCircle sx={{ color: "success.main" }} />
                                         <Box>
-                                            <Typography variant="body2" fontWeight={700} color="success.main">
+                                            <Typography variant="body2" fontWeight={700} color="success.main" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
                                                 Submitted
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary">
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                                 Submitted on {new Date(submissions[selectedAssignment.id].submitted_at).toLocaleString()}
                                             </Typography>
                                         </Box>
                                     </Box>
                                     <Box sx={{ mt: 1, pt: 1, borderTop: "1px solid", borderColor: "success.main" }}>
                                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                                            <Typography variant="caption" color="text.secondary">
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                                 Status:
                                             </Typography>
                                             <Chip
@@ -534,11 +565,11 @@ export default function AssignmentsPage() {
                                         </Box>
                                         {submissions[selectedAssignment.id].status === "GRADED" && (
                                             <Box>
-                                                <Typography variant="caption" color="text.secondary">
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                                     Score: {submissions[selectedAssignment.id].score}/{selectedAssignment.max_score}
                                                 </Typography>
                                                 {submissions[selectedAssignment.id].feedback && (
-                                                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5, fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                                         Feedback: {submissions[selectedAssignment.id].feedback}
                                                     </Typography>
                                                 )}
@@ -549,38 +580,38 @@ export default function AssignmentsPage() {
                             )}
 
                             <Box>
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                     Title
                                 </Typography>
-                                <Typography variant="body2" fontWeight={500}>
+                                <Typography variant="body2" fontWeight={500} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                                     {selectedAssignment.title}
                                 </Typography>
                             </Box>
 
                             <Box>
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                     Description
                                 </Typography>
-                                <Typography variant="body2">
+                                <Typography variant="body2" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                                     {selectedAssignment.description || "—"}
                                 </Typography>
                             </Box>
 
                             <Box>
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                     Instructions
                                 </Typography>
-                                <Typography variant="body2">
+                                <Typography variant="body2" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                                     {selectedAssignment.instructions || "—"}
                                 </Typography>
                             </Box>
 
                             <Box>
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                     Due Date
                                 </Typography>
                                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
-                                    <Typography variant="body2" fontWeight={500}>
+                                    <Typography variant="body2" fontWeight={500} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                                         {new Date(selectedAssignment.due_date).toLocaleString()}
                                     </Typography>
                                     {isOverdue(selectedAssignment.due_date) && (
@@ -590,17 +621,17 @@ export default function AssignmentsPage() {
                             </Box>
 
                             <Box>
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                     Max Score
                                 </Typography>
-                                <Typography variant="body2" fontWeight={500}>
+                                <Typography variant="body2" fontWeight={500} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                                     {selectedAssignment.max_score}
                                 </Typography>
                             </Box>
 
                             {selectedAssignment.file && (
                                 <Box>
-                                    <Typography variant="caption" color="text.secondary">
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                         Assignment File
                                     </Typography>
                                     <Button
@@ -611,6 +642,7 @@ export default function AssignmentsPage() {
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         sx={{ mt: 0.5 }}
+                                        size="small"
                                     >
                                         Download
                                     </Button>
@@ -628,13 +660,13 @@ export default function AssignmentsPage() {
                                     />
                                     <label htmlFor="assignment-file" style={{ cursor: "pointer", display: "block" }}>
                                         <AttachFile sx={{ fontSize: 32, color: "primary.main", mb: 1 }} />
-                                        <Typography variant="body2" fontWeight={500}>
+                                        <Typography variant="body2" fontWeight={500} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                                             {submissionFile ? submissionFile.name : "Click to upload or drag and drop"}
                                         </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5, fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                             PDF, Word, Excel, PowerPoint, ZIP, or TXT
                                         </Typography>
-                                        <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5, fontWeight: 500 }}>
+                                        <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5, fontWeight: 500, fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
                                             Maximum file size: 10MB
                                         </Typography>
                                     </label>
@@ -643,14 +675,15 @@ export default function AssignmentsPage() {
                         </Stack>
                     )}
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setViewOpen(false)}>Close</Button>
+                <DialogActions sx={{ p: { xs: 1.5, sm: 2 }, gap: 1 }}>
+                    <Button onClick={() => setViewOpen(false)} size="small">Close</Button>
                     {!submissions[selectedAssignment?.id] && (
                         <Button
                             variant="contained"
-                            startIcon={<Send />}
+                            startIcon={submitting ? <CircularProgress size={16} /> : <Send />}
                             onClick={handleSubmitAssignment}
                             disabled={!submissionFile || submitting}
+                            size="small"
                         >
                             {submitting ? "Submitting..." : "Submit Assignment"}
                         </Button>
