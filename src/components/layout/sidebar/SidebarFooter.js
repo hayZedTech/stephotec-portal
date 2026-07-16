@@ -10,12 +10,14 @@ import {
 } from "@mui/icons-material";
 
 import { useAuth } from "@/providers/AuthProvider";
+import { useLayout } from "@/providers/LayoutProvider";
 import { confirmAction } from "@/utils/confirmAction";
 
 export default function SidebarFooter({
     collapsed,
 }) {
     const { user, logout } = useAuth();
+    const { closeSidebar } = useLayout();
     const pathname = usePathname();
     const [isClient, setIsClient] = useState(false);
 
@@ -52,6 +54,7 @@ export default function SidebarFooter({
                 >
                     <Link
                         href={settingsHref}
+                        onClick={closeSidebar}
                         className={`flex items-center rounded-xl px-3 py-3 transition ${
                             isActive
                                 ? "bg-blue-600 text-white shadow-md"

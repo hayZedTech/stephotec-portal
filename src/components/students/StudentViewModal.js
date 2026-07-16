@@ -234,6 +234,8 @@ export default function StudentViewModal({
                                                     ? "warning"
                                                     : student.status === "GRADUATED"
                                                     ? "info"
+                                                    : student.status === "WITHDRAWN"
+                                                    ? "error"
                                                     : "default"
                                             }
                                             label={student.status || "UNKNOWN"}
@@ -461,6 +463,19 @@ export default function StudentViewModal({
                     }}
                 >
                     <Chip size="small" label="GRADUATED" color="info" variant="filled" />
+                </MenuItem>
+                <MenuItem
+                    onClick={() => handleStatusMenuChange("WITHDRAWN")}
+                    sx={{
+                        py: 1.5,
+                        px: 2,
+                        display: "flex",
+                        gap: 1.5,
+                        alignItems: "center",
+                        "&:hover": { bgcolor: "#fecaca" },
+                    }}
+                >
+                    <Chip size="small" label="WITHDRAWN" color="error" variant="filled" />
                 </MenuItem>
                 <MenuItem
                     onClick={() => handleStatusMenuChange("INACTIVE")}

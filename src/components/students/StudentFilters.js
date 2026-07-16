@@ -59,6 +59,7 @@ export default function StudentFilters({ onFilterChange, courses = [] }) {
                 <MenuItem value="SUSPENDED">Suspended</MenuItem>
                 <MenuItem value="GRADUATED">Graduated</MenuItem>
                 <MenuItem value="WITHDRAWN">Withdrawn</MenuItem>
+                <MenuItem value="INACTIVE">Inactive</MenuItem>
             </TextField>
 
             <TextField

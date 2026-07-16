@@ -353,6 +353,19 @@ export default function StudentsPage() {
                     <Chip size="small" label="GRADUATED" color="info" variant="filled" />
                 </MenuItem>
                 <MenuItem
+                    onClick={() => handleStatusChange("WITHDRAWN")}
+                    sx={{
+                        py: 1.5,
+                        px: 2,
+                        display: "flex",
+                        gap: 1.5,
+                        alignItems: "center",
+                        "&:hover": { bgcolor: "#fecaca" },
+                    }}
+                >
+                    <Chip size="small" label="WITHDRAWN" color="error" variant="filled" />
+                </MenuItem>
+                <MenuItem
                     onClick={() => handleStatusChange("INACTIVE")}
                     sx={{
                         py: 1.5,

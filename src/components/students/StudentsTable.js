@@ -92,8 +92,8 @@ export default function StudentsTable({
             align: "center",
             headerAlign: "center",
             renderCell: ({ row }) => (
-                <Box sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} onClick={() => onStatusClick?.(row)}>
-                    <Chip size="small" color={row.status === "ACTIVE" ? "success" : row.status === "SUSPENDED" ? "warning" : row.status === "GRADUATED" ? "info" : "default"} label={row.status || "UNKNOWN"} clickable />
+                <Box sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} onClick={(e) => onStatusClick?.(row, e)}>
+                    <Chip size="small" color={row.status === "ACTIVE" ? "success" : row.status === "SUSPENDED" ? "warning" : row.status === "GRADUATED" ? "info" : row.status === "WITHDRAWN" ? "error" : "default"} label={row.status || "UNKNOWN"} clickable />
                 </Box>
             ),
         },
@@ -198,9 +198,9 @@ export default function StudentsTable({
                                     </Typography>
                                     <Chip
                                         size="small"
-                                        color={row.status === "ACTIVE" ? "success" : row.status === "SUSPENDED" ? "warning" : row.status === "GRADUATED" ? "info" : "default"}
+                                        color={row.status === "ACTIVE" ? "success" : row.status === "SUSPENDED" ? "warning" : row.status === "GRADUATED" ? "info" : row.status === "WITHDRAWN" ? "error" : "default"}
                                         label={row.status || "UNKNOWN"}
-                                        onClick={() => onStatusClick?.(row)}
+                                        onClick={(e) => onStatusClick?.(row, e)}
                                         clickable
                                     />
                                 </Box>
