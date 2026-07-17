@@ -44,7 +44,6 @@ export function AuthProvider({ children }) {
 
         if (storedUser) {
             setUser(storedUser);
-            refreshUser();
         }
 
         setLoading(false);

@@ -34,6 +34,7 @@ export default function SidebarUser({
             >
 
                 <Avatar
+                    src={user?.role === "STUDENT" ? user?.profilePictureUrl : undefined}
                     sx={{
                         width: 46,
                         height: 46,

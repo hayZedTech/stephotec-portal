@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { memo, useMemo, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import {
@@ -25,7 +25,7 @@ import { useLayout } from "@/providers/LayoutProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import { getUnreadCount } from "@/services/notifications";
 
-export default function Header() {
+function Header() {
     const pathname = usePathname();
     const router = useRouter();
 
@@ -99,7 +99,7 @@ export default function Header() {
                 </div>
 
                 {/* Right Section */}
-                <div className="flex flex-shrink-0 items-center gap-3">
+                <div className="flex items-center gap-3">
 
                     {/* Notifications - Only for Students */}
                     {user?.role === "STUDENT" && (
@@ -114,7 +114,7 @@ export default function Header() {
                                 badgeContent={unreadCount}
                                 color="error"
                             >
-                                <NotificationsNone />
+                                <NotificationsNone sx={{ color: "#64748b" }} />
                             </Badge>
                         </IconButton>
                     )}
@@ -125,6 +125,7 @@ export default function Header() {
                         className="flex cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm transition-all hover:shadow-md sm:gap-3 sm:px-3 sm:py-2"
                     >
                         <Avatar
+                            src={user?.role === "STUDENT" ? user?.profilePictureUrl : undefined}
                             sx={{
                                 width: 34,
                                 height: 34,
@@ -133,7 +134,7 @@ export default function Header() {
                                 fontSize: "0.875rem",
                             }}
                         >
-                            {user?.username?.charAt(0)?.toUpperCase()}
+                            {user?.firstName?.charAt(0)?.toUpperCase()}{user?.lastName?.charAt(0)?.toUpperCase()}
                         </Avatar>
 
                         <div className="hidden text-left md:block">
@@ -216,3 +217,5 @@ export default function Header() {
         </>
     );
 }
+
+export default memo(Header);

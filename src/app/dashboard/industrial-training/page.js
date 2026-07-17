@@ -1,7 +1,6 @@
 "use client";
 
 import { useAuth } from "@/providers/AuthProvider";
-import { useEffect } from "react";
 import {
     Paper,
     Typography,
@@ -15,13 +14,7 @@ import {
 import { Workspaces, CheckCircle, AccessTime } from "@mui/icons-material";
 
 export default function IndustrialTrainingPage() {
-    const { user, refreshUser } = useAuth();
-
-    useEffect(() => {
-        if (user) {
-            refreshUser();
-        }
-    }, []);
+    const { user } = useAuth();
 
     if (!user) {
         return (
