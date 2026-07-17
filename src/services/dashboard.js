@@ -47,7 +47,9 @@ export const getDashboardData = async () => {
         })
     );
 
-    const recentStudents = [...students].reverse().slice(0, 5);
+    const recentStudents = [...students]
+        .sort((a, b) => new Date(b.date_joined) - new Date(a.date_joined))
+        .slice(0, 5);
 
     return {
         stats: {

@@ -42,8 +42,10 @@ export default function AssignmentsPage() {
     const [selectedAssignment, setSelectedAssignment] = useState(null);
     const [viewOpen, setViewOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    const [filterStatus, setFilterStatus] = useState("");
     const [filterCourse, setFilterCourse] = useState("");
+    const [filterGrade, setFilterGrade] = useState("");
+    const [filterDueDate, setFilterDueDate] = useState("");
+    const [filterScore, setFilterScore] = useState("");
     const [submissionFile, setSubmissionFile] = useState(null);
     const [submitting, setSubmitting] = useState(false);
 
@@ -53,7 +55,7 @@ export default function AssignmentsPage() {
 
     useEffect(() => {
         applyFilters();
-    }, [assignments, searchTerm, filterStatus, filterCourse]);
+    }, [assignments, searchTerm, filterCourse, filterGrade, filterDueDate, filterScore]);
 
     const loadAssignments = async () => {
         if (!user?.id) return;
@@ -122,12 +124,68 @@ export default function AssignmentsPage() {
             );
         }
 
-        if (filterStatus) {
-            filtered = filtered.filter((item) => item.status === filterStatus);
-        }
-
         if (filterCourse) {
             filtered = filtered.filter((item) => item.course === parseInt(filterCourse));
+        }
+
+        // Grade filter
+        if (filterGrade) {
+            filtered = filtered.filter((item) => {
+                const submission = submissions[item.id];
+                if (!submission || !submission.score) return false;
+                
+                const score = submission.score;
+                const maxScore = item.max_score || 100;
+                const percentage = (score / maxScore) * 100;
+                
+                switch (filterGrade) {
+                    case "A": return percentage >= 80;
+                    case "B": return percentage >= 70 && percentage < 80;
+                    case "C": return percentage >= 60 && percentage < 70;
+                    case "D": return percentage >= 50 && percentage < 60;
+                    case "F": return percentage < 50;
+                    default: return true;
+                }
+            });
+        }
+
+        // Due date filter
+        if (filterDueDate) {
+            const now = new Date();
+            filtered = filtered.filter((item) => {
+                const dueDate = new Date(item.due_date);
+                switch (filterDueDate) {
+                    case "today": return dueDate.toDateString() === now.toDateString();
+                    case "week": return (dueDate - now) / (1000 * 60 * 60 * 24) <= 7;
+                    case "month": return (dueDate - now) / (1000 * 60 * 60 * 24) <= 30;
+                    case "overdue": return dueDate < now;
+                    case "upcoming": return dueDate >= now;
+                    default: return true;
+                }
+            });
+        }
+
+        // Score filter
+        if (filterScore) {
+            filtered = filtered.filter((item) => {
+                const submission = submissions[item.id];
+                if (!submission || !submission.score) {
+                    return filterScore === "pending";
+                }
+                
+                const score = submission.score;
+                const maxScore = item.max_score || 100;
+                const percentage = (score / maxScore) * 100;
+                
+                switch (filterScore) {
+                    case "excellent": return percentage >= 90;
+                    case "good": return percentage >= 75 && percentage < 90;
+                    case "average": return percentage >= 60 && percentage < 75;
+                    case "below-average": return percentage < 60;
+                    case "pending": return false;
+                    default: return true;
+                }
+            });
         }
 
         setFilteredAssignments(filtered);
@@ -148,6 +206,16 @@ export default function AssignmentsPage() {
 
     const isOverdue = (dueDate) => {
         return new Date(dueDate) < new Date();
+    };
+
+    const getGrade = (score, maxScore) => {
+        if (!score || !maxScore) return null;
+        const percentage = (score / maxScore) * 100;
+        if (percentage >= 80) return { label: "A", color: "success" };
+        if (percentage >= 70) return { label: "B", color: "primary" };
+        if (percentage >= 60) return { label: "C", color: "info" };
+        if (percentage >= 50) return { label: "D", color: "warning" };
+        return { label: "F", color: "error" };
     };
 
     const handleViewAssignment = (assignment) => {
@@ -285,20 +353,6 @@ export default function AssignmentsPage() {
 
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                         <FormControl sx={{ minWidth: 150 }} size="small">
-                            <InputLabel>Status</InputLabel>
-                            <Select
-                                value={filterStatus}
-                                onChange={(e) => setFilterStatus(e.target.value)}
-                                label="Status"
-                            >
-                                <MenuItem value="">All Status</MenuItem>
-                                <MenuItem value="PUBLISHED">Published</MenuItem>
-                                <MenuItem value="DRAFT">Draft</MenuItem>
-                                <MenuItem value="CLOSED">Closed</MenuItem>
-                            </Select>
-                        </FormControl>
-
-                        <FormControl sx={{ minWidth: 150 }} size="small">
                             <InputLabel>Course</InputLabel>
                             <Select
                                 value={filterCourse}
@@ -313,13 +367,63 @@ export default function AssignmentsPage() {
                                 ))}
                             </Select>
                         </FormControl>
+
+                        <FormControl sx={{ minWidth: 150 }} size="small">
+                            <InputLabel>Grade</InputLabel>
+                            <Select
+                                value={filterGrade}
+                                onChange={(e) => setFilterGrade(e.target.value)}
+                                label="Grade"
+                                disabled={!Object.values(submissions).some(s => s?.score)}
+                            >
+                                <MenuItem value="">All Grades</MenuItem>
+                                <MenuItem value="A">A (80-100%)</MenuItem>
+                                <MenuItem value="B">B (70-79%)</MenuItem>
+                                <MenuItem value="C">C (60-69%)</MenuItem>
+                                <MenuItem value="D">D (50-59%)</MenuItem>
+                                <MenuItem value="F">F (Below 50%)</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <FormControl sx={{ minWidth: 150 }} size="small">
+                            <InputLabel>Due Date</InputLabel>
+                            <Select
+                                value={filterDueDate}
+                                onChange={(e) => setFilterDueDate(e.target.value)}
+                                label="Due Date"
+                            >
+                                <MenuItem value="">All Dates</MenuItem>
+                                <MenuItem value="today">Due Today</MenuItem>
+                                <MenuItem value="week">This Week</MenuItem>
+                                <MenuItem value="month">This Month</MenuItem>
+                                <MenuItem value="overdue">Overdue</MenuItem>
+                                <MenuItem value="upcoming">Upcoming</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <FormControl sx={{ minWidth: 150 }} size="small">
+                            <InputLabel>Score</InputLabel>
+                            <Select
+                                value={filterScore}
+                                onChange={(e) => setFilterScore(e.target.value)}
+                                label="Score"
+                                disabled={!Object.values(submissions).some(s => s?.score)}
+                            >
+                                <MenuItem value="">All Scores</MenuItem>
+                                <MenuItem value="pending">Pending</MenuItem>
+                                <MenuItem value="excellent">Excellent (90-100%)</MenuItem>
+                                <MenuItem value="good">Good (75-89%)</MenuItem>
+                                <MenuItem value="average">Average (60-74%)</MenuItem>
+                                <MenuItem value="below-average">Below Average (Below 60%)</MenuItem>
+                            </Select>
+                        </FormControl>
                     </Stack>
                 </Stack>
             </Paper>
 
             {/* Stats */}
             <Grid container spacing={3}>
-                <Grid key="total" xs={12} sm={6} md={3}>
+                <Grid key="total" xs={12} sm={6} md={4}>
                     <Paper
                         elevation={0}
                         sx={{
@@ -334,12 +438,12 @@ export default function AssignmentsPage() {
                             {publishedAssignments.length}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" mt={1} sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
-                            Total Assignments
+                            Total
                         </Typography>
                     </Paper>
                 </Grid>
 
-                <Grid key="upcoming" xs={12} sm={6} md={3}>
+                <Grid key="submitted" xs={12} sm={6} md={4}>
                     <Paper
                         elevation={0}
                         sx={{
@@ -351,15 +455,15 @@ export default function AssignmentsPage() {
                         }}
                     >
                         <Typography variant="h4" fontWeight={700} color="#16a34a" sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
-                            {upcomingAssignments.length}
+                            {publishedAssignments.length - unsubmittedAssignments.length}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" mt={1} sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
-                            Upcoming
+                            Submitted
                         </Typography>
                     </Paper>
                 </Grid>
 
-                <Grid key="overdue" xs={12} sm={6} md={3}>
+                <Grid key="pending" xs={12} sm={6} md={4}>
                     <Paper
                         elevation={0}
                         sx={{
@@ -370,31 +474,11 @@ export default function AssignmentsPage() {
                             textAlign: "center",
                         }}
                     >
-                        <Typography variant="h4" fontWeight={700} color="#ef4444" sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
-                            {overdueAssignments.length}
+                        <Typography variant="h4" fontWeight={700} color="#f59e0b" sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
+                            {unsubmittedAssignments.length}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" mt={1} sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
-                            Overdue
-                        </Typography>
-                    </Paper>
-                </Grid>
-
-                <Grid key="filtered" xs={12} sm={6} md={3}>
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            borderRadius: 3,
-                            border: "1px solid",
-                            borderColor: "grey.200",
-                            p: { xs: 2, sm: 3 },
-                            textAlign: "center",
-                        }}
-                    >
-                        <Typography variant="h4" fontWeight={700} color="#0ea5e9" sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
-                            {filteredAssignments.length}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" mt={1} sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
-                            Filtered
+                            Pending
                         </Typography>
                     </Paper>
                 </Grid>
@@ -411,27 +495,51 @@ export default function AssignmentsPage() {
                                     <TableRow>
                                         <TableCell fontWeight={700}>Title</TableCell>
                                         <TableCell>Due Date</TableCell>
-                                        <TableCell>Max Score</TableCell>
-                                        <TableCell align="right">Actions</TableCell>
+                                        <TableCell>Grade</TableCell>
+                                        <TableCell align="right">Action</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
                                     {filteredAssignments.map((assignment) => {
-                                        const isSubmitted = submissions[assignment.id];
+                                        const submission = submissions[assignment.id];
+                                        const isSubmitted = !!submission;
+                                        const grade = getGrade(submission?.score, assignment.max_score);
+                                        const assignmentIsOverdue = isOverdue(assignment.due_date);
+
                                         return (
                                             <TableRow key={assignment.id} hover>
-                                                <TableCell fontWeight={500}>{assignment.title}</TableCell>
-                                                <TableCell>
+                                                <TableCell fontWeight={500}>
                                                     <Box>
-                                                        <Typography variant="body2">
-                                                            {new Date(assignment.due_date).toLocaleDateString()}
-                                                        </Typography>
-                                                        {isOverdue(assignment.due_date) && (
-                                                            <Chip label="Overdue" color="error" size="small" sx={{ mt: 0.5 }} />
+                                                        <Typography variant="body2">{assignment.title}</Typography>
+                                                        {assignmentIsOverdue && !isSubmitted && (
+                                                            <Typography variant="caption" color="error">Overdue</Typography>
                                                         )}
                                                     </Box>
                                                 </TableCell>
-                                                <TableCell>{assignment.max_score}</TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2">
+                                                        {new Date(assignment.due_date).toLocaleDateString()}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {isSubmitted ? (
+                                                        <Box>
+                                                            <Typography variant="body2" fontWeight={600}>
+                                                                {submission.score}/{assignment.max_score}
+                                                            </Typography>
+                                                            {grade && (
+                                                                <Chip
+                                                                    label={grade.label}
+                                                                    color={grade.color}
+                                                                    size="small"
+                                                                    sx={{ mt: 0.5 }}
+                                                                />
+                                                            )}
+                                                        </Box>
+                                                    ) : (
+                                                        <Chip label="Pending" color="default" size="small" />
+                                                    )}
+                                                </TableCell>
                                                 <TableCell align="right">
                                                     <Button
                                                         size="small"
@@ -439,7 +547,7 @@ export default function AssignmentsPage() {
                                                         onClick={() => handleViewAssignment(assignment)}
                                                         color={isSubmitted ? "success" : "primary"}
                                                     >
-                                                        {isSubmitted ? "Submitted" : "View"}
+                                                        {isSubmitted ? "View" : "Submit"}
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
@@ -453,7 +561,10 @@ export default function AssignmentsPage() {
                     {/* Mobile Cards */}
                     <Stack spacing={2} sx={{ display: { xs: "flex", md: "none" } }}>
                         {filteredAssignments.map((assignment) => {
-                            const isSubmitted = submissions[assignment.id];
+                            const submission = submissions[assignment.id];
+                            const isSubmitted = !!submission;
+                            const grade = getGrade(submission?.score, assignment.max_score);
+                            const assignmentIsOverdue = isOverdue(assignment.due_date);
                             return (
                                 <Card key={assignment.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
                                     <CardContent sx={{ pb: 2 }}>
@@ -470,30 +581,35 @@ export default function AssignmentsPage() {
                                                     <Typography variant="body2" fontWeight={600} sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
                                                         {new Date(assignment.due_date).toLocaleDateString()}
                                                     </Typography>
-                                                    {isOverdue(assignment.due_date) && (
-                                                        <Chip label="Overdue" color="error" size="small" sx={{ mt: 0.5 }} />
+                                                    {assignmentIsOverdue && !isSubmitted && (
+                                                        <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5 }}>
+                                                            Overdue
+                                                        </Typography>
                                                     )}
                                                 </Box>
                                             </Box>
 
                                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                 <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
-                                                    Max Score
+                                                    Grade
                                                 </Typography>
-                                                <Typography variant="body2" fontWeight={600} sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
-                                                    {assignment.max_score}
-                                                </Typography>
-                                            </Box>
-
-                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}>
-                                                    Status
-                                                </Typography>
-                                                <Chip
-                                                    size="small"
-                                                    color={isSubmitted ? "success" : "warning"}
-                                                    label={isSubmitted ? "Submitted" : "Pending"}
-                                                />
+                                                {isSubmitted ? (
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={600} sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                                                            {submission.score}/{assignment.max_score}
+                                                        </Typography>
+                                                        {grade && (
+                                                            <Chip
+                                                                label={grade.label}
+                                                                color={grade.color}
+                                                                size="small"
+                                                                sx={{ mt: 0.5 }}
+                                                            />
+                                                        )}
+                                                    </Box>
+                                                ) : (
+                                                    <Chip label="Pending" color="default" size="small" />
+                                                )}
                                             </Box>
                                         </Stack>
 
@@ -505,7 +621,7 @@ export default function AssignmentsPage() {
                                             color={isSubmitted ? "success" : "primary"}
                                             variant="outlined"
                                         >
-                                            {isSubmitted ? "View Submission" : "View & Submit"}
+                                            {isSubmitted ? "View Grade" : "Submit Assignment"}
                                         </Button>
                                     </CardContent>
                                 </Card>

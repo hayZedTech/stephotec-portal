@@ -167,9 +167,7 @@ export default function NotificationsPage() {
                                         <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
                                             <Chip
                                                 size="small"
-                                                label={new Date(
-                                                    notification.created_at
-                                                ).toLocaleDateString()}
+                                                label={new Date(notification.created_at).toLocaleString()}
                                                 variant="outlined"
                                                 sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }}
                                             />

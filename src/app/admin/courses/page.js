@@ -228,7 +228,6 @@ export default function CoursesPage() {
                         borderRadius: 4,
                         border: "1px solid",
                         borderColor: "grey.200",
-                        height: { xs: "auto", md: 700 },
                         overflow: "auto",
                     }}
                 >
