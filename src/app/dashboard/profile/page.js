@@ -179,7 +179,25 @@ export default function ProfilePage() {
         setLoading(true);
         try {
             const response = await api.patch("/student/profile/", editFormData);
-            setUser(response.data);
+            const data = response.data;
+
+            const updatedUser = {
+                ...user,
+                address: data.address ?? editFormData.address,
+                additionalPhone: data.additional_phone ?? editFormData.additional_phone,
+                bio: data.bio ?? editFormData.bio,
+                profilePictureUrl: data.profile_picture_url ?? user.profilePictureUrl,
+            };
+
+            setUser(updatedUser);
+
+            const { saveSession, getAccessToken, getRefreshToken } = await import("@/utils/storage");
+            saveSession({
+                access: getAccessToken(),
+                refresh: getRefreshToken(),
+                user: updatedUser,
+            });
+
             setFormData((prev) => ({
                 ...prev,
                 ...editFormData,

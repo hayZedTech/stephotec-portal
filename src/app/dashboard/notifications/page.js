@@ -14,8 +14,10 @@ import {
 } from "@mui/material";
 import { Info, CheckCircle, WarningAmber } from "@mui/icons-material";
 import { getStudentNotifications, markNotificationAsRead } from "@/services/notifications";
+import { useNotifications } from "@/providers/NotificationsProvider";
 
 export default function NotificationsPage() {
+    const { decrementUnreadCount } = useNotifications();
     const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState([]);
     const [markingAsReadId, setMarkingAsReadId] = useState(null);
@@ -49,6 +51,7 @@ export default function NotificationsPage() {
                             : notif
                     )
                 );
+                decrementUnreadCount();
             }
         } finally {
             setMarkingAsReadId(null);

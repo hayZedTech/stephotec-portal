@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState, useEffect } from "react";
+import { memo, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import {
@@ -26,7 +26,7 @@ import {
 
 import { useLayout } from "@/providers/LayoutProvider";
 import { useAuth } from "@/providers/AuthProvider";
-import { getUnreadCount } from "@/services/notifications";
+import { useNotifications } from "@/providers/NotificationsProvider";
 
 function Header() {
     const pathname = usePathname();
@@ -36,24 +36,11 @@ function Header() {
     const { user, logout } = useAuth();
 
     const [anchorEl, setAnchorEl] = useState(null);
-    const [unreadCount, setUnreadCount] = useState(0);
     const [zoomOpen, setZoomOpen] = useState(false);
+    const { unreadCount } = useNotifications();
     const profilePic = user?.role === "STUDENT" ? user?.profilePictureUrl : undefined;
 
     const open = Boolean(anchorEl);
-
-    useEffect(() => {
-        if (user?.role === "STUDENT") {
-            loadUnreadCount();
-            const interval = setInterval(loadUnreadCount, 30000);
-            return () => clearInterval(interval);
-        }
-    }, [user]);
-
-    async function loadUnreadCount() {
-        const count = await getUnreadCount();
-        setUnreadCount(count);
-    }
 
     const pageTitle = useMemo(() => {
         const routes = {
