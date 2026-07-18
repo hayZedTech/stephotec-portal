@@ -2,8 +2,8 @@ import api from "@/lib/axios";
 
 export const getDashboardData = async () => {
     const [studentsRes, coursesRes] = await Promise.all([
-        api.get("/admin/students/"),
-        api.get("/courses/"),
+        api.get("/admin/students/?page_size=1000"),
+        api.get("/courses/?page_size=1000"),
     ]);
 
     const students = Array.isArray(studentsRes.data)

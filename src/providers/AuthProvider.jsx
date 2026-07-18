@@ -1,48 +1,69 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
     getUser,
+    getAccessToken,
+    getRefreshToken,
     saveSession,
     clearSession,
 } from "@/utils/storage";
 
+import api from "@/lib/axios";
 import { loginUser } from "@/services/auth";
 import { successToast } from "@/lib/toast";
 
 const AuthContext = createContext(null);
-const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
+
+function isTokenExpired(token) {
+    if (!token) return true;
+    try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        return payload.exp * 1000 < Date.now();
+    } catch {
+        return true;
+    }
+}
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [inactivityTimer, setInactivityTimer] = useState(null);
-
+    const inactivityTimerRef = useRef(null);
     const router = useRouter();
 
-    const handleInactivity = () => {
+    const forceLogout = (showToast = false) => {
         clearSession();
         setUser(null);
+        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         router.push("/login");
     };
 
     const resetInactivityTimer = () => {
-        if (inactivityTimer) {
-            clearTimeout(inactivityTimer);
-        }
-
-        if (user) {
-            const timer = setTimeout(handleInactivity, INACTIVITY_TIMEOUT);
-            setInactivityTimer(timer);
-        }
+        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = setTimeout(forceLogout, INACTIVITY_TIMEOUT);
     };
 
     useEffect(() => {
         const storedUser = getUser();
+        const accessToken = getAccessToken();
+        const refreshToken = getRefreshToken();
 
-        if (storedUser) {
+        if (!storedUser || !refreshToken || isTokenExpired(refreshToken)) {
+            clearSession();
+            setLoading(false);
+            router.push("/login");
+            return;
+        }
+
+        if (isTokenExpired(accessToken)) {
+            // Access token expired but refresh token still valid
+            // Axios interceptor will handle refresh on first API call
+            // Just restore user from storage so UI doesn't flash to login
+            setUser(storedUser);
+        } else {
             setUser(storedUser);
         }
 
@@ -55,22 +76,11 @@ export function AuthProvider({ children }) {
         resetInactivityTimer();
 
         const events = ["mousedown", "keydown", "scroll", "touchstart", "click"];
-
-        const handleActivity = () => {
-            resetInactivityTimer();
-        };
-
-        events.forEach((event) => {
-            window.addEventListener(event, handleActivity);
-        });
+        events.forEach((e) => window.addEventListener(e, resetInactivityTimer));
 
         return () => {
-            events.forEach((event) => {
-                window.removeEventListener(event, handleActivity);
-            });
-            if (inactivityTimer) {
-                clearTimeout(inactivityTimer);
-            }
+            events.forEach((e) => window.removeEventListener(e, resetInactivityTimer));
+            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         };
     }, [user]);
 
@@ -120,9 +130,7 @@ export function AuthProvider({ children }) {
     const logout = () => {
         clearSession();
         setUser(null);
-        if (inactivityTimer) {
-            clearTimeout(inactivityTimer);
-        }
+        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         successToast("Signed out successfully.");
         router.push("/login");
     };
@@ -130,45 +138,34 @@ export function AuthProvider({ children }) {
     const refreshUser = async () => {
         try {
             const storedUser = getUser();
-            if (!storedUser) return;
-            
-            const { getAccessToken } = await import("@/utils/storage");
             const token = getAccessToken();
-            if (!token) return;
-            
-            if (storedUser.role !== "STUDENT") return;
-            
-            const { default: api } = await import("@/lib/axios");
+            if (!storedUser || !token || storedUser.role !== "STUDENT") return;
+
             const response = await api.get("/student/profile/");
-            
+            const d = response.data;
+
             const userData = {
-                id: response.data.id,
-                username: response.data.username,
-                email: response.data.email,
-                role: response.data.role,
-                status: response.data.status,
-                isProfileComplete: response.data.is_profile_complete,
-                isIndustrialTraining: response.data.is_industrial_training,
-                firstName: response.data.first_name,
-                lastName: response.data.last_name,
-                phone: response.data.phone,
-                additionalPhone: response.data.additional_phone,
-                dateOfBirth: response.data.date_of_birth,
-                gender: response.data.gender,
-                address: response.data.address,
-                stateOfOrigin: response.data.state_of_origin,
-                bio: response.data.bio,
-                profilePictureUrl: response.data.profile_picture_url,
-                courses: response.data.courses || [],
+                id: d.id,
+                username: d.username,
+                email: d.email,
+                role: d.role,
+                status: d.status,
+                isProfileComplete: d.is_profile_complete,
+                isIndustrialTraining: d.is_industrial_training,
+                firstName: d.first_name,
+                lastName: d.last_name,
+                phone: d.phone,
+                additionalPhone: d.additional_phone,
+                dateOfBirth: d.date_of_birth,
+                gender: d.gender,
+                address: d.address,
+                stateOfOrigin: d.state_of_origin,
+                bio: d.bio,
+                profilePictureUrl: d.profile_picture_url,
+                courses: d.courses || [],
             };
-            
-            const { getRefreshToken } = await import("@/utils/storage");
-            saveSession({
-                access: token,
-                refresh: getRefreshToken(),
-                user: userData,
-            });
-            
+
+            saveSession({ access: token, refresh: getRefreshToken(), user: userData });
             setUser(userData);
         } catch (error) {
             console.error("Failed to refresh user data", error);

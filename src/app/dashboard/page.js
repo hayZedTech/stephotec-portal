@@ -10,10 +10,10 @@ import {
     CircularProgress,
     Box,
     Chip,
-    Avatar,
     Stack,
     Divider,
 } from "@mui/material";
+import ImageZoom from "@/components/ui/ImageZoom";
 import {
     School,
     Person,
@@ -131,19 +131,22 @@ export default function StudentDashboardPage() {
                 }}
             >
                 <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
-                    <Avatar
+                    <ImageZoom
                         src={user?.profilePictureUrl}
-                        sx={{
-                            width: 80,
-                            height: 80,
-                            bgcolor: "#2563eb",
-                            fontSize: 32,
-                            fontWeight: 700,
+                        alt={user?.firstName}
+                        avatarProps={{
+                            sx: {
+                                width: 80,
+                                height: 80,
+                                bgcolor: "#2563eb",
+                                fontSize: 32,
+                                fontWeight: 700,
+                            },
                         }}
                     >
                         {user?.firstName?.charAt(0)?.toUpperCase()}
                         {user?.lastName?.charAt(0)?.toUpperCase()}
-                    </Avatar>
+                    </ImageZoom>
 
                     <Box sx={{ flex: 1 }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar } from "@mui/material";
+import ImageZoom from "@/components/ui/ImageZoom";
 
 export default function SidebarUser({
     user,
@@ -33,17 +33,20 @@ export default function SidebarUser({
                 }`}
             >
 
-                <Avatar
+                <ImageZoom
                     src={user?.role === "STUDENT" ? user?.profilePictureUrl : undefined}
-                    sx={{
-                        width: 46,
-                        height: 46,
-                        bgcolor: user?.role === "ADMIN" ? "#2563eb" : "#7c3aed",
-                        fontWeight: 700,
+                    alt={initials}
+                    avatarProps={{
+                        sx: {
+                            width: 46,
+                            height: 46,
+                            bgcolor: user?.role === "ADMIN" ? "#2563eb" : "#7c3aed",
+                            fontWeight: 700,
+                        }
                     }}
                 >
                     {initials}
-                </Avatar>
+                </ImageZoom>
 
                 {!collapsed && (
 

@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { DataGrid } from "@mui/x-data-grid";
-import { Chip, Avatar, IconButton, Tooltip, Box, Card, CardContent, Typography, Stack, useMediaQuery, useTheme, Pagination } from "@mui/material";
+import { Chip, IconButton, Tooltip, Box, Card, CardContent, Typography, Stack, useMediaQuery, useTheme, Pagination } from "@mui/material";
 import { VisibilityOutlined, EditOutlined, DeleteOutlineOutlined } from "@mui/icons-material";
+import ImageZoom from "@/components/ui/ImageZoom";
 
 export default function StudentsTable({
     rows = [],
@@ -35,9 +36,13 @@ export default function StudentsTable({
             headerAlign: "center",
             renderCell: ({ row }) => (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: "100%", height: "100%" }}>
-                    <Avatar sx={{ width: 42, height: 42, bgcolor: "#2563eb", flexShrink: 0 }}>
+                    <ImageZoom
+                        src={row.profile_picture_url}
+                        alt={row.first_name}
+                        avatarProps={{ sx: { width: 42, height: 42, bgcolor: "#2563eb", flexShrink: 0 } }}
+                    >
                         {row.first_name?.charAt(0)?.toUpperCase() || "S"}
-                    </Avatar>
+                    </ImageZoom>
                     <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, minWidth: 0 }}>
                         <Box sx={{ fontWeight: 600, fontSize: 14, lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {row.first_name} {row.last_name}
@@ -153,9 +158,13 @@ export default function StudentsTable({
                     <Card key={row.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
                         <CardContent sx={{ pb: 2 }}>
                             <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-                                <Avatar sx={{ width: 48, height: 48, bgcolor: "#2563eb", fontSize: 18, fontWeight: 700 }}>
+                                <ImageZoom
+                                    src={row.profile_picture_url}
+                                    alt={row.first_name}
+                                    avatarProps={{ sx: { width: 48, height: 48, bgcolor: "#2563eb", fontSize: 18, fontWeight: 700 } }}
+                                >
                                     {row.first_name?.charAt(0)?.toUpperCase() || "S"}
-                                </Avatar>
+                                </ImageZoom>
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
                                     <Typography variant="subtitle2" fontWeight={700} sx={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                         {row.first_name} {row.last_name}

@@ -19,6 +19,7 @@ import {
 } from "@mui/material";
 
 import { Close } from "@mui/icons-material";
+import ImageZoom from "@/components/ui/ImageZoom";
 import StudentCoursesManager from "./StudentCoursesManager";
 import StudentContentAssignment from "./StudentContentAssignment";
 
@@ -100,18 +101,13 @@ export default function StudentViewModal({
             <DialogContent dividers sx={{ py: 0, px: { xs: 1.5, sm: 3 } }}>
                 {/* Avatar and Name */}
                 <Box sx={{ display: "flex", alignItems: "center", gap: { xs: 1.5, sm: 2 }, mb: 3, p: { xs: 2, sm: 3 }, pb: 0 }}>
-                    <Avatar
+                    <ImageZoom
                         src={student.profile_picture_url}
-                        sx={{
-                            width: { xs: 56, sm: 64 },
-                            height: { xs: 56, sm: 64 },
-                            bgcolor: "#2563eb",
-                            fontSize: { xs: 20, sm: 24 },
-                            fontWeight: 700,
-                        }}
+                        alt={fullName}
+                        avatarProps={{ sx: { width: { xs: 56, sm: 64 }, height: { xs: 56, sm: 64 }, bgcolor: "#2563eb", fontSize: { xs: 20, sm: 24 }, fontWeight: 700 } }}
                     >
                         {student.first_name?.charAt(0)?.toUpperCase() || "S"}
-                    </Avatar>
+                    </ImageZoom>
                     <Box>
                         <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
                             {student.first_name} {student.last_name}

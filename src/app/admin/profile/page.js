@@ -19,6 +19,7 @@ import {
     Stack,
 } from "@mui/material";
 import { Person } from "@mui/icons-material";
+import ImageZoom from "@/components/ui/ImageZoom";
 
 const InfoCard = ({ label, value }) => (
     <Card elevation={0} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200", p: { xs: 1.5, sm: 2 }, height: "100%", overflow: "hidden" }}>
@@ -100,18 +101,14 @@ export default function AdminProfilePage() {
             >
                 <Box sx={{ display: "flex", gap: { xs: 2, sm: 3 }, alignItems: "flex-start", mb: 3, flexDirection: { xs: "column", sm: "row" } }}>
                     <Box sx={{ position: "relative" }}>
-                        <Avatar
-                            sx={{
-                                width: { xs: 80, sm: 100 },
-                                height: { xs: 80, sm: 100 },
-                                bgcolor: "#7c3aed",
-                                fontSize: { xs: 32, sm: 40 },
-                                fontWeight: 700,
-                            }}
+                        <ImageZoom
+                            src={user?.profilePictureUrl}
+                            alt={`${user?.firstName} ${user?.lastName}`}
+                            avatarProps={{ sx: { width: { xs: 80, sm: 100 }, height: { xs: 80, sm: 100 }, bgcolor: "#7c3aed", fontSize: { xs: 32, sm: 40 }, fontWeight: 700 } }}
                         >
                             {user?.firstName?.charAt(0)?.toUpperCase()}
                             {user?.lastName?.charAt(0)?.toUpperCase()}
-                        </Avatar>
+                        </ImageZoom>
                     </Box>
 
                     <Box sx={{ flex: 1 }}>

@@ -10,6 +10,8 @@ import {
     IconButton,
     Menu,
     MenuItem,
+    Dialog,
+    Box,
 } from "@mui/material";
 
 import {
@@ -19,6 +21,7 @@ import {
     Logout,
     Person,
     Settings,
+    Close,
 } from "@mui/icons-material";
 
 import { useLayout } from "@/providers/LayoutProvider";
@@ -34,6 +37,8 @@ function Header() {
 
     const [anchorEl, setAnchorEl] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [zoomOpen, setZoomOpen] = useState(false);
+    const profilePic = user?.role === "STUDENT" ? user?.profilePictureUrl : undefined;
 
     const open = Boolean(anchorEl);
 
@@ -125,13 +130,20 @@ function Header() {
                         className="flex cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm transition-all hover:shadow-md sm:gap-3 sm:px-3 sm:py-2"
                     >
                         <Avatar
-                            src={user?.role === "STUDENT" ? user?.profilePictureUrl : undefined}
+                            src={profilePic}
+                            onClick={(e) => {
+                                if (profilePic && window.innerWidth >= 1024) {
+                                    e.stopPropagation();
+                                    setZoomOpen(true);
+                                }
+                            }}
                             sx={{
                                 width: 34,
                                 height: 34,
                                 bgcolor: "#2563eb",
                                 fontWeight: 700,
                                 fontSize: "0.875rem",
+                                cursor: { xs: "default", lg: profilePic ? "zoom-in" : "default" },
                             }}
                         >
                             {user?.firstName?.charAt(0)?.toUpperCase()}{user?.lastName?.charAt(0)?.toUpperCase()}
@@ -214,6 +226,30 @@ function Header() {
                     Logout
                 </MenuItem>
             </Menu>
+
+            {/* Profile Picture Zoom */}
+            {profilePic && (
+                <Dialog
+                    open={zoomOpen}
+                    onClose={() => setZoomOpen(false)}
+                    maxWidth={false}
+                    slotProps={{
+                        paper: { sx: { bgcolor: "transparent", boxShadow: "none", borderRadius: 3, overflow: "visible", m: 2 } },
+                        backdrop: { sx: { bgcolor: "rgba(0,0,0,0.85)" } },
+                    }}
+                    sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                    <Box sx={{ position: "relative", lineHeight: 0 }}>
+                        <IconButton
+                            onClick={() => setZoomOpen(false)}
+                            sx={{ position: "absolute", top: -16, right: -16, bgcolor: "rgba(0,0,0,0.6)", color: "white", zIndex: 1, "&:hover": { bgcolor: "rgba(0,0,0,0.85)" } }}
+                        >
+                            <Close />
+                        </IconButton>
+                        <img src={profilePic} alt="Profile" style={{ display: "block", maxWidth: "90vw", maxHeight: "80vh", width: "auto", height: "auto", borderRadius: 12, objectFit: "contain" }} />
+                    </Box>
+                </Dialog>
+            )}
         </>
     );
 }

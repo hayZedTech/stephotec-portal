@@ -27,6 +27,7 @@ import {
     Stack,
 } from "@mui/material";
 import { School, DateRange, Edit, CloudUpload, Close, Badge } from "@mui/icons-material";
+import ImageZoom from "@/components/ui/ImageZoom";
 
 const NIGERIAN_STATES = [
     "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
@@ -264,19 +265,14 @@ export default function ProfilePage() {
             >
                 <Box sx={{ display: "flex", gap: { xs: 2, sm: 3 }, alignItems: "flex-start", mb: 3, flexDirection: { xs: "column", sm: "row" } }}>
                     <Box sx={{ position: "relative" }}>
-                        <Avatar
+                        <ImageZoom
                             src={user?.profilePictureUrl}
-                            sx={{
-                                width: { xs: 80, sm: 100 },
-                                height: { xs: 80, sm: 100 },
-                                bgcolor: "#2563eb",
-                                fontSize: { xs: 32, sm: 40 },
-                                fontWeight: 700,
-                            }}
+                            alt={`${user?.firstName} ${user?.lastName}`}
+                            avatarProps={{ sx: { width: { xs: 80, sm: 100 }, height: { xs: 80, sm: 100 }, bgcolor: "#2563eb", fontSize: { xs: 32, sm: 40 }, fontWeight: 700 } }}
                         >
                             {user?.firstName?.charAt(0)?.toUpperCase()}
                             {user?.lastName?.charAt(0)?.toUpperCase()}
-                        </Avatar>
+                        </ImageZoom>
                         <IconButton
                             onClick={() => setShowPictureDialog(true)}
                             sx={{
@@ -665,6 +661,7 @@ export default function ProfilePage() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
         </div>
     );
 }
