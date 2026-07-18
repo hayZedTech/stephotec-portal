@@ -122,7 +122,7 @@ export default function SidebarNav({ user, collapsed }) {
                         href={item.href}
                         onClick={closeSidebar}
                         className={`
-                            group relative flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all
+                            group relative flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-all
                             
                             ${user?.role === "ADMIN"
                                 ? active
