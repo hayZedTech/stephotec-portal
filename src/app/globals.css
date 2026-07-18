@@ -157,3 +157,6 @@ body {
   font-family: "Ancizar Sans", sans-serif;
   font-size: 16px;
 }
+
+.text-xs { font-size: 0.875rem !important; }
+.text-sm { font-size: 1rem !important; }

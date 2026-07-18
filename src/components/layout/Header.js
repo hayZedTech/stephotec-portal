@@ -194,7 +194,7 @@ function Header() {
                         setAnchorEl(null);
                         router.push(user?.role === "ADMIN" ? "/admin/profile" : "/dashboard/profile");
                     }}
-                    sx={{ fontSize: '0.875rem', py: 1 }}
+                    sx={{ fontSize: '1rem', py: 1 }}
                 >
                     <Person sx={{ mr: 1.5, fontSize: 20, color: '#64748b' }} />
                     View Profile
@@ -206,7 +206,7 @@ function Header() {
                             setAnchorEl(null);
                             router.push("/admin/settings");
                         }}
-                        sx={{ fontSize: '0.875rem', py: 1 }}
+                        sx={{ fontSize: '1rem', py: 1 }}
                     >
                         <Settings sx={{ mr: 1.5, fontSize: 20, color: '#64748b' }} />
                         Settings
@@ -220,7 +220,7 @@ function Header() {
                         setAnchorEl(null);
                         logout();
                     }}
-                    sx={{ fontSize: '0.875rem', py: 1, color: '#ef4444' }}
+                    sx={{ fontSize: '1rem', py: 1, color: '#ef4444' }}
                 >
                     <Logout sx={{ mr: 1.5, fontSize: 20, color: '#ef4444' }} />
                     Logout
