@@ -76,6 +76,7 @@ export default function LearningContentManager() {
         title: "",
         description: "",
         file: null,
+        existingFile: null,
         video_url: "",
     });
     const [submitting, setSubmitting] = useState(false);
@@ -222,6 +223,7 @@ export default function LearningContentManager() {
             title: content.title,
             description: content.description,
             file: null,
+            existingFile: content.file || null,
             video_url: content.video_url || "",
         });
         setDialogOpen(true);
@@ -250,10 +252,10 @@ export default function LearningContentManager() {
             
             let maxSize, fileType;
             if (isVideo) {
-                maxSize = 50 * 1024 * 1024; // 50MB for videos
+                maxSize = 50 * 1024 * 1024;
                 fileType = "video";
             } else if (isDocument) {
-                maxSize = 10 * 1024 * 1024; // 10MB for documents
+                maxSize = 10 * 1024 * 1024;
                 fileType = "document";
             } else {
                 errorToast(null, "Invalid file type. Allowed: Videos (MP4, AVI, MOV, MKV, FLV, WMV) or Documents (PDF, Word, Excel, PowerPoint, TXT)");
@@ -266,12 +268,14 @@ export default function LearningContentManager() {
                 errorToast(null, `${fileType} file size exceeds ${maxSizeMB}MB limit. Your file is ${fileSizeMB}MB`);
                 return;
             }
-            setFormData({ ...formData, file: file, video_url: "" });
+            // new file chosen: clear video_url and existingFile
+            setFormData({ ...formData, file, video_url: "", existingFile: null });
         }
     };
 
     const handleVideoUrlChange = (e) => {
-        setFormData({ ...formData, video_url: e.target.value, file: null });
+        // switching to URL: clear file and existingFile
+        setFormData({ ...formData, video_url: e.target.value, file: null, existingFile: null });
     };
 
     const handleSubmit = async () => {
@@ -819,7 +823,11 @@ export default function LearningContentManager() {
                             startIcon={<CloudUpload />}
                             fullWidth
                         >
-                            {formData.file ? formData.file.name : "Upload File"}
+                            {formData.file
+                                ? formData.file.name
+                                : formData.existingFile
+                                ? `Current: ${formData.existingFile.split("/").pop()}`
+                                : "Upload File"}
                             <input
                                 type="file"
                                 hidden
