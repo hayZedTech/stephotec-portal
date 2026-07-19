@@ -11,22 +11,13 @@ import {
     clearSession,
 } from "@/utils/storage";
 
-import api from "@/lib/axios";
+import api, { ensureValidAccessToken, resetRefreshState } from "@/lib/axios";
 import { loginUser } from "@/services/auth";
 import { successToast } from "@/lib/toast";
+import { isTokenExpired } from "@/utils/token";
 
 const AuthContext = createContext(null);
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
-
-function isTokenExpired(token) {
-    if (!token) return true;
-    try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        return payload.exp * 1000 < Date.now();
-    } catch {
-        return true;
-    }
-}
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
@@ -47,27 +38,63 @@ export function AuthProvider({ children }) {
     };
 
     useEffect(() => {
-        const storedUser = getUser();
-        const accessToken = getAccessToken();
-        const refreshToken = getRefreshToken();
+        async function initAuth() {
+            const storedUser = getUser();
+            const accessToken = getAccessToken();
+            const refreshToken = getRefreshToken();
 
-        if (!storedUser || !refreshToken || isTokenExpired(refreshToken)) {
-            clearSession();
-            setLoading(false);
-            router.push("/login");
-            return;
+            if (!storedUser || !refreshToken || isTokenExpired(refreshToken)) {
+                clearSession();
+                setLoading(false);
+                router.push("/login");
+                return;
+            }
+
+            try {
+                if (isTokenExpired(accessToken)) {
+                    await ensureValidAccessToken();
+                }
+
+                setUser(storedUser);
+            } catch {
+                clearSession();
+                router.push("/login");
+            } finally {
+                setLoading(false);
+            }
         }
 
-        if (isTokenExpired(accessToken)) {
-            // Access token expired but refresh token still valid
-            // Axios interceptor will handle refresh on first API call
-            // Just restore user from storage so UI doesn't flash to login
-            setUser(storedUser);
-        } else {
-            setUser(storedUser);
-        }
+        initAuth();
+    }, []);
 
-        setLoading(false);
+    useEffect(() => {
+        const handleAppResume = async () => {
+            if (document.visibilityState !== "visible") return;
+
+            resetRefreshState();
+
+            const storedUser = getUser();
+            const refreshToken = getRefreshToken();
+
+            if (!storedUser || !refreshToken || isTokenExpired(refreshToken)) {
+                forceLogout();
+                return;
+            }
+
+            try {
+                await ensureValidAccessToken();
+            } catch {
+                forceLogout();
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleAppResume);
+        window.addEventListener("pageshow", handleAppResume);
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleAppResume);
+            window.removeEventListener("pageshow", handleAppResume);
+        };
     }, []);
 
     useEffect(() => {
