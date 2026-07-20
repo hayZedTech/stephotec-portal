@@ -93,19 +93,23 @@ function Header() {
                 {/* Right Section */}
                 <div className="flex items-center gap-3">
 
-                    {/* Notifications - Only for Students */}
+                    {/* Notifications - Students and Admin */}
                     {user?.role === "STUDENT" && (
                         <IconButton
                             onClick={() => router.push("/dashboard/notifications")}
-                            sx={{
-                                border: "1px solid #e5e7eb",
-                                borderRadius: 3,
-                            }}
+                            sx={{ border: "1px solid #e5e7eb", borderRadius: 3 }}
                         >
-                            <Badge
-                                badgeContent={unreadCount}
-                                color="error"
-                            >
+                            <Badge badgeContent={unreadCount} color="error">
+                                <NotificationsNone sx={{ color: "#64748b" }} />
+                            </Badge>
+                        </IconButton>
+                    )}
+                    {user?.role === "ADMIN" && (
+                        <IconButton
+                            onClick={() => router.push("/admin/notifications")}
+                            sx={{ border: "1px solid #e5e7eb", borderRadius: 3 }}
+                        >
+                            <Badge badgeContent={unreadCount} color="error">
                                 <NotificationsNone sx={{ color: "#64748b" }} />
                             </Badge>
                         </IconButton>

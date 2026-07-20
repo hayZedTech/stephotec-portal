@@ -17,6 +17,7 @@ import {
     Mail,
     History,
     Lock,
+    EventAvailable,
 } from "@mui/icons-material";
 
 export default function SidebarNav({ user, collapsed }) {
@@ -87,6 +88,11 @@ export default function SidebarNav({ user, collapsed }) {
                     label: "Assignments",
                     href: "/dashboard/assignments",
                     icon: <Assignment fontSize="small" />,
+                },
+                {
+                    label: "Attendance",
+                    href: "/dashboard/attendance",
+                    icon: <EventAvailable fontSize="small" />,
                 },
                 {
                     label: "Profile",
