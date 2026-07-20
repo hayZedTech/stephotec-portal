@@ -18,6 +18,7 @@ import {
     History,
     Lock,
     EventAvailable,
+    Payment,
 } from "@mui/icons-material";
 
 export default function SidebarNav({ user, collapsed }) {
@@ -46,6 +47,11 @@ export default function SidebarNav({ user, collapsed }) {
                     label: "Notifications",
                     href: "/admin/notifications",
                     icon: <Mail fontSize="small" />,
+                },
+                {
+                    label: "Payments",
+                    href: "/admin/payments",
+                    icon: <Payment fontSize="small" />,
                 },
                 {
                     label: "Learning Management",
@@ -93,6 +99,11 @@ export default function SidebarNav({ user, collapsed }) {
                     label: "Attendance",
                     href: "/dashboard/attendance",
                     icon: <EventAvailable fontSize="small" />,
+                },
+                {
+                    label: "Payments",
+                    href: "/dashboard/payments",
+                    icon: <Payment fontSize="small" />,
                 },
                 {
                     label: "Profile",

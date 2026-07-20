@@ -48,6 +48,7 @@ function Header() {
             "/admin/students": "Students",
             "/admin/courses": "Courses",
             "/admin/notifications": "Send Notifications",
+            "/admin/payments": "Student Payments",
             "/admin/settings": "Settings",
             "/admin/profile": "Admin Profile",
             "/admin/audit-logs": "Audit Logs",
