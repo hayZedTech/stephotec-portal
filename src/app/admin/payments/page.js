@@ -8,9 +8,10 @@ import {
     Avatar, Divider, LinearProgress, Tooltip, Tabs, Tab,
     Card, CardContent, Stack, useMediaQuery, useTheme, Select, MenuItem,
 } from "@mui/material";
-import { Visibility, Edit, Search, Payment, Close, FilterList } from "@mui/icons-material";
+import { Visibility, Edit, Search, Payment, Close, FilterList, History, Add, Delete, Refresh } from "@mui/icons-material";
 import api from "@/lib/axios";
 import { successToast, errorToast } from "@/lib/toast";
+import { confirmAction } from "@/utils/confirmAction";
 
 const STATUS_META = {
     PAID:    { color: "success", text: "#16a34a", bg: "#f0fdf4" },
@@ -34,7 +35,7 @@ function PaymentProgress({ fee, paid, status }) {
     );
 }
 
-function CoursePaymentView({ course }) {
+function CoursePaymentView({ course, onHistory }) {
     const meta = STATUS_META[course.status] || STATUS_META.UNPAID;
     const pct = course.course_fee > 0 ? Math.min(100, Math.round((course.amount_paid / course.course_fee) * 100)) : 0;
     return (
@@ -75,49 +76,88 @@ function CoursePaymentView({ course }) {
             <Typography variant="caption" color="text.disabled">
                 Last updated: {new Date(course.last_updated).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
             </Typography>
+            <Button
+                variant="outlined"
+                size="small"
+                startIcon={<History fontSize="small" />}
+                onClick={() => onHistory(course)}
+                sx={{ alignSelf: "flex-start", mt: 1 }}
+            >
+                Payment History
+            </Button>
         </Box>
     );
 }
 
-function CoursePaymentEdit({ course, onChange }) {
-    const outstanding = Math.max(0, (parseFloat(course.course_fee) || 0) - (parseFloat(course.amount_paid) || 0));
+function CoursePaymentEdit({ course, onTopUp, topping, topUpForm, onTopUpChange, onUpdateFee }) {
     return (
         <Box sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2.5 }}>
-            <TextField
-                label="Course Fee (₦)"
-                type="number"
-                value={course.course_fee}
-                onChange={(e) => onChange("course_fee", e.target.value)}
-                size="small"
-                fullWidth
-                slotProps={{ input: { startAdornment: <InputAdornment position="start">₦</InputAdornment> } }}
-            />
-            <TextField
-                label="Amount Paid (₦)"
-                type="number"
-                value={course.amount_paid}
-                onChange={(e) => onChange("amount_paid", e.target.value)}
-                size="small"
-                fullWidth
-                slotProps={{ input: { startAdornment: <InputAdornment position="start">₦</InputAdornment> } }}
-            />
-            <Box sx={{ p: { xs: 1.5, sm: 2 }, bgcolor: "#f8fafc", borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
-                <Typography variant="caption" color="text.secondary" fontWeight={600}>Preview</Typography>
-                <Box sx={{ display: "flex", justifyContent: "space-between", mt: 0.5 }}>
-                    <Typography variant="body2">Outstanding</Typography>
-                    <Typography variant="body2" fontWeight={700} color="#dc2626">{fmt(outstanding)}</Typography>
-                </Box>
+            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: { xs: 1, sm: 2 } }}>
+                {[
+                    { label: "Course Fee", value: fmt(course.course_fee), color: "#2563eb" },
+                    { label: "Amount Paid", value: fmt(course.amount_paid), color: "#16a34a" },
+                    { label: "Outstanding", value: fmt(course.outstanding), color: "#dc2626" },
+                ].map((item) => (
+                    <Paper key={item.label} elevation={0} variant="outlined" sx={{ p: { xs: 1, sm: 1.5 }, borderRadius: 2, textAlign: "center" }}>
+                        <Typography variant="body2" fontWeight={700} sx={{ color: item.color, fontSize: { xs: "0.72rem", sm: "0.875rem" } }}>{item.value}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }}>{item.label}</Typography>
+                    </Paper>
+                ))}
             </Box>
+            <Divider />
+            <Typography variant="body2" fontWeight={700}>Update Course Fee</Typography>
+            <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                <TextField
+                    label="Course Fee (₦)"
+                    type="number"
+                    size="small"
+                    sx={{ flex: 1 }}
+                    value={topUpForm.course_fee}
+                    onChange={(e) => onTopUpChange("course_fee", e.target.value)}
+                    slotProps={{ input: { startAdornment: <InputAdornment position="start">₦</InputAdornment> } }}
+                    placeholder={String(course.course_fee)}
+                />
+                <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={onUpdateFee}
+                    disabled={topping || !topUpForm.course_fee}
+                    sx={{ whiteSpace: "nowrap", height: 40 }}
+                >
+                    Update Fee
+                </Button>
+            </Box>
+            <Divider />
+            <Typography variant="body2" fontWeight={700}>Record Top-Up Payment</Typography>
             <TextField
-                label="Notes (optional)"
-                value={course.notes}
-                onChange={(e) => onChange("notes", e.target.value)}
+                label="Amount (₦)"
+                type="number"
+                size="small"
+                fullWidth
+                value={topUpForm.amount}
+                onChange={(e) => onTopUpChange("amount", e.target.value)}
+                slotProps={{ input: { startAdornment: <InputAdornment position="start">₦</InputAdornment> } }}
+            />
+            <TextField
+                label="Note (optional)"
                 size="small"
                 fullWidth
                 multiline
-                rows={3}
-                placeholder="e.g. Paid via bank transfer on 12 Jan..."
+                rows={2}
+                value={topUpForm.note}
+                onChange={(e) => onTopUpChange("note", e.target.value)}
+                placeholder="Additional details..."
             />
+            <Button
+                variant="contained"
+                size="small"
+                startIcon={topping ? <CircularProgress size={14} color="inherit" /> : <Add />}
+                onClick={onTopUp}
+                disabled={topping || !topUpForm.amount}
+                sx={{ alignSelf: "flex-end" }}
+            >
+                {topping ? "Saving..." : "Add Payment"}
+            </Button>
         </Box>
     );
 }
@@ -170,15 +210,28 @@ export default function AdminPaymentsPage() {
     const [viewTab, setViewTab] = useState(0);
     const [editStudent, setEditStudent] = useState(null);
     const [editTab, setEditTab] = useState(0);
-    const [editForms, setEditForms] = useState({});
-    const [saving, setSaving] = useState(false);
+    const [topUpForms, setTopUpForms] = useState({});  // { [paymentId]: { amount, mode, note } }
+    const [topping, setTopping] = useState(false);
+    const [historyPayment, setHistoryPayment] = useState(null); // { id, course_name }
+    const [historyEntries, setHistoryEntries] = useState([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [addForm, setAddForm] = useState({ amount: "", note: "" });
+    const [addSaving, setAddSaving] = useState(false);
 
-    const load = useCallback(async () => {
+    const load = useCallback(async (syncStudentId) => {
         try {
             setLoading(true);
             await api.post("/payments/ensure/").catch(() => {});
             const { data } = await api.get("/payments/by_student/");
-            setStudents(Array.isArray(data) ? data : data.results || []);
+            const list = Array.isArray(data) ? data : data.results || [];
+            setStudents(list);
+            if (syncStudentId) {
+                const fresh = list.find((s) => s.student_id === syncStudentId);
+                if (fresh) {
+                    setViewStudent((prev) => prev?.student_id === syncStudentId ? fresh : prev);
+                    setEditStudent((prev) => prev?.student_id === syncStudentId ? fresh : prev);
+                }
+            }
         } catch (err) {
             errorToast(err, "Failed to load payments");
         } finally {
@@ -202,35 +255,110 @@ export default function AdminPaymentsPage() {
         setEditTab(0);
         const forms = {};
         student.courses.forEach((c) => {
-            forms[c.id] = { course_fee: c.course_fee, amount_paid: c.amount_paid, notes: c.notes || "" };
+            forms[c.id] = { amount: "", note: "", course_fee: "" };
         });
-        setEditForms(forms);
+        setTopUpForms(forms);
     }
 
-    function handleEditChange(paymentId, field, value) {
-        setEditForms((prev) => ({ ...prev, [paymentId]: { ...prev[paymentId], [field]: value } }));
+    function handleTopUpChange(paymentId, field, value) {
+        setTopUpForms((prev) => ({ ...prev, [paymentId]: { ...prev[paymentId], [field]: value } }));
     }
 
-    async function handleSave() {
-        setSaving(true);
+    function syncCourseInModals(paymentId, updatedFields) {
+        const patch = (prev) => prev ? {
+            ...prev,
+            courses: prev.courses.map((c) => c.id === paymentId ? { ...c, ...updatedFields } : c),
+        } : prev;
+        setViewStudent(patch);
+        setEditStudent(patch);
+    }
+
+    async function handleTopUp(paymentId) {
+        const form = topUpForms[paymentId];
+        if (!form?.amount) return;
+        setTopping(true);
         try {
-            await Promise.all(
-                Object.entries(editForms).map(([id, form]) =>
-                    api.patch(`/payments/${id}/`, {
-                        course_fee: parseFloat(form.course_fee) || 0,
-                        amount_paid: parseFloat(form.amount_paid) || 0,
-                        notes: form.notes,
-                    })
-                )
-            );
-            successToast("Payments updated");
-            setEditStudent(null);
+            await api.post(`/payments/${paymentId}/history/add/`, {
+                amount: parseFloat(form.amount),
+                note: form.note,
+            });
+            successToast("Payment recorded");
+            setTopUpForms((prev) => ({ ...prev, [paymentId]: { ...prev[paymentId], amount: "", note: "" } }));
+            load(editStudent?.student_id);
+        } catch (err) {
+            errorToast(err, "Failed to record payment");
+        } finally {
+            setTopping(false);
+        }
+    }
+
+    async function handleUpdateFee(paymentId) {
+        const form = topUpForms[paymentId];
+        if (!form?.course_fee) return;
+        setTopping(true);
+        try {
+            const { data } = await api.patch(`/payments/${paymentId}/`, { course_fee: parseFloat(form.course_fee) });
+            successToast("Course fee updated");
+            setTopUpForms((prev) => ({ ...prev, [paymentId]: { ...prev[paymentId], course_fee: "" } }));
+            load(editStudent?.student_id);
+        } catch (err) {
+            errorToast(err, "Failed to update course fee");
+        } finally {
+            setTopping(false);
+        }
+    }
+
+    async function openHistory(course) {
+        setHistoryPayment(course);
+        setAddForm({ amount: "", note: "" });
+        setHistoryLoading(true);
+        try {
+            const { data } = await api.get(`/payments/${course.id}/history/`);
+            setHistoryEntries(Array.isArray(data) ? data : []);
+        } catch (err) {
+            errorToast(err, "Failed to load history");
+        } finally {
+            setHistoryLoading(false);
+        }
+    }
+
+    async function handleAddEntry() {
+        if (!addForm.amount) return;
+        setAddSaving(true);
+        try {
+            await api.post(`/payments/${historyPayment.id}/history/add/`, {
+                amount: parseFloat(addForm.amount),
+                note: addForm.note,
+            });
+            successToast("Entry added");
+            setAddForm({ amount: "", note: "" });
+            const { data } = await api.get(`/payments/${historyPayment.id}/history/`);
+            setHistoryEntries(Array.isArray(data) ? data : []);
             load();
         } catch (err) {
-            errorToast(err, "Failed to update payments");
+            errorToast(err, "Failed to add entry");
         } finally {
-            setSaving(false);
+            setAddSaving(false);
         }
+    }
+
+    async function handleDeleteEntry(entryId) {
+        confirmAction(
+            "Delete this payment entry? This will recalculate the total amount paid.",
+            async () => {
+                try {
+                    await api.delete(`/payments/${historyPayment.id}/history/${entryId}/delete/`);
+                    setHistoryEntries((prev) => prev.filter((e) => e.id !== entryId));
+                    load(editStudent?.student_id ?? viewStudent?.student_id);
+                } catch (err) {
+                    errorToast(err, "Failed to delete entry");
+                }
+            },
+            null,
+            "Delete",
+            "Cancel",
+            true,
+        );
     }
 
     // ── Mobile card list ──────────────────────────────────────────────────────
@@ -441,10 +569,11 @@ export default function AdminPaymentsPage() {
                         <CourseTabs courses={viewStudent.courses} value={viewTab} onChange={setViewTab} />
                         <DialogContent sx={{ pt: 0, px: { xs: 2, sm: 3 } }}>
                             {viewStudent.courses.map((c, i) => (
-                                viewTab === i && <CoursePaymentView key={c.id} course={c} />
+                                viewTab === i && <CoursePaymentView key={c.id} course={c} onHistory={openHistory} />
                             ))}
                         </DialogContent>
                         <DialogActions sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 }, gap: 1 }}>
+                            <Button onClick={() => load(viewStudent.student_id)} variant="outlined" startIcon={<Refresh />} size="small">Refresh</Button>
                             <Button onClick={() => { setViewStudent(null); openEdit(viewStudent); }} variant="outlined" startIcon={<Edit />} size="small">Edit Payments</Button>
                             <Button onClick={() => setViewStudent(null)} variant="contained" size="small">Close</Button>
                         </DialogActions>
@@ -462,7 +591,7 @@ export default function AdminPaymentsPage() {
                                     {editStudent.student_name?.charAt(0) || "S"}
                                 </Avatar>
                                 <Box>
-                                    <Typography fontWeight={700} sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>Edit Payments — {editStudent.student_name}</Typography>
+                                    <Typography fontWeight={700} sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>Record Payment — {editStudent.student_name}</Typography>
                                     <Typography variant="caption" color="text.secondary">{editStudent.student_username}</Typography>
                                 </Box>
                             </Box>
@@ -472,20 +601,114 @@ export default function AdminPaymentsPage() {
                         <CourseTabs courses={editStudent.courses} value={editTab} onChange={setEditTab} />
                         <DialogContent sx={{ pt: 0, px: { xs: 2, sm: 3 } }}>
                             {editStudent.courses.map((c, i) =>
-                                editTab === i && editForms[c.id] ? (
+                                editTab === i && topUpForms[c.id] ? (
                                     <CoursePaymentEdit
                                         key={c.id}
-                                        course={editForms[c.id]}
-                                        onChange={(field, value) => handleEditChange(c.id, field, value)}
+                                        course={c}
+                                        topUpForm={topUpForms[c.id]}
+                                        onTopUpChange={(field, value) => handleTopUpChange(c.id, field, value)}
+                                        onTopUp={() => handleTopUp(c.id)}
+                                        onUpdateFee={() => handleUpdateFee(c.id)}
+                                        topping={topping}
                                     />
                                 ) : null
                             )}
                         </DialogContent>
                         <DialogActions sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 }, gap: 1 }}>
-                            <Button onClick={() => setEditStudent(null)} variant="outlined" color="inherit" size="small">Cancel</Button>
-                            <Button onClick={handleSave} variant="contained" size="small" disabled={saving} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>
-                                {saving ? "Saving..." : "Save All Changes"}
-                            </Button>
+                            <Button onClick={() => setEditStudent(null)} variant="outlined" color="inherit" size="small">Close</Button>
+                        </DialogActions>
+                    </>
+                )}
+            </Dialog>
+
+            {/* HISTORY MODAL */}
+            <Dialog open={!!historyPayment} onClose={() => setHistoryPayment(null)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
+                {historyPayment && (
+                    <>
+                        <DialogTitle sx={{ py: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 3 }, pr: 6 }}>
+                            <Box>
+                                <Typography fontWeight={700} sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>Payment History</Typography>
+                                <Typography variant="caption" color="text.secondary">{historyPayment.course_name}</Typography>
+                            </Box>
+                            <IconButton onClick={() => setHistoryPayment(null)} size="small" sx={{ position: "absolute", top: 12, right: 12 }}><Close /></IconButton>
+                        </DialogTitle>
+                        <Divider />
+                        <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
+                            <Box sx={{ mb: 3, p: { xs: 1.5, sm: 2 }, bgcolor: "#f8fafc", borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                <Typography variant="body2" fontWeight={700} sx={{ mb: 1.5 }}>Record New Payment</Typography>
+                                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                                    <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
+                                        <TextField
+                                            label="Amount (₦)"
+                                            type="number"
+                                            size="small"
+                                            value={addForm.amount}
+                                            onChange={(e) => setAddForm((p) => ({ ...p, amount: e.target.value }))}
+                                            slotProps={{ input: { startAdornment: <InputAdornment position="start">₦</InputAdornment> } }}
+                                        />
+                                    </Box>
+                                    <TextField
+                                        label="Note (optional)"
+                                        size="small"
+                                        fullWidth
+                                        multiline
+                                        rows={2}
+                                        value={addForm.note}
+                                        onChange={(e) => setAddForm((p) => ({ ...p, note: e.target.value }))}
+                                        placeholder="Additional details..."
+                                    />
+                                    <Button
+                                        variant="contained"
+                                        size="small"
+                                        startIcon={addSaving ? <CircularProgress size={14} color="inherit" /> : <Add />}
+                                        onClick={handleAddEntry}
+                                        disabled={addSaving || !addForm.amount}
+                                        sx={{ alignSelf: "flex-end" }}
+                                    >
+                                        {addSaving ? "Saving..." : "Add Entry"}
+                                    </Button>
+                                </Box>
+                            </Box>
+
+                            <Typography variant="body2" fontWeight={700} sx={{ mb: 1.5 }}>
+                                {historyLoading ? "Loading..." : `${historyEntries.length} payment${historyEntries.length !== 1 ? "s" : ""} recorded`}
+                            </Typography>
+                            {historyLoading ? (
+                                <Box sx={{ py: 3, textAlign: "center" }}><CircularProgress size={28} /></Box>
+                            ) : historyEntries.length === 0 ? (
+                                <Box sx={{ py: 3, textAlign: "center" }}>
+                                    <History sx={{ fontSize: 36, color: "grey.300", mb: 1 }} />
+                                    <Typography variant="body2" color="text.secondary">No payment entries yet.</Typography>
+                                </Box>
+                            ) : (
+                                <Stack spacing={1.5}>
+                                    {historyEntries.map((entry, idx) => (
+                                        <Box key={entry.id} sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "#fff" }}>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1 }}>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+                                                        <Typography variant="body2" fontWeight={700} sx={{ color: "#16a34a" }}>{fmt(entry.amount)}</Typography>
+                                                        <Typography variant="caption" color="text.secondary">#{historyEntries.length - idx}</Typography>
+                                                    </Box>
+                                                    {entry.note && <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{entry.note}</Typography>}
+                                                    <Typography variant="caption" color="text.disabled">
+                                                        {new Date(entry.date).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                                                        {entry.recorded_by_name && ` · by ${entry.recorded_by_name}`}
+                                                    </Typography>
+                                                </Box>
+                                                <Tooltip title="Delete entry">
+                                                    <IconButton size="small" color="error" onClick={() => handleDeleteEntry(entry.id)}>
+                                                        <Delete fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </Box>
+                                        </Box>
+                                    ))}
+                                </Stack>
+                            )}
+                        </DialogContent>
+                        <DialogActions sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 } }}>
+                            <Button onClick={() => setHistoryPayment(null)} variant="contained" size="small">Close</Button>
                         </DialogActions>
                     </>
                 )}

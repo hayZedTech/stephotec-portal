@@ -6,7 +6,8 @@ import {
     Box, Paper, Typography, Chip, CircularProgress, LinearProgress,
     Divider, Tabs, Tab,
 } from "@mui/material";
-import { Payment, CheckCircle, HourglassEmpty, ReportProblemOutlined } from "@mui/icons-material";
+import { Stack } from "@mui/material";
+import { Payment, CheckCircle, HourglassEmpty, ReportProblemOutlined, History } from "@mui/icons-material";
 import api from "@/lib/axios";
 import { errorToast } from "@/lib/toast";
 
@@ -25,6 +26,55 @@ function InfoRow({ label, value, valueColor }) {
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", py: 1.5, borderBottom: "1px solid", borderColor: "grey.100" }}>
             <Typography variant="body2" color="text.secondary" fontWeight={500}>{label}</Typography>
             <Typography variant="body2" fontWeight={700} sx={{ color: valueColor || "text.primary" }}>{value}</Typography>
+        </Box>
+    );
+}
+
+function PaymentHistory({ paymentId }) {
+    const [entries, setEntries] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        setLoading(true);
+        api.get(`/payments/${paymentId}/history/`)
+            .then(({ data }) => setEntries(Array.isArray(data) ? data : []))
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, [paymentId]);
+
+    return (
+        <Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+                <History fontSize="small" sx={{ color: "text.secondary" }} />
+                <Typography variant="body2" fontWeight={700}>Payment History</Typography>
+            </Box>
+            {loading ? (
+                <Box sx={{ py: 2, textAlign: "center" }}><CircularProgress size={24} /></Box>
+            ) : entries.length === 0 ? (
+                <Box sx={{ py: 2, textAlign: "center" }}>
+                    <Typography variant="body2" color="text.secondary">No payment entries recorded yet.</Typography>
+                </Box>
+            ) : (
+                <Stack spacing={1}>
+                    {entries.map((entry, idx) => (
+                        <Box key={entry.id} sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "#fafafa" }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1 }}>
+                                <Box>
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.25 }}>
+                                        <Typography variant="body2" fontWeight={700} sx={{ color: "#16a34a" }}>{fmt(entry.amount)}</Typography>
+                                        <Typography variant="caption" color="text.secondary">#{entries.length - idx}</Typography>
+                                    </Box>
+                                    {entry.note && <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{entry.note}</Typography>}
+                                    <Typography variant="caption" color="text.disabled">
+                                        {new Date(entry.date).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                                    </Typography>
+                                </Box>
+                                <Chip label={fmt(entry.amount)} size="small" color="success" variant="outlined" sx={{ fontSize: "0.65rem", height: 20 }} />
+                            </Box>
+                        </Box>
+                    ))}
+                </Stack>
+            )}
         </Box>
     );
 }
@@ -85,13 +135,8 @@ function CoursePaymentDetail({ payment }) {
                 <InfoRow label="Last Updated" value={new Date(payment.last_updated).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })} />
             </Box>
 
-            {/* Notes */}
-            {payment.notes && (
-                <Box sx={{ p: 2, bgcolor: "#f8fafc", borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
-                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>Notes from Admin</Typography>
-                    <Typography variant="body2" sx={{ mt: 0.5 }}>{payment.notes}</Typography>
-                </Box>
-            )}
+            <Divider />
+            <PaymentHistory paymentId={payment.id} />
         </Box>
     );
 }
