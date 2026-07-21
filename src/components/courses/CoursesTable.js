@@ -58,6 +58,20 @@ export default function CoursesTable({
             headerAlign: "center",
         },
         {
+            field: "default_fee",
+            headerName: "Default Fee",
+            width: 160,
+            align: "center",
+            headerAlign: "center",
+            renderCell: ({ value }) => (
+                <Typography variant="body2" fontWeight={600} sx={{ color: value > 0 ? "#2563eb" : "text.disabled" }}>
+                    {value > 0
+                        ? Number(value).toLocaleString("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0 })
+                        : "—"}
+                </Typography>
+            ),
+        },
+        {
             field: "student_count",
             headerName: "Students",
             width: 120,
@@ -130,6 +144,17 @@ export default function CoursesTable({
                                 </Typography>
                                 <Typography variant="body2" fontWeight={600}>
                                     {row.code_prefix}
+                                </Typography>
+                            </Box>
+
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                    Default Fee
+                                </Typography>
+                                <Typography variant="body2" fontWeight={600} sx={{ color: row.default_fee > 0 ? "#2563eb" : "text.disabled" }}>
+                                    {row.default_fee > 0
+                                        ? Number(row.default_fee).toLocaleString("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0 })
+                                        : "—"}
                                 </Typography>
                             </Box>
 

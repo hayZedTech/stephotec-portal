@@ -9,6 +9,7 @@ import {
     Switch,
     Button,
     Stack,
+    InputAdornment,
 } from "@mui/material";
 
 import {
@@ -42,6 +43,7 @@ export default function CourseForm({
             name: "",
             code_prefix: "",
             is_active: true,
+            default_fee: "",
         },
     });
 
@@ -52,6 +54,7 @@ export default function CourseForm({
             name: defaultValues.name || "",
             code_prefix: defaultValues.code_prefix || "",
             is_active: defaultValues.is_active ?? true,
+            default_fee: defaultValues.default_fee ?? "",
         });
     }, [defaultValues, reset]);
 
@@ -126,6 +129,29 @@ export default function CourseForm({
                                         style: {
                                             opacity: isEditing ? 1 : 0.8,
                                         },
+                                    },
+                                }}
+                            />
+                        )}
+                    />
+                </Grid>
+
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <Controller
+                        name="default_fee"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                label="Default Course Fee"
+                                type="number"
+                                fullWidth
+                                required
+                                disabled={!isEditing}
+                                slotProps={{
+                                    input: {
+                                        startAdornment: <InputAdornment position="start">₦</InputAdornment>,
+                                        style: { opacity: isEditing ? 1 : 0.8 },
                                     },
                                 }}
                             />
