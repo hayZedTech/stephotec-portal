@@ -11,7 +11,7 @@ import { isTokenExpired } from "@/utils/token";
 
 const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL,
-    timeout: 30000,
+    timeout: 60000,
     headers: {
         "Content-Type": "application/json",
     },
@@ -58,7 +58,7 @@ async function performTokenRefresh() {
     const { data } = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/auth/token/refresh/`,
         { refresh },
-        { timeout: 15000 }
+        { timeout: 30000 }
     );
 
     if (!data?.access) {
