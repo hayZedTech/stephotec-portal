@@ -5,7 +5,6 @@ export function successToast(message) {
 }
 
 export function errorToast(error, fallback = "Something went wrong.") {
-    // If error is null or undefined, don't show anything
     if (!error) {
         toast.error(fallback);
         return;
@@ -16,34 +15,30 @@ export function errorToast(error, fallback = "Something went wrong.") {
 
     let message = fallback;
 
-    // Handle 404 errors
-    if (status === 404) {
-        message = "No data available. This feature may not be set up yet.";
+    // Handle DRF validation errors FIRST
+    if (errors && typeof errors === "object") {
+        const errorMessages = Object.values(errors)
+            .flat()
+            .filter((msg) => typeof msg === "string");
+
+        if (errorMessages.length) {
+            toast.error(errorMessages.join("\n\n"));
+            return;
+        }
     }
-    // Handle 403 errors
-    else if (status === 403) {
-        message = "You don't have permission to access this.";
-    }
-    // Handle 500 errors
-    else if (status === 500) {
-        message = "Server error. Please try again later.";
-    }
-    // Handle network errors
-    else if (error?.message === "Network Error") {
-        message = "Network error. Please check your connection.";
-    }
-    // Handle API response errors
-    else if (errors?.detail) {
+
+    if (errors?.detail) {
         message = errors.detail;
     } else if (errors?.message) {
         message = errors.message;
-    } else if (typeof errors === "object" && errors !== null) {
-        const errorMessages = Object.values(errors)
-            .flat()
-            .filter(msg => msg && typeof msg === "string");
-        if (errorMessages.length > 0) {
-            message = errorMessages.join(" ");
-        }
+    } else if (status === 404) {
+        message = "No data available. This feature may not be set up yet.";
+    } else if (status === 403) {
+        message = "You don't have permission to access this.";
+    } else if (status === 500) {
+        message = "Server error. Please try again later.";
+    } else if (error?.message === "Network Error") {
+        message = "Network error. Please check your connection.";
     }
 
     toast.error(message);
