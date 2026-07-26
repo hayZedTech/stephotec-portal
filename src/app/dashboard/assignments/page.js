@@ -147,12 +147,12 @@ export default function AssignmentsPage() {
         if (filterScore) {
             filtered = filtered.filter((item) => {
                 const submission = submissions[item.id];
-                if (!submission || !submission.score) {
+                if (!submission || submission.score == null) {
                     return filterScore === "pending";
                 }
                 
-                const score = submission.score;
-                const maxScore = item.max_score || 100;
+                const score = Number(submission.score);
+                const maxScore = Number(item.max_score) || 100;
                 const percentage = (score / maxScore) * 100;
                 
                 switch (filterScore) {
@@ -358,7 +358,6 @@ export default function AssignmentsPage() {
                                 value={filterScore}
                                 onChange={(e) => setFilterScore(e.target.value)}
                                 label="Score"
-                                disabled={!Object.values(submissions).some(s => s?.score)}
                             >
                                 <MenuItem value="">All Scores</MenuItem>
                                 <MenuItem value="pending">Pending</MenuItem>

@@ -15,6 +15,7 @@ import {
     InputAdornment,
     Box,
     CircularProgress,
+    MenuItem,
 } from "@mui/material";
 
 import {
@@ -39,6 +40,8 @@ export default function CoursesPage() {
     const [loading, setLoading] = useState(true);
 
     const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("ALL");
+    const [feeFilter, setFeeFilter] = useState("ALL");
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedCourse, setSelectedCourse] = useState(null);
@@ -65,16 +68,22 @@ export default function CoursesPage() {
     const filteredCourses = useMemo(() => {
         const keyword = search.trim().toLowerCase();
 
-        if (!keyword) {
-            return courses;
-        }
-
-        return courses.filter(
-            (course) =>
+        return courses.filter((course) => {
+            const matchesSearch = !keyword ||
                 course.name.toLowerCase().includes(keyword) ||
-                course.code_prefix.toLowerCase().includes(keyword)
-        );
-    }, [courses, search]);
+                course.code_prefix.toLowerCase().includes(keyword);
+
+            const matchesStatus = statusFilter === "ALL" ||
+                (statusFilter === "ACTIVE" && course.is_active) ||
+                (statusFilter === "INACTIVE" && !course.is_active);
+
+            const matchesFee = feeFilter === "ALL" ||
+                (feeFilter === "PAID" && Number(course.default_fee) > 0) ||
+                (feeFilter === "FREE" && (!course.default_fee || Number(course.default_fee) <= 0));
+
+            return matchesSearch && matchesStatus && matchesFee;
+        });
+    }, [courses, search, statusFilter, feeFilter]);
 
     function handleAddCourse() {
         setSelectedCourse(null);
@@ -181,7 +190,7 @@ export default function CoursesPage() {
                         </Typography>
                     </Box>
 
-                    <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: { xs: 2, sm: 3 }, width: { xs: "100%", lg: "auto" } }}>
+                    <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: { xs: 2, sm: 3 }, width: { xs: "100%", lg: "auto" }, alignItems: "center" }}>
                         <TextField
                             placeholder="Search courses..."
                             value={search}
@@ -190,8 +199,8 @@ export default function CoursesPage() {
                             sx={{
                                 width: {
                                     xs: "100%",
-                                    sm: "auto",
-                                    md: 320,
+                                    sm: 200,
+                                    md: 240,
                                 },
                             }}
                             slotProps={{
@@ -204,6 +213,32 @@ export default function CoursesPage() {
                                 },
                             }}
                         />
+
+                        <TextField
+                            select
+                            label="Status"
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            size="small"
+                            sx={{ minWidth: 130 }}
+                        >
+                            <MenuItem value="ALL">All Statuses</MenuItem>
+                            <MenuItem value="ACTIVE">Active</MenuItem>
+                            <MenuItem value="INACTIVE">Inactive</MenuItem>
+                        </TextField>
+
+                        <TextField
+                            select
+                            label="Fee"
+                            value={feeFilter}
+                            onChange={(e) => setFeeFilter(e.target.value)}
+                            size="small"
+                            sx={{ minWidth: 120 }}
+                        >
+                            <MenuItem value="ALL">All Fees</MenuItem>
+                            <MenuItem value="PAID">Paid</MenuItem>
+                            <MenuItem value="FREE">Free</MenuItem>
+                        </TextField>
 
                         <Button
                             variant="contained"

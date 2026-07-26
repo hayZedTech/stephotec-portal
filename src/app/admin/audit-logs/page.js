@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
     Box,
     Card,
@@ -38,17 +38,18 @@ export default function AuditLogsPage() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [filters, setFilters] = useState({
         action: "",
+        search: "",
     });
 
     useEffect(() => {
         loadLogs();
-    }, [filters]);
+    }, [filters.action]);
 
     async function loadLogs() {
         try {
             setLoading(true);
             setError(null);
-            const data = await getAuditLogs(filters);
+            const data = await getAuditLogs({ action: filters.action });
             setLogs(data);
             setPage(0);
         } catch (err) {
@@ -74,7 +75,20 @@ export default function AuditLogsPage() {
         }));
     };
 
-    const paginatedLogs = logs.slice(
+    const filteredLogs = useMemo(() => {
+        return logs.filter((log) => {
+            if (!filters.search) return true;
+            const term = filters.search.toLowerCase();
+            return (
+                (log.actor_username && log.actor_username.toLowerCase().includes(term)) ||
+                (log.actor_email && log.actor_email.toLowerCase().includes(term)) ||
+                (log.path && log.path.toLowerCase().includes(term)) ||
+                (log.changes && JSON.stringify(log.changes).toLowerCase().includes(term))
+            );
+        });
+    }, [logs, filters.search]);
+
+    const paginatedLogs = filteredLogs.slice(
         page * rowsPerPage,
         page * rowsPerPage + rowsPerPage
     );
@@ -120,17 +134,27 @@ export default function AuditLogsPage() {
 
             <Card sx={{ mb: 0 }}>
                 <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-                    <Box
+                     <Box
                         sx={{
                             display: "grid",
                             gridTemplateColumns: {
                                 xs: "1fr",
                                 sm: "1fr 1fr",
-                                md: "1fr auto",
+                                md: "2fr 1fr auto",
                             },
                             gap: { xs: 2, sm: 3 },
                         }}
                     >
+                        <TextField
+                            label="Search Username, Email, Path..."
+                            value={filters.search}
+                            onChange={(e) =>
+                                handleFilterChange("search", e.target.value)
+                            }
+                            size="small"
+                            fullWidth
+                        />
+
                         <TextField
                             select
                             label="Action"
@@ -318,7 +342,7 @@ export default function AuditLogsPage() {
                         <TablePagination
                             rowsPerPageOptions={[10, 25, 50, 100]}
                             component="div"
-                            count={logs.length}
+                            count={filteredLogs.length}
                             rowsPerPage={rowsPerPage}
                             page={page}
                             onPageChange={handleChangePage}

@@ -40,7 +40,7 @@ export default function LearningPage() {
 
     useEffect(() => {
         loadContent();
-    }, [user]);
+    }, [user, filterCourse]);
 
     useEffect(() => {
         applyFilters();
@@ -53,7 +53,7 @@ export default function LearningPage() {
             const res = await api.get("/learning/student-learning-content/student_content/", {
                 params: {
                     student_id: user.id,
-                    course_id: user.courses?.[0]?.course?.id || "",
+                    course_id: filterCourse || user.courses?.[0]?.course?.id || "",
                 },
             });
             console.log("Learning content response:", res.data);
@@ -98,7 +98,7 @@ export default function LearningPage() {
         }
 
         if (filterCourse) {
-            filtered = filtered.filter((item) => item.course === parseInt(filterCourse));
+            filtered = filtered.filter((item) => item.course?.id === parseInt(filterCourse));
         }
 
         setFilteredContents(filtered);

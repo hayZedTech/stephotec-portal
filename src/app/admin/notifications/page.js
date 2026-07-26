@@ -53,6 +53,54 @@ export default function AdminNotificationsPage() {
     const [alertsLoading, setAlertsLoading] = useState(true);
     const [markingAllRead, setMarkingAllRead] = useState(false);
 
+    const [incomingSearch, setIncomingSearch] = useState("");
+    const [incomingFilterStatus, setIncomingFilterStatus] = useState("ALL");
+    const [outgoingSearch, setOutgoingSearch] = useState("");
+    const [outgoingFilterType, setOutgoingFilterType] = useState("ALL");
+    const [outgoingFilterTarget, setOutgoingFilterTarget] = useState("ALL");
+    const [studentSearch, setStudentSearch] = useState("");
+    const [courseSearch, setCourseSearch] = useState("");
+
+    const filteredAlerts = alerts.filter((alert) => {
+        const matchesSearch = !incomingSearch || 
+            (alert.title && alert.title.toLowerCase().includes(incomingSearch.toLowerCase())) ||
+            (alert.message && alert.message.toLowerCase().includes(incomingSearch.toLowerCase())) ||
+            (alert.triggered_by_username && alert.triggered_by_username.toLowerCase().includes(incomingSearch.toLowerCase())) ||
+            (alert.triggered_by_name && alert.triggered_by_name.toLowerCase().includes(incomingSearch.toLowerCase()));
+
+        const matchesStatus = incomingFilterStatus === "ALL" ||
+            (incomingFilterStatus === "READ" && alert.is_read) ||
+            (incomingFilterStatus === "UNREAD" && !alert.is_read);
+
+        return matchesSearch && matchesStatus;
+    });
+
+    const filteredNotifications = notifications.filter((n) => {
+        const matchesSearch = !outgoingSearch ||
+            (n.title && n.title.toLowerCase().includes(outgoingSearch.toLowerCase())) ||
+            (n.message && n.message.toLowerCase().includes(outgoingSearch.toLowerCase()));
+
+        const matchesType = outgoingFilterType === "ALL" || n.type === outgoingFilterType;
+        const matchesTarget = outgoingFilterTarget === "ALL" || n.target_type === outgoingFilterTarget;
+
+        return matchesSearch && matchesType && matchesTarget;
+    });
+
+    const filteredStudentsList = students.filter((s) => {
+        const term = studentSearch.toLowerCase();
+        return !studentSearch ||
+            (s.first_name && s.first_name.toLowerCase().includes(term)) ||
+            (s.last_name && s.last_name.toLowerCase().includes(term)) ||
+            (s.username && s.username.toLowerCase().includes(term));
+    });
+
+    const filteredCoursesList = courses.filter((c) => {
+        const term = courseSearch.toLowerCase();
+        return !courseSearch ||
+            (c.name && c.name.toLowerCase().includes(term)) ||
+            (c.code_prefix && c.code_prefix.toLowerCase().includes(term));
+    });
+
     const { control, handleSubmit, reset, watch, formState: { isSubmitting } } = useForm({
         defaultValues: { title: "", message: "", type: "INFO", target_type: "ALL" },
     });
@@ -231,19 +279,42 @@ export default function AdminNotificationsPage() {
                                 )}
                             </Box>
 
-                            {alertsLoading ? (
-                                <Box sx={{ py: 6, textAlign: "center" }}>
-                                    <CircularProgress size={28} />
-                                </Box>
-                            ) : alerts.length === 0 ? (
-                                <Box sx={{ py: 6, textAlign: "center" }}>
-                                    <CheckCircle sx={{ fontSize: 48, color: "#16a34a", mb: 1 }} />
-                                    <Typography fontWeight={600}>All caught up!</Typography>
-                                    <Typography variant="body2" color="text.secondary">No attendance requests yet.</Typography>
-                                </Box>
-                            ) : (
-                                <Stack divider={<Divider />}>
-                                    {alerts.map((alert) => (
+                             {/* Search and Filters */}
+                             <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 3 }}>
+                                 <TextField
+                                     placeholder="Search by student name, username, title..."
+                                     value={incomingSearch}
+                                     onChange={(e) => setIncomingSearch(e.target.value)}
+                                     size="small"
+                                     fullWidth
+                                 />
+                                 <TextField
+                                     select
+                                     label="Status"
+                                     value={incomingFilterStatus}
+                                     onChange={(e) => setIncomingFilterStatus(e.target.value)}
+                                     size="small"
+                                     sx={{ minWidth: 150 }}
+                                 >
+                                     <MenuItem value="ALL">All Statuses</MenuItem>
+                                     <MenuItem value="UNREAD">Unread</MenuItem>
+                                     <MenuItem value="READ">Read</MenuItem>
+                                 </TextField>
+                             </Stack>
+
+                             {alertsLoading ? (
+                                 <Box sx={{ py: 6, textAlign: "center" }}>
+                                     <CircularProgress size={28} />
+                                 </Box>
+                             ) : filteredAlerts.length === 0 ? (
+                                 <Box sx={{ py: 6, textAlign: "center" }}>
+                                     <CheckCircle sx={{ fontSize: 48, color: "#16a34a", mb: 1 }} />
+                                     <Typography fontWeight={600}>No requests found</Typography>
+                                     <Typography variant="body2" color="text.secondary">Try adjusting your filters.</Typography>
+                                 </Box>
+                             ) : (
+                                 <Stack divider={<Divider />}>
+                                     {filteredAlerts.map((alert) => (
                                         <Box
                                             key={alert.id}
                                             sx={{
@@ -373,44 +444,83 @@ export default function AdminNotificationsPage() {
 
                             <Divider />
 
-                            {/* Sent History */}
-                            <Box>
-                                <Typography variant="subtitle1" fontWeight={700} mb={2}>Sent History</Typography>
-                                <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
-                                    <Table size="small">
-                                        <TableHead sx={{ bgcolor: "grey.50" }}>
-                                            <TableRow>
-                                                <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
-                                                <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
-                                                <TableCell sx={{ fontWeight: 700 }}>Target</TableCell>
-                                                <TableCell sx={{ fontWeight: 700 }}>Recipients</TableCell>
-                                                <TableCell sx={{ fontWeight: 700 }}>Sent At</TableCell>
-                                                <TableCell sx={{ fontWeight: 700 }}>Action</TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {notifications.length > 0 ? notifications.map((n) => (
-                                                <TableRow key={n.id}>
-                                                    <TableCell sx={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.title}</TableCell>
-                                                    <TableCell>
-                                                        <Chip label={n.type} size="small" color={n.type === "SUCCESS" ? "success" : n.type === "WARNING" ? "warning" : n.type === "ERROR" ? "error" : "info"} variant="outlined" />
-                                                    </TableCell>
-                                                    <TableCell>{n.target_type}</TableCell>
-                                                    <TableCell>{n.recipient_count}</TableCell>
-                                                    <TableCell sx={{ whiteSpace: "nowrap" }}>{new Date(n.created_at).toLocaleDateString()}</TableCell>
-                                                    <TableCell>
-                                                        <Button
-                                                            size="small"
-                                                            variant="outlined"
-                                                            startIcon={loadingNotificationId === n.id ? <CircularProgress size={14} /> : <Visibility />}
-                                                            onClick={() => viewNotificationHistory(n)}
-                                                            disabled={loadingNotificationId === n.id}
-                                                        >
-                                                            {loadingNotificationId === n.id ? "Loading..." : "View"}
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            )) : (
+                             {/* Sent History */}
+                             <Box>
+                                 <Typography variant="subtitle1" fontWeight={700} mb={2}>Sent History</Typography>
+                                 
+                                 {/* Sent History Filters */}
+                                 <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2.5 }}>
+                                     <TextField
+                                         placeholder="Search by title or message..."
+                                         value={outgoingSearch}
+                                         onChange={(e) => setOutgoingSearch(e.target.value)}
+                                         size="small"
+                                         fullWidth
+                                     />
+                                     <TextField
+                                         select
+                                         label="Filter by Type"
+                                         value={outgoingFilterType}
+                                         onChange={(e) => setOutgoingFilterType(e.target.value)}
+                                         size="small"
+                                         sx={{ minWidth: 150 }}
+                                     >
+                                         <MenuItem value="ALL">All Types</MenuItem>
+                                         <MenuItem value="INFO">Information</MenuItem>
+                                         <MenuItem value="WARNING">Warning</MenuItem>
+                                         <MenuItem value="SUCCESS">Success</MenuItem>
+                                         <MenuItem value="ERROR">Error</MenuItem>
+                                     </TextField>
+                                     <TextField
+                                         select
+                                         label="Filter by Target"
+                                         value={outgoingFilterTarget}
+                                         onChange={(e) => setOutgoingFilterTarget(e.target.value)}
+                                         size="small"
+                                         sx={{ minWidth: 180 }}
+                                     >
+                                         <MenuItem value="ALL">All Targets</MenuItem>
+                                         <MenuItem value="ALL_STUDENTS">All Students</MenuItem>
+                                         <MenuItem value="SPECIFIC">Specific Students</MenuItem>
+                                         <MenuItem value="COURSE">By Course</MenuItem>
+                                     </TextField>
+                                 </Stack>
+
+                                 <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
+                                     <Table size="small">
+                                         <TableHead sx={{ bgcolor: "grey.50" }}>
+                                             <TableRow>
+                                                 <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
+                                                 <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
+                                                 <TableCell sx={{ fontWeight: 700 }}>Target</TableCell>
+                                                 <TableCell sx={{ fontWeight: 700 }}>Recipients</TableCell>
+                                                 <TableCell sx={{ fontWeight: 700 }}>Sent At</TableCell>
+                                                 <TableCell sx={{ fontWeight: 700 }}>Action</TableCell>
+                                             </TableRow>
+                                         </TableHead>
+                                         <TableBody>
+                                             {filteredNotifications.length > 0 ? filteredNotifications.map((n) => (
+                                                 <TableRow key={n.id}>
+                                                     <TableCell sx={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.title}</TableCell>
+                                                     <TableCell>
+                                                         <Chip label={n.type} size="small" color={n.type === "SUCCESS" ? "success" : n.type === "WARNING" ? "warning" : n.type === "ERROR" ? "error" : "info"} variant="outlined" />
+                                                     </TableCell>
+                                                     <TableCell>{n.target_type}</TableCell>
+                                                     <TableCell>{n.recipient_count}</TableCell>
+                                                     <TableCell sx={{ whiteSpace: "nowrap" }}>{new Date(n.created_at).toLocaleDateString()}</TableCell>
+                                                     <TableCell>
+                                                         <Button
+                                                             size="small"
+                                                             variant="outlined"
+                                                             startIcon={loadingNotificationId === n.id ? <CircularProgress size={14} /> : <Visibility />}
+                                                             onClick={() => viewNotificationHistory(n)}
+                                                             disabled={loadingNotificationId === n.id}
+                                                         >
+                                                             {loadingNotificationId === n.id ? "Loading..." : "View"}
+                                                         </Button>
+                                                     </TableCell>
+                                                 </TableRow>
+                                             )) : (
                                                 <TableRow>
                                                     <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                                                         <Typography color="text.secondary">No notifications sent yet.</Typography>
@@ -430,8 +540,16 @@ export default function AdminNotificationsPage() {
             <Dialog open={showStudentDialog} onClose={() => setShowStudentDialog(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, m: 2, maxHeight: "85vh" } } }}>
                 <DialogTitle>Select Students</DialogTitle>
                 <DialogContent sx={{ maxHeight: 400, overflow: "auto" }}>
-                    <Stack spacing={1} sx={{ pt: 1 }}>
-                        {students.map((s) => (
+                    <TextField
+                        placeholder="Search students..."
+                        value={studentSearch}
+                        onChange={(e) => setStudentSearch(e.target.value)}
+                        size="small"
+                        fullWidth
+                        sx={{ mb: 2, mt: 1 }}
+                    />
+                    <Stack spacing={1}>
+                        {filteredStudentsList.map((s) => (
                             <FormControlLabel
                                 key={s.id}
                                 control={<Checkbox checked={selectedStudents.includes(s.id)} onChange={() => toggleStudent(s.id)} size="small" />}
@@ -447,8 +565,16 @@ export default function AdminNotificationsPage() {
             <Dialog open={showCourseDialog} onClose={() => setShowCourseDialog(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, m: 2, maxHeight: "85vh" } } }}>
                 <DialogTitle>Select Courses</DialogTitle>
                 <DialogContent sx={{ maxHeight: 400, overflow: "auto" }}>
-                    <Stack spacing={1} sx={{ pt: 1 }}>
-                        {courses.map((c) => (
+                    <TextField
+                        placeholder="Search courses..."
+                        value={courseSearch}
+                        onChange={(e) => setCourseSearch(e.target.value)}
+                        size="small"
+                        fullWidth
+                        sx={{ mb: 2, mt: 1 }}
+                    />
+                    <Stack spacing={1}>
+                        {filteredCoursesList.map((c) => (
                             <FormControlLabel
                                 key={c.id}
                                 control={<Checkbox checked={selectedCourses.includes(c.id)} onChange={() => toggleCourse(c.id)} size="small" />}
