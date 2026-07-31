@@ -14,12 +14,14 @@ import {
     Assignment,
     CheckCircle,
     CardGiftcard,
+    MenuBook,
 } from "@mui/icons-material";
 import LearningContentManager from "@/components/admin/learning/LearningContentManager";
 import AssignmentManager from "@/components/admin/assignments/AssignmentManager";
 import AttendanceManager from "@/components/admin/attendance/AttendanceManager";
 import CertificateManager from "@/components/admin/certificates/CertificateManager";
 import HandoutManager from "@/components/admin/handouts/HandoutManager";
+import BrochureManager from "@/components/admin/brochures/BrochureManager";
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -90,7 +92,7 @@ export default function AdminLearningPage() {
                     Learning Management
                 </Typography>
                 <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-                    Manage courses, assignments, attendance, certificates, and handouts.
+                    Manage courses, assignments, attendance, certificates, handouts, and brochures.
                 </Typography>
             </div>
 
@@ -152,6 +154,12 @@ export default function AdminLearningPage() {
                         iconPosition="start"
                         id="tab-4"
                     />
+                    <Tab
+                        label="Brochure"
+                        icon={<MenuBook />}
+                        iconPosition="start"
+                        id="tab-5"
+                    />
                 </Tabs>
 
                 <Box sx={{ p: { xs: 2, sm: 3 } }}>
@@ -173,6 +181,10 @@ export default function AdminLearningPage() {
 
                     <TabPanel value={tabValue} index={4}>
                         <HandoutManager />
+                    </TabPanel>
+
+                    <TabPanel value={tabValue} index={5}>
+                        <BrochureManager />
                     </TabPanel>
                 </Box>
             </Paper>

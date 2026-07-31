@@ -83,6 +83,11 @@ export default function LearningPage() {
     const [viewCertOpen, setViewCertOpen] = useState(false);
     const [searchTermCertificates, setSearchTermCertificates] = useState("");
 
+    // Brochure State
+    const [brochures, setBrochures] = useState([]);
+    const [filteredBrochures, setFilteredBrochures] = useState([]);
+    const [searchTermBrochures, setSearchTermBrochures] = useState("");
+
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -103,13 +108,17 @@ export default function LearningPage() {
         applyCertificateFilters();
     }, [certificates, searchTermCertificates]);
 
+    useEffect(() => {
+        applyBrochureFilters();
+    }, [brochures, searchTermBrochures]);
+
     const loadAllData = async () => {
         if (!user?.id) return;
         try {
             setLoading(true);
             const courseId = filterCourse || user.courses?.[0]?.course?.id || "";
 
-            const [contentRes, handoutsRes, purchasesRes, certsRes, bankAccountsRes] = await Promise.all([
+            const [contentRes, handoutsRes, purchasesRes, certsRes, bankAccountsRes, brochuresRes] = await Promise.all([
                 api.get("/learning/student-learning-content/student_content/", {
                     params: { student_id: user.id, course_id: courseId },
                 }).catch(() => ({ data: [] })),
@@ -117,6 +126,7 @@ export default function LearningPage() {
                 api.get("/learning/handout-purchases/").catch(() => ({ data: { results: [] } })),
                 api.get("/learning/certificates/").catch(() => ({ data: { results: [] } })),
                 api.get("/payments/bank-accounts/").catch(() => ({ data: { results: [] } })),
+                api.get("/learning/brochures/").catch(() => ({ data: { results: [] } })),
             ]);
 
             // Transform learning content
@@ -149,6 +159,10 @@ export default function LearningPage() {
             // Bank Accounts
             const bankData = bankAccountsRes.data.results || bankAccountsRes.data || [];
             setBankAccounts(Array.isArray(bankData) ? bankData : []);
+
+            // Brochures
+            const brochureData = brochuresRes.data.results || brochuresRes.data || [];
+            setBrochures(Array.isArray(brochureData) ? brochureData : []);
         } catch (error) {
             console.error("Failed to load student learning data:", error);
             errorToast(error, "Failed to load learning resources");
@@ -202,6 +216,20 @@ export default function LearningPage() {
             );
         }
         setFilteredCertificates(filtered);
+    };
+
+    const applyBrochureFilters = () => {
+        let filtered = [...brochures];
+        if (searchTermBrochures) {
+            const term = searchTermBrochures.toLowerCase();
+            filtered = filtered.filter(
+                (item) =>
+                    (item.title && item.title.toLowerCase().includes(term)) ||
+                    (item.description && item.description.toLowerCase().includes(term)) ||
+                    (item.course_name && item.course_name.toLowerCase().includes(term))
+            );
+        }
+        setFilteredBrochures(filtered);
     };
 
     // Open Payment Modal
@@ -325,6 +353,7 @@ export default function LearningPage() {
                     <Tab label="Learning Materials" icon={<MenuBook />} iconPosition="start" />
                     <Tab label="Handouts & Study Materials" icon={<School />} iconPosition="start" />
                     <Tab label="My Certificates" icon={<CardGiftcard />} iconPosition="start" />
+                    <Tab label="Course Brochure / Outline" icon={<MenuBook />} iconPosition="start" />
                 </Tabs>
 
                 <Box sx={{ p: { xs: 2, sm: 3 } }}>
@@ -686,6 +715,107 @@ export default function LearningPage() {
                                     <CardGiftcard sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
                                     <Typography color="text.secondary">
                                         No certificates earned yet. Complete your courses to earn certificates!
+                                    </Typography>
+                                </Paper>
+                            )}
+                        </Stack>
+                    </TabPanel>
+
+                    {/* TAB 3: BROCHURES / COURSE OUTLINES */}
+                    <TabPanel value={tabValue} index={3}>
+                        <Stack spacing={3}>
+                            {/* Search Filter */}
+                            <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
+                                <TextField
+                                    fullWidth
+                                    placeholder="Search course brochures / outlines by title, course, description..."
+                                    value={searchTermBrochures}
+                                    onChange={(e) => setSearchTermBrochures(e.target.value)}
+                                    size="small"
+                                />
+                            </Paper>
+
+                            {/* Brochures Grid */}
+                            {filteredBrochures.length > 0 ? (
+                                <Grid container spacing={3}>
+                                    {filteredBrochures.map((brochure) => (
+                                        <Grid xs={12} sm={6} md={4} key={brochure.id}>
+                                            <Card
+                                                sx={{
+                                                    borderRadius: 3,
+                                                    border: "1px solid",
+                                                    borderColor: "grey.200",
+                                                    height: "100%",
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    justifyContent: "space-between",
+                                                    transition: "box-shadow 0.2s",
+                                                    "&:hover": { boxShadow: "0 4px 20px rgba(0,0,0,0.1)" },
+                                                }}
+                                            >
+                                                <CardContent>
+                                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+                                                        <Chip
+                                                            label={brochure.course_name || "Course Brochure"}
+                                                            color="primary"
+                                                            size="small"
+                                                            sx={{ fontWeight: 700 }}
+                                                        />
+                                                        <MenuBook sx={{ fontSize: 24, color: "primary.main" }} />
+                                                    </Box>
+
+                                                    <Typography variant="h6" fontWeight={700} mb={1}>
+                                                        {brochure.title}
+                                                    </Typography>
+
+                                                    <Typography variant="body2" color="text.secondary" mb={2}>
+                                                        {brochure.description || "Official course brochure and outline."}
+                                                    </Typography>
+
+                                                    {brochure.created_at && (
+                                                        <Typography variant="caption" color="text.secondary" display="block">
+                                                            Uploaded: {new Date(brochure.created_at).toLocaleDateString()}
+                                                        </Typography>
+                                                    )}
+                                                </CardContent>
+
+                                                <Box sx={{ p: 2, pt: 0 }}>
+                                                    {brochure.file ? (
+                                                        <Button
+                                                            fullWidth
+                                                            variant="contained"
+                                                            color="primary"
+                                                            startIcon={<Download />}
+                                                            href={brochure.file}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                        >
+                                                            Download Brochure
+                                                        </Button>
+                                                    ) : (
+                                                        <Button fullWidth variant="outlined" disabled>
+                                                            No File Attached
+                                                        </Button>
+                                                    )}
+                                                </Box>
+                                            </Card>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            ) : (
+                                <Paper
+                                    elevation={0}
+                                    sx={{
+                                        borderRadius: 3,
+                                        border: "1px solid",
+                                        borderColor: "grey.200",
+                                        p: 5,
+                                        textAlign: "center",
+                                    }}
+                                >
+                                    <MenuBook sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
+                                    <Typography color="text.secondary">
+                                        No course brochures or outlines available at the moment.
                                     </Typography>
                                 </Paper>
                             )}

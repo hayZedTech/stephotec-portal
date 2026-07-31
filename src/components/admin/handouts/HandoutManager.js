@@ -636,12 +636,13 @@ export default function HandoutManager() {
                             <Table size="small">
                                 <TableHead sx={{ bgcolor: "grey.50" }}>
                                     <TableRow>
-                                        <TableCell fontWeight={700}>Student</TableCell>
-                                        <TableCell fontWeight={700}>Handout</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Student</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, display: { xs: "none", md: "table-cell" } }}>Username</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Handout</TableCell>
                                         <TableCell>Amount</TableCell>
                                         <TableCell>Status</TableCell>
                                         <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Date</TableCell>
-                                        <TableCell align="right" fontWeight={700}>Actions</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -650,6 +651,11 @@ export default function HandoutManager() {
                                             <TableCell>
                                                 <Typography variant="body2" fontWeight={600}>
                                                     {purchase.student_name || "N/A"}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
+                                                <Typography variant="body2" fontFamily="monospace" color="text.secondary">
+                                                    {purchase.student_username || "—"}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
@@ -927,6 +933,15 @@ export default function HandoutManager() {
                                         </Typography>
                                         <Typography variant="body2" fontWeight={600}>
                                             {viewingItem.data.student_name || "—"}
+                                        </Typography>
+                                    </Box>
+
+                                    <Box>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Username
+                                        </Typography>
+                                        <Typography variant="body2" fontFamily="monospace" color="text.secondary">
+                                            {viewingItem.data.student_username || "—"}
                                         </Typography>
                                     </Box>
 

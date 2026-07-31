@@ -264,11 +264,11 @@ export default function AdminNotificationsPage() {
                             {/* Header row */}
                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
                                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                    <EventAvailable sx={{ color: "#7c3aed" }} />
+                                    <Inbox sx={{ color: "#7c3aed" }} />
                                     <Box>
-                                        <Typography fontWeight={700}>Attendance Requests</Typography>
+                                        <Typography fontWeight={700}>Incoming Student Requests & Alerts</Typography>
                                         <Typography variant="caption" color="text.secondary">
-                                            Student attendance marks awaiting your review
+                                            Student attendance marks, handout payments, and assignment submissions awaiting review
                                         </Typography>
                                     </Box>
                                 </Box>

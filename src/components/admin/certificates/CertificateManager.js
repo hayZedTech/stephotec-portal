@@ -445,13 +445,13 @@ export default function CertificateManager() {
                                             onChange={handleSelectAll}
                                         />
                                     </TableCell>
-                                    <TableCell fontWeight={700}>Student</TableCell>
-                                    <TableCell fontWeight={700}>Title</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Student</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, display: { xs: "none", md: "table-cell" } }}>Username</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
                                     <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Course</TableCell>
-                                    <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Certificate #</TableCell>
                                     <TableCell>Status</TableCell>
                                     <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Earned Date</TableCell>
-                                    <TableCell align="right" fontWeight={700}>Actions</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -467,9 +467,6 @@ export default function CertificateManager() {
                                             <Typography variant="body2" fontWeight={600}>
                                                 {cert.student_name || "N/A"}
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary" sx={{ display: { xs: "block", sm: "none" } }}>
-                                                {cert.certificate_number}
-                                            </Typography>
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2">{cert.title}</Typography>
@@ -477,8 +474,10 @@ export default function CertificateManager() {
                                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                                             {cert.course_name || "N/A"}
                                         </TableCell>
-                                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                                            {cert.certificate_number}
+                                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
+                                            <Typography variant="body2" fontFamily="monospace" color="text.secondary">
+                                                {cert.student_username || "—"}
+                                            </Typography>
                                         </TableCell>
                                         <TableCell>
                                             <Chip
@@ -660,6 +659,15 @@ export default function CertificateManager() {
                                 </Typography>
                                 <Typography variant="body2" fontWeight={600}>
                                     {viewingCert.student_name || "—"}
+                                </Typography>
+                            </Box>
+
+                            <Box>
+                                <Typography variant="caption" color="text.secondary">
+                                    Username
+                                </Typography>
+                                <Typography variant="body2" fontFamily="monospace" color="text.secondary">
+                                    {viewingCert.student_username || "—"}
                                 </Typography>
                             </Box>
 
