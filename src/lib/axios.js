@@ -10,7 +10,7 @@ import {
 import { isTokenExpired } from "@/utils/token";
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1",
     timeout: 60000,
     headers: {
         "Content-Type": "application/json",
@@ -55,8 +55,9 @@ async function performTokenRefresh() {
         throw new Error("No refresh token");
     }
 
+    const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
     const { data } = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/token/refresh/`,
+        `${baseURL}/auth/token/refresh/`,
         { refresh },
         { timeout: 30000 }
     );

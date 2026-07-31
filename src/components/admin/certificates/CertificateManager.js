@@ -18,6 +18,7 @@ import {
     TextField,
     Select,
     MenuItem,
+    Menu,
     CircularProgress,
     Chip,
     IconButton,
@@ -26,6 +27,7 @@ import {
     InputLabel,
     Stack,
     Checkbox,
+    Autocomplete,
 } from "@mui/material";
 import { Edit, Delete, Add, CheckCircle, CloudUpload, Visibility, Download, DeleteOutlined } from "@mui/icons-material";
 import api from "@/lib/axios";
@@ -37,6 +39,9 @@ export default function CertificateManager() {
     const [certificates, setCertificates] = useState([]);
     const [filteredCertificates, setFilteredCertificates] = useState([]);
     const [courses, setCourses] = useState([]);
+    const [students, setStudents] = useState([]);
+    const [studentCourses, setStudentCourses] = useState([]);
+    const [selectedStudent, setSelectedStudent] = useState(null);
     const [loading, setLoading] = useState(true);
     const [openDialog, setOpenDialog] = useState(false);
     const [viewOpen, setViewOpen] = useState(false);
@@ -46,12 +51,35 @@ export default function CertificateManager() {
     const [filterCourse, setFilterCourse] = useState("");
     const [filterStatus, setFilterStatus] = useState("");
     const [selectedIds, setSelectedIds] = useState(new Set());
+    const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+    const [statusMenuCert, setStatusMenuCert] = useState(null);
+
+    const handleStatusClick = (cert, event) => {
+        setStatusMenuCert(cert);
+        setStatusMenuAnchor(event.currentTarget);
+    };
+
+    const handleStatusChange = async (newStatus) => {
+        if (!statusMenuCert) return;
+        try {
+            await api.patch(`/learning/certificates/${statusMenuCert.id}/`, { status: newStatus });
+            successToast(`Certificate status updated to ${newStatus}`);
+            setCertificates((prev) =>
+                prev.map((c) => (c.id === statusMenuCert.id ? { ...c, status: newStatus } : c))
+            );
+        } catch (error) {
+            errorToast(error, "Failed to update certificate status");
+        } finally {
+            setStatusMenuAnchor(null);
+            setStatusMenuCert(null);
+        }
+    };
     const [formData, setFormData] = useState({
-        course: "",
+        student_course: "",
         title: "",
         certificate_number: "",
         status: "EARNED",
-        earned_date: "",
+        earned_date: new Date().toISOString().split("T")[0],
         file: null,
     });
 
@@ -63,19 +91,34 @@ export default function CertificateManager() {
         applyFilters();
     }, [certificates, searchTerm, filterCourse, filterStatus]);
 
+    // When student is selected, fetch their student_course records
+    useEffect(() => {
+        if (!selectedStudent) {
+            setStudentCourses([]);
+            return;
+        }
+        api.get(`/admin/students/${selectedStudent.id}/courses/`)
+            .then((res) => setStudentCourses(res.data.results || res.data || []))
+            .catch(() => setStudentCourses([]));
+    }, [selectedStudent]);
+
     const loadData = async () => {
         try {
             setLoading(true);
-            const [certRes, coursesData] = await Promise.all([
+            const [certRes, coursesData, studentsRes] = await Promise.all([
                 api.get("/learning/certificates/").catch(() => ({ data: { results: [] } })),
                 getCourses().catch(() => []),
+                api.get("/admin/students/").catch(() => ({ data: { results: [] } })),
             ]);
             setCertificates(certRes.data.results || certRes.data || []);
             setCourses(coursesData);
+            setStudents(studentsRes.data.results || studentsRes.data || []);
         } catch (error) {
             console.error("Error loading data:", error);
+            errorToast(error, "Failed to load certificates");
             setCertificates([]);
             setCourses([]);
+            setStudents([]);
         } finally {
             setLoading(false);
         }
@@ -85,16 +128,17 @@ export default function CertificateManager() {
         let filtered = [...certificates];
 
         if (searchTerm) {
+            const term = searchTerm.toLowerCase();
             filtered = filtered.filter(
                 (item) =>
-                    item.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    item.certificate_number.toLowerCase().includes(searchTerm.toLowerCase())
+                    (item.student_name && item.student_name.toLowerCase().includes(term)) ||
+                    (item.title && item.title.toLowerCase().includes(term)) ||
+                    (item.certificate_number && item.certificate_number.toLowerCase().includes(term))
             );
         }
 
         if (filterCourse) {
-            filtered = filtered.filter((item) => item.course === parseInt(filterCourse));
+            filtered = filtered.filter((item) => item.course_name === filterCourse || item.student_course === parseInt(filterCourse));
         }
 
         if (filterStatus) {
@@ -107,15 +151,26 @@ export default function CertificateManager() {
     const handleOpenDialog = (cert = null) => {
         if (cert) {
             setEditingId(cert.id);
-            setFormData(cert);
+            setSelectedStudent(null);
+            setFormData({
+                student_course: cert.student_course,
+                title: cert.title,
+                certificate_number: cert.certificate_number,
+                status: cert.status,
+                earned_date: cert.earned_date,
+                file: null,
+            });
         } else {
             setEditingId(null);
+            setSelectedStudent(null);
+            setStudentCourses([]);
             setFormData({
-                course: "",
+                student_course: "",
                 title: "",
                 certificate_number: `CERT-${Date.now()}`,
                 status: "EARNED",
                 earned_date: new Date().toISOString().split("T")[0],
+                file: null,
             });
         }
         setOpenDialog(true);
@@ -130,19 +185,39 @@ export default function CertificateManager() {
     };
 
     const handleFileChange = (e) => {
-        setFormData((prev) => ({
-            ...prev,
-            file: e.target.files[0],
-        }));
+        const file = e.target.files[0];
+        if (file) {
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            if (file.size > maxSize) {
+                errorToast(null, `File size exceeds 10MB limit. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB`);
+                return;
+            }
+            setFormData((prev) => ({
+                ...prev,
+                file: file,
+            }));
+        }
     };
 
     const handleSubmit = async () => {
+        if (!editingId && !formData.student_course) {
+            errorToast(null, "Please select a student and course");
+            return;
+        }
+        if (!formData.title) {
+            errorToast(null, "Title is required");
+            return;
+        }
+
         try {
             const data = new FormData();
-            data.append("course", formData.course);
+            if (formData.student_course) {
+                data.append("student_course", formData.student_course);
+            }
             data.append("title", formData.title);
             data.append("certificate_number", formData.certificate_number);
             data.append("earned_date", formData.earned_date);
+            data.append("status", formData.status);
             if (formData.file) {
                 data.append("file", formData.file);
             }
@@ -151,28 +226,37 @@ export default function CertificateManager() {
                 await api.patch(`/learning/certificates/${editingId}/`, data, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
-                successToast("Certificate updated");
+                successToast("Certificate updated successfully");
             } else {
                 await api.post("/learning/certificates/", data, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
-                successToast("Certificate created");
+                successToast("Certificate created successfully");
             }
             setOpenDialog(false);
             loadData();
         } catch (error) {
-            errorToast(error, "Failed to save");
+            errorToast(error, "Failed to save certificate");
         }
     };
 
     const handleIssue = async (id) => {
-        try {
-            await api.post(`/learning/certificates/${id}/issue/`);
-            successToast("Certificate issued");
-            loadData();
-        } catch (error) {
-            errorToast(error, "Failed to issue");
-        }
+        confirmAction(
+            "Issue this certificate to the student?",
+            async () => {
+                try {
+                    await api.post(`/learning/certificates/${id}/issue/`);
+                    successToast("Certificate issued successfully");
+                    loadData();
+                } catch (error) {
+                    errorToast(error, "Failed to issue certificate");
+                }
+            },
+            null,
+            "Issue",
+            "Cancel",
+            false
+        );
     };
 
     const handleDelete = async (id) => {
@@ -246,17 +330,19 @@ export default function CertificateManager() {
         setViewOpen(true);
     };
 
-    const getCourseName = (courseId) => {
-        return courses.find((c) => c.id === courseId)?.name || "Unknown";
-    };
-
     if (loading) {
-        return <CircularProgress />;
+        return (
+            <Box sx={{ py: 4, textAlign: "center" }}>
+                <CircularProgress />
+            </Box>
+        );
     }
 
+    const courseNames = [...new Set(certificates.map((c) => c.course_name).filter(Boolean))];
+
     return (
-        <Box>
-            <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between" }}>
+        <Box sx={{ p: { xs: 1, sm: 2 } }}>
+            <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "center", flexDirection: { xs: "column", sm: "row" }, gap: 2 }}>
                 <Typography variant="h6" fontWeight={700}>
                     Certificates
                 </Typography>
@@ -270,7 +356,7 @@ export default function CertificateManager() {
             </Box>
 
             {/* Search and Filters */}
-            <Paper sx={{ p: 2, mb: 3 }}>
+            <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 3, borderRadius: 2 }} elevation={0} variant="outlined">
                 <Stack spacing={2}>
                     <TextField
                         fullWidth
@@ -280,26 +366,8 @@ export default function CertificateManager() {
                         size="small"
                     />
 
-                    <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap" }}>
-                        {selectedIds.size > 0 && (
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                                <Typography variant="body2">
-                                    {selectedIds.size} selected
-                                </Typography>
-                                <Button
-                                    size="small"
-                                    color="error"
-                                    startIcon={<DeleteOutlined />}
-                                    onClick={handleBulkDelete}
-                                >
-                                    Delete Selected
-                                </Button>
-                            </Box>
-                        )}
-                    </Stack>
-
-                    <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap" }}>
-                        <FormControl sx={{ minWidth: 150 }} size="small">
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ flexWrap: "wrap" }}>
+                        <FormControl sx={{ minWidth: { xs: "100%", sm: 160 } }} size="small">
                             <InputLabel>Course</InputLabel>
                             <Select
                                 value={filterCourse}
@@ -308,14 +376,14 @@ export default function CertificateManager() {
                             >
                                 <MenuItem value="">All Courses</MenuItem>
                                 {courses.map((course) => (
-                                    <MenuItem key={course.id} value={course.id}>
+                                    <MenuItem key={course.id} value={course.name}>
                                         {course.name}
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
 
-                        <FormControl sx={{ minWidth: 150 }} size="small">
+                        <FormControl sx={{ minWidth: { xs: "100%", sm: 150 } }} size="small">
                             <InputLabel>Status</InputLabel>
                             <Select
                                 value={filterStatus}
@@ -325,8 +393,21 @@ export default function CertificateManager() {
                                 <MenuItem value="">All Status</MenuItem>
                                 <MenuItem value="EARNED">Earned</MenuItem>
                                 <MenuItem value="ISSUED">Issued</MenuItem>
+                                <MenuItem value="REVOKED">Revoked</MenuItem>
                             </Select>
                         </FormControl>
+
+                        {selectedIds.size > 0 && (
+                            <Button
+                                size="small"
+                                color="error"
+                                startIcon={<DeleteOutlined />}
+                                onClick={handleBulkDelete}
+                                variant="outlined"
+                            >
+                                Delete Selected ({selectedIds.size})
+                            </Button>
+                        )}
                     </Stack>
                 </Stack>
             </Paper>
@@ -338,156 +419,226 @@ export default function CertificateManager() {
                         borderRadius: 3,
                         border: "1px solid",
                         borderColor: "grey.200",
-                        p: 4,
+                        p: { xs: 3, sm: 5 },
                         textAlign: "center",
                     }}
                 >
                     <Typography color="text.secondary" sx={{ mb: 1 }}>
-                        No certificates yet
+                        No certificates found
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Create and issue certificates to students. Click "Create Certificate" to begin.
+                        {searchTerm || filterCourse || filterStatus
+                            ? "Try adjusting your filters"
+                            : "Create and issue certificates to students. Click 'Create Certificate' to begin."}
                     </Typography>
                 </Paper>
             ) : (
-                <TableContainer component={Paper} sx={{ border: "1px solid", borderColor: "grey.200" }}>
-                    <Table>
-                        <TableHead sx={{ bgcolor: "grey.50" }}>
-                            <TableRow>
-                                <TableCell padding="checkbox">
-                                    <Checkbox
-                                        checked={selectedIds.size === filteredCertificates.length && filteredCertificates.length > 0}
-                                        indeterminate={selectedIds.size > 0 && selectedIds.size < filteredCertificates.length}
-                                        onChange={handleSelectAll}
-                                    />
-                                </TableCell>
-                                <TableCell fontWeight={700}>Student</TableCell>
-                                <TableCell>Title</TableCell>
-                                <TableCell>Certificate #</TableCell>
-                                <TableCell>Status</TableCell>
-                                <TableCell>Earned Date</TableCell>
-                                <TableCell align="right">Actions</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {filteredCertificates.map((cert) => (
-                                <TableRow key={cert.id} hover>
+                <Box sx={{ overflowX: "auto", borderRadius: 2 }}>
+                    <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
+                        <Table size="small">
+                            <TableHead sx={{ bgcolor: "grey.50" }}>
+                                <TableRow>
                                     <TableCell padding="checkbox">
                                         <Checkbox
-                                            checked={selectedIds.has(cert.id)}
-                                            onChange={() => handleSelectItem(cert.id)}
+                                            checked={selectedIds.size === filteredCertificates.length && filteredCertificates.length > 0}
+                                            indeterminate={selectedIds.size > 0 && selectedIds.size < filteredCertificates.length}
+                                            onChange={handleSelectAll}
                                         />
                                     </TableCell>
-                                    <TableCell>{cert.student_name}</TableCell>
-                                    <TableCell>{cert.title}</TableCell>
-                                    <TableCell>{cert.certificate_number}</TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={cert.status}
-                                            color={cert.status === "ISSUED" ? "success" : "default"}
-                                            size="small"
-                                        />
-                                    </TableCell>
-                                    <TableCell>{cert.earned_date}</TableCell>
-                                    <TableCell align="right">
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleViewCert(cert)}
-                                            title="View details"
-                                        >
-                                            <Visibility fontSize="small" />
-                                        </IconButton>
-                                        {cert.status === "EARNED" && (
-                                            <Button
-                                                size="small"
-                                                startIcon={<CheckCircle />}
-                                                onClick={() => handleIssue(cert.id)}
-                                            >
-                                                Issue
-                                            </Button>
-                                        )}
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleOpenDialog(cert)}
-                                        >
-                                            <Edit fontSize="small" />
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleDelete(cert.id)}
-                                        >
-                                            <Delete fontSize="small" />
-                                        </IconButton>
-                                    </TableCell>
+                                    <TableCell fontWeight={700}>Student</TableCell>
+                                    <TableCell fontWeight={700}>Title</TableCell>
+                                    <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Course</TableCell>
+                                    <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Certificate #</TableCell>
+                                    <TableCell>Status</TableCell>
+                                    <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Earned Date</TableCell>
+                                    <TableCell align="right" fontWeight={700}>Actions</TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                            </TableHead>
+                            <TableBody>
+                                {filteredCertificates.map((cert) => (
+                                    <TableRow key={cert.id} hover>
+                                        <TableCell padding="checkbox">
+                                            <Checkbox
+                                                checked={selectedIds.has(cert.id)}
+                                                onChange={() => handleSelectItem(cert.id)}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2" fontWeight={600}>
+                                                {cert.student_name || "N/A"}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: { xs: "block", sm: "none" } }}>
+                                                {cert.certificate_number}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Typography variant="body2">{cert.title}</Typography>
+                                        </TableCell>
+                                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
+                                            {cert.course_name || "N/A"}
+                                        </TableCell>
+                                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                                            {cert.certificate_number}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                label={cert.status}
+                                                color={cert.status === "ISSUED" ? "success" : cert.status === "EARNED" ? "info" : "error"}
+                                                size="small"
+                                                onClick={(e) => handleStatusClick(cert, e)}
+                                                clickable
+                                                sx={{ cursor: "pointer" }}
+                                            />
+                                        </TableCell>
+                                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                                            {cert.earned_date}
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleViewCert(cert)}
+                                                    title="View details"
+                                                    sx={{ color: "primary.main" }}
+                                                >
+                                                    <Visibility fontSize="small" />
+                                                </IconButton>
+                                                {cert.status === "EARNED" && (
+                                                    <Button
+                                                        size="small"
+                                                        startIcon={<CheckCircle />}
+                                                        color="success"
+                                                        onClick={() => handleIssue(cert.id)}
+                                                        sx={{ fontSize: "0.75rem", py: 0.2 }}
+                                                    >
+                                                        Issue
+                                                    </Button>
+                                                )}
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleOpenDialog(cert)}
+                                                    title="Edit"
+                                                    sx={{ color: "warning.main" }}
+                                                >
+                                                    <Edit fontSize="small" />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleDelete(cert.id)}
+                                                    title="Delete"
+                                                    sx={{ color: "error.main" }}
+                                                >
+                                                    <Delete fontSize="small" />
+                                                </IconButton>
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Box>
             )}
 
+            {/* Create/Edit Dialog */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     {editingId ? "Edit Certificate" : "Create Certificate"}
                 </DialogTitle>
-                <DialogContent sx={{ pt: 3, space: 2 }}>
-                    <Select
-                        fullWidth
-                        name="course"
-                        value={formData.course}
-                        onChange={handleChange}
-                        sx={{ mb: 2 }}
-                    >
-                        <MenuItem value="">Select Course</MenuItem>
-                        {courses.map((course) => (
-                            <MenuItem key={course.id} value={course.id}>
-                                {course.name}
-                            </MenuItem>
-                        ))}
-                    </Select>
+                <DialogContent sx={{ pt: 2 }}>
+                    <Stack spacing={2} sx={{ mt: 1 }}>
+                        {!editingId && (
+                            <>
+                                <Autocomplete
+                                    options={students}
+                                    getOptionLabel={(s) => `${s.first_name} ${s.last_name} (${s.username})`}
+                                    value={selectedStudent}
+                                    onChange={(_, val) => {
+                                        setSelectedStudent(val);
+                                        setFormData((p) => ({ ...p, student_course: "" }));
+                                    }}
+                                    renderInput={(params) => (
+                                        <TextField {...params} label="Select Student" size="small" required />
+                                    )}
+                                />
+                                <FormControl size="small" disabled={!selectedStudent || studentCourses.length === 0} required>
+                                    <InputLabel>Student Course</InputLabel>
+                                    <Select
+                                        value={formData.student_course}
+                                        onChange={(e) => setFormData((p) => ({ ...p, student_course: e.target.value }))}
+                                        label="Student Course"
+                                    >
+                                        {studentCourses.map((sc) => (
+                                            <MenuItem key={sc.id} value={sc.id}>
+                                                {sc.course?.name || sc.course} — {sc.enrollment_id}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </>
+                        )}
 
-                    <TextField
-                        fullWidth
-                        label="Title"
-                        name="title"
-                        value={formData.title}
-                        onChange={handleChange}
-                        sx={{ mb: 2 }}
-                    />
-
-                    <TextField
-                        fullWidth
-                        label="Certificate Number"
-                        name="certificate_number"
-                        value={formData.certificate_number}
-                        onChange={handleChange}
-                        sx={{ mb: 2 }}
-                    />
-
-                    <TextField
-                        fullWidth
-                        label="Earned Date"
-                        name="earned_date"
-                        type="date"
-                        value={formData.earned_date}
-                        onChange={handleChange}
-                        InputLabelProps={{ shrink: true }}
-                        sx={{ mb: 2 }}
-                    />
-
-                    <Button
-                        variant="outlined"
-                        component="label"
-                        startIcon={<CloudUpload />}
-                        fullWidth
-                    >
-                        {formData.file ? formData.file.name : "Upload Certificate File"}
-                        <input
-                            type="file"
-                            hidden
-                            onChange={handleFileChange}
+                        <TextField
+                            fullWidth
+                            label="Certificate Title"
+                            name="title"
+                            value={formData.title}
+                            onChange={handleChange}
+                            size="small"
+                            required
                         />
-                    </Button>
+
+                        <TextField
+                            fullWidth
+                            label="Certificate Number"
+                            name="certificate_number"
+                            value={formData.certificate_number}
+                            onChange={handleChange}
+                            size="small"
+                            required
+                        />
+
+                        <TextField
+                            fullWidth
+                            label="Earned Date"
+                            name="earned_date"
+                            type="date"
+                            value={formData.earned_date}
+                            onChange={handleChange}
+                            slotProps={{ inputLabel: { shrink: true } }}
+                            size="small"
+                            required
+                        />
+
+                        <FormControl size="small">
+                            <InputLabel>Status</InputLabel>
+                            <Select
+                                name="status"
+                                value={formData.status}
+                                onChange={handleChange}
+                                label="Status"
+                            >
+                                <MenuItem value="EARNED">Earned</MenuItem>
+                                <MenuItem value="ISSUED">Issued</MenuItem>
+                                <MenuItem value="REVOKED">Revoked</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <Button
+                            variant="outlined"
+                            component="label"
+                            startIcon={<CloudUpload />}
+                            fullWidth
+                        >
+                            {formData.file ? formData.file.name : "Upload Certificate File (PDF / Image)"}
+                            <input
+                                type="file"
+                                accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
+                                hidden
+                                onChange={handleFileChange}
+                            />
+                        </Button>
+                    </Stack>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
@@ -497,6 +648,7 @@ export default function CertificateManager() {
                 </DialogActions>
             </Dialog>
 
+            {/* View Details Dialog */}
             <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>Certificate Details</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
@@ -506,8 +658,8 @@ export default function CertificateManager() {
                                 <Typography variant="caption" color="text.secondary">
                                     Student
                                 </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {viewingCert.student_name}
+                                <Typography variant="body2" fontWeight={600}>
+                                    {viewingCert.student_name || "—"}
                                 </Typography>
                             </Box>
 
@@ -525,7 +677,7 @@ export default function CertificateManager() {
                                     Course
                                 </Typography>
                                 <Typography variant="body2" fontWeight={500}>
-                                    {getCourseName(viewingCert.course)}
+                                    {viewingCert.course_name || "—"}
                                 </Typography>
                             </Box>
 
@@ -542,9 +694,13 @@ export default function CertificateManager() {
                                 <Typography variant="caption" color="text.secondary">
                                     Status
                                 </Typography>
-                                <Typography variant="body2" fontWeight={500}>
-                                    {viewingCert.status}
-                                </Typography>
+                                <Box sx={{ mt: 0.5 }}>
+                                    <Chip
+                                        label={viewingCert.status}
+                                        color={viewingCert.status === "ISSUED" ? "success" : viewingCert.status === "EARNED" ? "info" : "error"}
+                                        size="small"
+                                    />
+                                </Box>
                             </Box>
 
                             <Box>
@@ -570,7 +726,7 @@ export default function CertificateManager() {
                             {viewingCert.file && (
                                 <Box>
                                     <Typography variant="caption" color="text.secondary">
-                                        Certificate File
+                                        Certificate Document
                                     </Typography>
                                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
                                         <Typography
@@ -601,6 +757,32 @@ export default function CertificateManager() {
                     <Button onClick={() => setViewOpen(false)}>Close</Button>
                 </DialogActions>
             </Dialog>
+
+            {/* STATUS MENU */}
+            <Menu
+                anchorEl={statusMenuAnchor}
+                open={Boolean(statusMenuAnchor)}
+                onClose={() => setStatusMenuAnchor(null)}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            borderRadius: 2,
+                            minWidth: 160,
+                            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.15)",
+                        },
+                    },
+                }}
+            >
+                <MenuItem onClick={() => handleStatusChange("EARNED")} sx={{ py: 1, px: 2 }}>
+                    <Chip size="small" label="EARNED" color="info" />
+                </MenuItem>
+                <MenuItem onClick={() => handleStatusChange("ISSUED")} sx={{ py: 1, px: 2 }}>
+                    <Chip size="small" label="ISSUED" color="success" />
+                </MenuItem>
+                <MenuItem onClick={() => handleStatusChange("REVOKED")} sx={{ py: 1, px: 2 }}>
+                    <Chip size="small" label="REVOKED" color="error" />
+                </MenuItem>
+            </Menu>
         </Box>
     );
 }

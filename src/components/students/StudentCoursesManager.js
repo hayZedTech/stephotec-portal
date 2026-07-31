@@ -12,6 +12,7 @@ import {
     DialogActions,
     CircularProgress,
     Chip,
+    Menu,
     IconButton,
 } from "@mui/material";
 import { Add, Edit, Delete } from "@mui/icons-material";
@@ -36,6 +37,28 @@ export default function StudentCoursesManager({ studentId, admissionYear, onCour
         status: "ACTIVE",
         is_primary: false,
     });
+    const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+    const [statusMenuCourse, setStatusMenuCourse] = useState(null);
+
+    const handleStatusClick = (courseItem, event) => {
+        setStatusMenuCourse(courseItem);
+        setStatusMenuAnchor(event.currentTarget);
+    };
+
+    const handleStatusChange = async (newStatus) => {
+        if (!statusMenuCourse) return;
+        try {
+            await updateStudentCourse(statusMenuCourse.id, { status: newStatus });
+            successToast(`Course status updated to ${newStatus}`);
+            loadCourses();
+            if (onCoursesUpdated) onCoursesUpdated();
+        } catch (error) {
+            errorToast(error, "Failed to update course status");
+        } finally {
+            setStatusMenuAnchor(null);
+            setStatusMenuCourse(null);
+        }
+    };
 
     useEffect(() => {
         loadCourses();
@@ -207,7 +230,9 @@ export default function StudentCoursesManager({ studentId, admissionYear, onCour
                                             ? "info"
                                             : "default"
                                     }
-                                    sx={{ mt: 0.5 }}
+                                    onClick={(e) => handleStatusClick(course, e)}
+                                    clickable
+                                    sx={{ mt: 0.5, cursor: "pointer" }}
                                 />
                             </Box>
                             <Box sx={{ display: "flex", gap: 1 }}>
@@ -284,6 +309,32 @@ export default function StudentCoursesManager({ studentId, admissionYear, onCour
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* STATUS MENU */}
+            <Menu
+                anchorEl={statusMenuAnchor}
+                open={Boolean(statusMenuAnchor)}
+                onClose={() => setStatusMenuAnchor(null)}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            borderRadius: 2,
+                            minWidth: 160,
+                            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.15)",
+                        },
+                    },
+                }}
+            >
+                <MenuItem onClick={() => handleStatusChange("ACTIVE")} sx={{ py: 1, px: 2 }}>
+                    <Chip size="small" label="ACTIVE" color="success" />
+                </MenuItem>
+                <MenuItem onClick={() => handleStatusChange("COMPLETED")} sx={{ py: 1, px: 2 }}>
+                    <Chip size="small" label="COMPLETED" color="info" />
+                </MenuItem>
+                <MenuItem onClick={() => handleStatusChange("WITHDRAWN")} sx={{ py: 1, px: 2 }}>
+                    <Chip size="small" label="WITHDRAWN" color="error" />
+                </MenuItem>
+            </Menu>
         </Box>
     );
 }

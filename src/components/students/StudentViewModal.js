@@ -335,16 +335,8 @@ export default function StudentViewModal({
                     {tabValue === 2 && (
                         <StudentContentAssignment
                             studentId={student.id}
+                            courseId={student.courses?.find((c) => c.is_primary)?.course?.id || student.courses?.[0]?.course?.id}
                             contentType="Learning Content"
-                            fetchFunction={async (id) => {
-                                return [];
-                            }}
-                            assignFunction={async (studentId, itemId) => {
-                                // API call placeholder
-                            }}
-                            unassignFunction={async (studentId, itemId) => {
-                                // API call placeholder
-                            }}
                         />
                     )}
 
@@ -352,16 +344,8 @@ export default function StudentViewModal({
                     {tabValue === 3 && (
                         <StudentContentAssignment
                             studentId={student.id}
+                            courseId={student.courses?.find((c) => c.is_primary)?.course?.id || student.courses?.[0]?.course?.id}
                             contentType="Assignments"
-                            fetchFunction={async (id) => {
-                                return [];
-                            }}
-                            assignFunction={async (studentId, itemId) => {
-                                // API call placeholder
-                            }}
-                            unassignFunction={async (studentId, itemId) => {
-                                // API call placeholder
-                            }}
                         />
                     )}
 
@@ -369,16 +353,8 @@ export default function StudentViewModal({
                     {tabValue === 4 && (
                         <StudentContentAssignment
                             studentId={student.id}
+                            courseId={student.courses?.find((c) => c.is_primary)?.course?.id || student.courses?.[0]?.course?.id}
                             contentType="Certificates"
-                            fetchFunction={async (id) => {
-                                return [];
-                            }}
-                            assignFunction={async (studentId, itemId) => {
-                                // API call placeholder
-                            }}
-                            unassignFunction={async (studentId, itemId) => {
-                                // API call placeholder
-                            }}
                         />
                     )}
 
@@ -386,16 +362,8 @@ export default function StudentViewModal({
                     {tabValue === 5 && (
                         <StudentContentAssignment
                             studentId={student.id}
+                            courseId={student.courses?.find((c) => c.is_primary)?.course?.id || student.courses?.[0]?.course?.id}
                             contentType="Handouts"
-                            fetchFunction={async (id) => {
-                                return [];
-                            }}
-                            assignFunction={async (studentId, itemId) => {
-                                // API call placeholder
-                            }}
-                            unassignFunction={async (studentId, itemId) => {
-                                // API call placeholder
-                            }}
                         />
                     )}
                 </Box>

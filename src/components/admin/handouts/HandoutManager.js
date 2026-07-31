@@ -18,6 +18,7 @@ import {
     TextField,
     Select,
     MenuItem,
+    Menu,
     CircularProgress,
     Chip,
     IconButton,
@@ -27,9 +28,9 @@ import {
     FormControl,
     InputLabel,
     Stack,
+    Checkbox,
 } from "@mui/material";
-import { Edit, Delete, Add, Download, CloudUpload, Visibility, DeleteOutlined } from "@mui/icons-material";
-import { Checkbox } from "@mui/material";
+import { Edit, Delete, Add, Download, CloudUpload, Visibility, DeleteOutlined, CheckCircle, Cancel } from "@mui/icons-material";
 import api from "@/lib/axios";
 import { getCourses } from "@/services/courses";
 import { successToast, errorToast } from "@/lib/toast";
@@ -62,7 +63,29 @@ export default function HandoutManager() {
     const [searchTermPurchases, setSearchTermPurchases] = useState("");
     const [filterStatusPurchases, setFilterStatusPurchases] = useState("");
     const [selectedHandoutIds, setSelectedHandoutIds] = useState(new Set());
-    const [selectedPurchaseIds, setSelectedPurchaseIds] = useState(new Set());
+    const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+    const [statusMenuHandout, setStatusMenuHandout] = useState(null);
+
+    const handleStatusClick = (handout, event) => {
+        setStatusMenuHandout(handout);
+        setStatusMenuAnchor(event.currentTarget);
+    };
+
+    const handleStatusChange = async (newStatus) => {
+        if (!statusMenuHandout) return;
+        try {
+            await api.patch(`/learning/handouts/${statusMenuHandout.id}/`, { status: newStatus });
+            successToast(`Handout status updated to ${newStatus}`);
+            setHandouts((prev) =>
+                prev.map((h) => (h.id === statusMenuHandout.id ? { ...h, status: newStatus } : h))
+            );
+        } catch (error) {
+            errorToast(error, "Failed to update handout status");
+        } finally {
+            setStatusMenuAnchor(null);
+            setStatusMenuHandout(null);
+        }
+    };
     const [formData, setFormData] = useState({
         course: "",
         title: "",
@@ -97,6 +120,7 @@ export default function HandoutManager() {
             setCourses(coursesData);
         } catch (error) {
             console.error("Error loading data:", error);
+            errorToast(error, "Failed to load handouts");
             setHandouts([]);
             setPurchases([]);
             setCourses([]);
@@ -105,14 +129,35 @@ export default function HandoutManager() {
         }
     };
 
+    const handleApprovePurchase = async (purchaseId) => {
+        try {
+            await api.post(`/learning/handout-purchases/${purchaseId}/approve/`);
+            successToast("Handout payment approved & assigned to student!");
+            loadData();
+        } catch (error) {
+            errorToast(error, "Failed to approve payment");
+        }
+    };
+
+    const handleRejectPurchase = async (purchaseId) => {
+        try {
+            await api.post(`/learning/handout-purchases/${purchaseId}/reject/`);
+            successToast("Handout purchase request rejected.");
+            loadData();
+        } catch (error) {
+            errorToast(error, "Failed to reject purchase");
+        }
+    };
+
     const applyHandoutFilters = () => {
         let filtered = [...handouts];
 
         if (searchTermHandouts) {
+            const term = searchTermHandouts.toLowerCase();
             filtered = filtered.filter(
                 (item) =>
-                    item.title.toLowerCase().includes(searchTermHandouts.toLowerCase()) ||
-                    item.description.toLowerCase().includes(searchTermHandouts.toLowerCase())
+                    (item.title && item.title.toLowerCase().includes(term)) ||
+                    (item.description && item.description.toLowerCase().includes(term))
             );
         }
 
@@ -131,10 +176,12 @@ export default function HandoutManager() {
         let filtered = [...purchases];
 
         if (searchTermPurchases) {
+            const term = searchTermPurchases.toLowerCase();
             filtered = filtered.filter(
                 (item) =>
-                    item.student_name.toLowerCase().includes(searchTermPurchases.toLowerCase()) ||
-                    item.handout_title.toLowerCase().includes(searchTermPurchases.toLowerCase())
+                    (item.student_name && item.student_name.toLowerCase().includes(term)) ||
+                    (item.handout_title && item.handout_title.toLowerCase().includes(term)) ||
+                    (item.transaction_id && item.transaction_id.toLowerCase().includes(term))
             );
         }
 
@@ -148,7 +195,14 @@ export default function HandoutManager() {
     const handleOpenDialog = (handout = null) => {
         if (handout) {
             setEditingId(handout.id);
-            setFormData(handout);
+            setFormData({
+                course: handout.course,
+                title: handout.title,
+                description: handout.description || "",
+                price: handout.price,
+                status: handout.status,
+                file: null,
+            });
         } else {
             setEditingId(null);
             setFormData({
@@ -157,6 +211,7 @@ export default function HandoutManager() {
                 description: "",
                 price: "",
                 status: "DRAFT",
+                file: null,
             });
         }
         setOpenDialog(true);
@@ -171,19 +226,39 @@ export default function HandoutManager() {
     };
 
     const handleFileChange = (e) => {
-        setFormData((prev) => ({
-            ...prev,
-            file: e.target.files[0],
-        }));
+        const file = e.target.files[0];
+        if (file) {
+            const maxSize = 10 * 1024 * 1024; // 10MB limit
+            if (file.size > maxSize) {
+                errorToast(null, `File size exceeds 10MB limit. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB`);
+                return;
+            }
+            setFormData((prev) => ({
+                ...prev,
+                file: file,
+            }));
+        }
     };
 
     const handleSubmit = async () => {
-        try {
-            if (!formData.file && !editingId) {
-                errorToast(null, "File is required for new handouts");
-                return;
-            }
+        if (!formData.course) {
+            errorToast(null, "Course is required");
+            return;
+        }
+        if (!formData.title) {
+            errorToast(null, "Title is required");
+            return;
+        }
+        if (!formData.price) {
+            errorToast(null, "Price is required");
+            return;
+        }
+        if (!formData.file && !editingId) {
+            errorToast(null, "File is required for new handouts");
+            return;
+        }
 
+        try {
             const data = new FormData();
             data.append("course", formData.course);
             data.append("title", formData.title);
@@ -198,17 +273,17 @@ export default function HandoutManager() {
                 await api.patch(`/learning/handouts/${editingId}/`, data, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
-                successToast("Handout updated");
+                successToast("Handout updated successfully");
             } else {
                 await api.post("/learning/handouts/", data, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
-                successToast("Handout created");
+                successToast("Handout created successfully");
             }
             setOpenDialog(false);
             loadData();
         } catch (error) {
-            errorToast(error, "Failed to save");
+            errorToast(error, "Failed to save handout");
         }
     };
 
@@ -221,7 +296,7 @@ export default function HandoutManager() {
                     successToast("Handout deleted");
                     loadData();
                 } catch (error) {
-                    errorToast(error, "Failed to delete");
+                    errorToast(error, "Failed to delete handout");
                 }
             },
             null,
@@ -293,18 +368,27 @@ export default function HandoutManager() {
     };
 
     if (loading) {
-        return <CircularProgress />;
+        return (
+            <Box sx={{ py: 4, textAlign: "center" }}>
+                <CircularProgress />
+            </Box>
+        );
     }
 
     return (
-        <Box>
-            <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ mb: 3 }}>
+        <Box sx={{ p: { xs: 1, sm: 2 } }}>
+            <Tabs
+                value={tabValue}
+                onChange={(e, v) => setTabValue(v)}
+                sx={{ mb: 3, borderBottom: "1px solid", borderColor: "grey.200" }}
+            >
                 <Tab label="Handouts" />
                 <Tab label="Purchases" />
             </Tabs>
 
+            {/* TAB 0: HANDOUTS */}
             <TabPanel value={tabValue} index={0}>
-                <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between" }}>
+                <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "center", flexDirection: { xs: "column", sm: "row" }, gap: 2 }}>
                     <Typography variant="h6" fontWeight={700}>
                         Study Materials
                     </Typography>
@@ -318,7 +402,7 @@ export default function HandoutManager() {
                 </Box>
 
                 {/* Search and Filters for Handouts */}
-                <Paper sx={{ p: 2, mb: 3 }}>
+                <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 3, borderRadius: 2 }} elevation={0} variant="outlined">
                     <Stack spacing={2}>
                         <TextField
                             fullWidth
@@ -328,24 +412,8 @@ export default function HandoutManager() {
                             size="small"
                         />
 
-                        {selectedHandoutIds.size > 0 && (
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                                <Typography variant="body2">
-                                    {selectedHandoutIds.size} selected
-                                </Typography>
-                                <Button
-                                    size="small"
-                                    color="error"
-                                    startIcon={<DeleteOutlined />}
-                                    onClick={handleBulkDeleteHandouts}
-                                >
-                                    Delete Selected
-                                </Button>
-                            </Box>
-                        )}
-
-                        <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap" }}>
-                            <FormControl sx={{ minWidth: 150 }} size="small">
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ flexWrap: "wrap" }}>
+                            <FormControl sx={{ minWidth: { xs: "100%", sm: 160 } }} size="small">
                                 <InputLabel>Course</InputLabel>
                                 <Select
                                     value={filterCourseHandouts}
@@ -361,7 +429,7 @@ export default function HandoutManager() {
                                 </Select>
                             </FormControl>
 
-                            <FormControl sx={{ minWidth: 150 }} size="small">
+                            <FormControl sx={{ minWidth: { xs: "100%", sm: 150 } }} size="small">
                                 <InputLabel>Status</InputLabel>
                                 <Select
                                     value={filterStatusHandouts}
@@ -374,6 +442,18 @@ export default function HandoutManager() {
                                     <MenuItem value="ARCHIVED">Archived</MenuItem>
                                 </Select>
                             </FormControl>
+
+                            {selectedHandoutIds.size > 0 && (
+                                <Button
+                                    size="small"
+                                    color="error"
+                                    startIcon={<DeleteOutlined />}
+                                    onClick={handleBulkDeleteHandouts}
+                                    variant="outlined"
+                                >
+                                    Delete Selected ({selectedHandoutIds.size})
+                                </Button>
+                            )}
                         </Stack>
                     </Stack>
                 </Paper>
@@ -385,115 +465,148 @@ export default function HandoutManager() {
                             borderRadius: 3,
                             border: "1px solid",
                             borderColor: "grey.200",
-                            p: 4,
+                            p: { xs: 3, sm: 5 },
                             textAlign: "center",
                         }}
                     >
                         <Typography color="text.secondary" sx={{ mb: 1 }}>
-                            No handouts yet
+                            No handouts found
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            Create study materials for your students. Click "Create Handout" to get started.
+                            {searchTermHandouts || filterCourseHandouts || filterStatusHandouts
+                                ? "Try adjusting your filters"
+                                : "Create study materials for your students. Click 'Create Handout' to get started."}
                         </Typography>
                     </Paper>
                 ) : (
-                    <TableContainer component={Paper} sx={{ border: "1px solid", borderColor: "grey.200" }}>
-                        <Table>
-                            <TableHead sx={{ bgcolor: "grey.50" }}>
-                                <TableRow>
-                                    <TableCell padding="checkbox">
-                                        <Checkbox
-                                            checked={selectedHandoutIds.size === filteredHandouts.length && filteredHandouts.length > 0}
-                                            indeterminate={selectedHandoutIds.size > 0 && selectedHandoutIds.size < filteredHandouts.length}
-                                            onChange={handleSelectAllHandouts}
-                                        />
-                                    </TableCell>
-                                    <TableCell fontWeight={700}>Title</TableCell>
-                                    <TableCell>Course</TableCell>
-                                    <TableCell>Price</TableCell>
-                                    <TableCell>Purchases</TableCell>
-                                    <TableCell>Status</TableCell>
-                                    <TableCell align="right">Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filteredHandouts.map((handout) => (
-                                    <TableRow key={handout.id} hover>
+                    <Box sx={{ overflowX: "auto", borderRadius: 2 }}>
+                        <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
+                            <Table size="small">
+                                <TableHead sx={{ bgcolor: "grey.50" }}>
+                                    <TableRow>
                                         <TableCell padding="checkbox">
                                             <Checkbox
-                                                checked={selectedHandoutIds.has(handout.id)}
-                                                onChange={() => handleSelectHandout(handout.id)}
+                                                checked={selectedHandoutIds.size === filteredHandouts.length && filteredHandouts.length > 0}
+                                                indeterminate={selectedHandoutIds.size > 0 && selectedHandoutIds.size < filteredHandouts.length}
+                                                onChange={handleSelectAllHandouts}
                                             />
                                         </TableCell>
-                                        <TableCell>{handout.title}</TableCell>
-                                        <TableCell>{getCourseName(handout.course)}</TableCell>
-                                        <TableCell>₦{parseFloat(handout.price).toLocaleString()}</TableCell>
-                                        <TableCell>{handout.purchase_count}</TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={handout.status}
-                                                color={handout.status === "PUBLISHED" ? "success" : "default"}
-                                                size="small"
-                                            />
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleViewHandout(handout)}
-                                                title="View details"
-                                            >
-                                                <Visibility fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleOpenDialog(handout)}
-                                            >
-                                                <Edit fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleDelete(handout.id)}
-                                            >
-                                                <Delete fontSize="small" />
-                                            </IconButton>
-                                        </TableCell>
+                                        <TableCell fontWeight={700}>Title</TableCell>
+                                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Course</TableCell>
+                                        <TableCell>Price</TableCell>
+                                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Purchases</TableCell>
+                                        <TableCell>Status</TableCell>
+                                        <TableCell align="right" fontWeight={700}>Actions</TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                                </TableHead>
+                                <TableBody>
+                                    {filteredHandouts.map((handout) => (
+                                        <TableRow key={handout.id} hover>
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    checked={selectedHandoutIds.has(handout.id)}
+                                                    onChange={() => handleSelectHandout(handout.id)}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {handout.title}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: "block", md: "none" } }}>
+                                                    {getCourseName(handout.course)}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
+                                                {getCourseName(handout.course)}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={500}>
+                                                    ₦{parseFloat(handout.price || 0).toLocaleString()}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                                                {handout.purchase_count || 0}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={handout.status}
+                                                    color={handout.status === "PUBLISHED" ? "success" : handout.status === "DRAFT" ? "default" : "error"}
+                                                    size="small"
+                                                    onClick={(e) => handleStatusClick(handout, e)}
+                                                    clickable
+                                                    sx={{ cursor: "pointer" }}
+                                                />
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleViewHandout(handout)}
+                                                        title="View details"
+                                                        sx={{ color: "primary.main" }}
+                                                    >
+                                                        <Visibility fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleOpenDialog(handout)}
+                                                        title="Edit"
+                                                        sx={{ color: "warning.main" }}
+                                                    >
+                                                        <Edit fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleDelete(handout.id)}
+                                                        title="Delete"
+                                                        sx={{ color: "error.main" }}
+                                                    >
+                                                        <Delete fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Box>
                 )}
             </TabPanel>
 
+            {/* TAB 1: PURCHASES */}
             <TabPanel value={tabValue} index={1}>
                 <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
                     Purchase History
                 </Typography>
 
                 {/* Search and Filters for Purchases */}
-                <Paper sx={{ p: 2, mb: 3 }}>
+                <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 3, borderRadius: 2 }} elevation={0} variant="outlined">
                     <Stack spacing={2}>
                         <TextField
                             fullWidth
-                            placeholder="Search by student name or handout title..."
+                            placeholder="Search by student name, handout title, or transaction ID..."
                             value={searchTermPurchases}
                             onChange={(e) => setSearchTermPurchases(e.target.value)}
                             size="small"
                         />
 
-                        <FormControl sx={{ minWidth: 150 }} size="small">
-                            <InputLabel>Status</InputLabel>
-                            <Select
-                                value={filterStatusPurchases}
-                                onChange={(e) => setFilterStatusPurchases(e.target.value)}
-                                label="Status"
-                            >
-                                <MenuItem value="">All Status</MenuItem>
-                                <MenuItem value="PENDING">Pending</MenuItem>
-                                <MenuItem value="COMPLETED">Completed</MenuItem>
-                                <MenuItem value="FAILED">Failed</MenuItem>
-                            </Select>
-                        </FormControl>
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ flexWrap: "wrap" }}>
+                            <FormControl sx={{ minWidth: { xs: "100%", sm: 160 } }} size="small">
+                                <InputLabel>Status</InputLabel>
+                                <Select
+                                    value={filterStatusPurchases}
+                                    onChange={(e) => setFilterStatusPurchases(e.target.value)}
+                                    label="Status"
+                                >
+                                    <MenuItem value="">All Status</MenuItem>
+                                    <MenuItem value="PENDING">Pending</MenuItem>
+                                    <MenuItem value="COMPLETED">Completed</MenuItem>
+                                    <MenuItem value="FAILED">Failed</MenuItem>
+                                    <MenuItem value="REFUNDED">Refunded</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Stack>
                     </Stack>
                 </Paper>
 
@@ -504,146 +617,192 @@ export default function HandoutManager() {
                             borderRadius: 3,
                             border: "1px solid",
                             borderColor: "grey.200",
-                            p: 4,
+                            p: { xs: 3, sm: 5 },
                             textAlign: "center",
                         }}
                     >
                         <Typography color="text.secondary" sx={{ mb: 1 }}>
-                            No purchases yet
+                            No purchases found
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            Student purchases will appear here once they buy handouts.
+                            {searchTermPurchases || filterStatusPurchases
+                                ? "Try adjusting your filters"
+                                : "Student purchases will appear here once they purchase handouts."}
                         </Typography>
                     </Paper>
                 ) : (
-                    <TableContainer component={Paper} sx={{ border: "1px solid", borderColor: "grey.200" }}>
-                        <Table>
-                            <TableHead sx={{ bgcolor: "grey.50" }}>
-                                <TableRow>
-                                    <TableCell fontWeight={700}>Student</TableCell>
-                                    <TableCell>Handout</TableCell>
-                                    <TableCell>Amount</TableCell>
-                                    <TableCell>Status</TableCell>
-                                    <TableCell>Date</TableCell>
-                                    <TableCell align="right">Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filteredPurchases.map((purchase) => (
-                                    <TableRow key={purchase.id} hover>
-                                        <TableCell>{purchase.student_name}</TableCell>
-                                        <TableCell>{purchase.handout_title}</TableCell>
-                                        <TableCell>₦{parseFloat(purchase.amount_paid).toLocaleString()}</TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={purchase.status}
-                                                color={purchase.status === "COMPLETED" ? "success" : "warning"}
-                                                size="small"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            {new Date(purchase.purchased_at).toLocaleDateString()}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleViewPurchase(purchase)}
-                                                title="View details"
-                                            >
-                                                <Visibility fontSize="small" />
-                                            </IconButton>
-                                            {purchase.status === "COMPLETED" && (
-                                                <Button
-                                                    size="small"
-                                                    startIcon={<Download />}
-                                                >
-                                                    Download
-                                                </Button>
-                                            )}
-                                        </TableCell>
+                    <Box sx={{ overflowX: "auto", borderRadius: 2 }}>
+                        <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
+                            <Table size="small">
+                                <TableHead sx={{ bgcolor: "grey.50" }}>
+                                    <TableRow>
+                                        <TableCell fontWeight={700}>Student</TableCell>
+                                        <TableCell fontWeight={700}>Handout</TableCell>
+                                        <TableCell>Amount</TableCell>
+                                        <TableCell>Status</TableCell>
+                                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Date</TableCell>
+                                        <TableCell align="right" fontWeight={700}>Actions</TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                                </TableHead>
+                                <TableBody>
+                                    {filteredPurchases.map((purchase) => (
+                                        <TableRow key={purchase.id} hover>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {purchase.student_name || "N/A"}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2">{purchase.handout_title || "N/A"}</Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={500}>
+                                                    ₦{parseFloat(purchase.amount_paid || 0).toLocaleString()}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={purchase.status}
+                                                    color={purchase.status === "COMPLETED" ? "success" : purchase.status === "PENDING" ? "warning" : "error"}
+                                                    size="small"
+                                                />
+                                            </TableCell>
+                                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                            {purchase.purchased_at ? new Date(purchase.purchased_at).toLocaleDateString() : "—"}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", flexWrap: "wrap", alignItems: "center" }}>
+                                                    {purchase.status === "PENDING" && (
+                                                        <>
+                                                            <Button
+                                                                size="small"
+                                                                variant="contained"
+                                                                color="success"
+                                                                startIcon={<CheckCircle />}
+                                                                onClick={() => handleApprovePurchase(purchase.id)}
+                                                                sx={{ fontSize: "0.75rem", py: 0.2 }}
+                                                            >
+                                                                Approve
+                                                            </Button>
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                color="error"
+                                                                startIcon={<Cancel />}
+                                                                onClick={() => handleRejectPurchase(purchase.id)}
+                                                                sx={{ fontSize: "0.75rem", py: 0.2 }}
+                                                            >
+                                                                Reject
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleViewPurchase(purchase)}
+                                                        title="View details"
+                                                        sx={{ color: "primary.main" }}
+                                                    >
+                                                        <Visibility fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Box>
                 )}
             </TabPanel>
 
+            {/* Create/Edit Handout Dialog */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     {editingId ? "Edit Handout" : "Create Handout"}
                 </DialogTitle>
-                <DialogContent sx={{ pt: 3, space: 2 }}>
-                    <Select
-                        fullWidth
-                        name="course"
-                        value={formData.course}
-                        onChange={handleChange}
-                        sx={{ mb: 2 }}
-                    >
-                        <MenuItem value="">Select Course</MenuItem>
-                        {courses.map((course) => (
-                            <MenuItem key={course.id} value={course.id}>
-                                {course.name}
-                            </MenuItem>
-                        ))}
-                    </Select>
+                <DialogContent sx={{ pt: 2 }}>
+                    <Stack spacing={2} sx={{ mt: 1 }}>
+                        <FormControl size="small" required fullWidth>
+                            <InputLabel>Course</InputLabel>
+                            <Select
+                                name="course"
+                                value={formData.course}
+                                onChange={handleChange}
+                                label="Course"
+                            >
+                                <MenuItem value="">Select Course</MenuItem>
+                                {courses.map((course) => (
+                                    <MenuItem key={course.id} value={course.id}>
+                                        {course.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
 
-                    <TextField
-                        fullWidth
-                        label="Title"
-                        name="title"
-                        value={formData.title}
-                        onChange={handleChange}
-                        sx={{ mb: 2 }}
-                    />
-
-                    <TextField
-                        fullWidth
-                        label="Description"
-                        name="description"
-                        value={formData.description}
-                        onChange={handleChange}
-                        multiline
-                        rows={2}
-                        sx={{ mb: 2 }}
-                    />
-
-                    <TextField
-                        fullWidth
-                        label="Price (₦)"
-                        name="price"
-                        type="number"
-                        value={formData.price}
-                        onChange={handleChange}
-                        sx={{ mb: 2 }}
-                    />
-
-                    <Select
-                        fullWidth
-                        name="status"
-                        value={formData.status}
-                        onChange={handleChange}
-                        sx={{ mb: 2 }}
-                    >
-                        <MenuItem value="DRAFT">Draft</MenuItem>
-                        <MenuItem value="PUBLISHED">Published</MenuItem>
-                        <MenuItem value="ARCHIVED">Archived</MenuItem>
-                    </Select>
-
-                    <Button
-                        variant="outlined"
-                        component="label"
-                        startIcon={<CloudUpload />}
-                        fullWidth
-                    >
-                        {formData.file ? formData.file.name : "Upload Handout File"}
-                        <input
-                            type="file"
-                            hidden
-                            onChange={handleFileChange}
+                        <TextField
+                            fullWidth
+                            label="Title"
+                            name="title"
+                            value={formData.title}
+                            onChange={handleChange}
+                            size="small"
+                            required
                         />
-                    </Button>
+
+                        <TextField
+                            fullWidth
+                            label="Description"
+                            name="description"
+                            value={formData.description}
+                            onChange={handleChange}
+                            multiline
+                            rows={2}
+                            size="small"
+                        />
+
+                        <TextField
+                            fullWidth
+                            label="Price (₦)"
+                            name="price"
+                            type="number"
+                            value={formData.price}
+                            onChange={handleChange}
+                            size="small"
+                            required
+                        />
+
+                        <FormControl size="small" fullWidth>
+                            <InputLabel>Status</InputLabel>
+                            <Select
+                                name="status"
+                                value={formData.status}
+                                onChange={handleChange}
+                                label="Status"
+                            >
+                                <MenuItem value="DRAFT">Draft</MenuItem>
+                                <MenuItem value="PUBLISHED">Published</MenuItem>
+                                <MenuItem value="ARCHIVED">Archived</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <Button
+                            variant="outlined"
+                            component="label"
+                            startIcon={<CloudUpload />}
+                            fullWidth
+                        >
+                            {formData.file ? formData.file.name : "Upload Handout File (PDF, Image, Doc, Zip)"}
+                            <input
+                                type="file"
+                                accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+                                hidden
+                                onChange={handleFileChange}
+                            />
+                        </Button>
+                        <Typography variant="caption" color="text.secondary" sx={{ textAlign: "center", display: "block" }}>
+                            Max file size: 10MB
+                        </Typography>
+                    </Stack>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
@@ -653,6 +812,7 @@ export default function HandoutManager() {
                 </DialogActions>
             </Dialog>
 
+            {/* View Details Dialog */}
             <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     {viewingItem?.type === "handout" ? "Handout Details" : "Purchase Details"}
@@ -666,7 +826,7 @@ export default function HandoutManager() {
                                         <Typography variant="caption" color="text.secondary">
                                             Title
                                         </Typography>
-                                        <Typography variant="body2" fontWeight={500}>
+                                        <Typography variant="body2" fontWeight={600}>
                                             {viewingItem.data.title}
                                         </Typography>
                                     </Box>
@@ -693,8 +853,8 @@ export default function HandoutManager() {
                                         <Typography variant="caption" color="text.secondary">
                                             Price
                                         </Typography>
-                                        <Typography variant="body2" fontWeight={500}>
-                                            ₦{parseFloat(viewingItem.data.price).toLocaleString()}
+                                        <Typography variant="body2" fontWeight={600}>
+                                            ₦{parseFloat(viewingItem.data.price || 0).toLocaleString()}
                                         </Typography>
                                     </Box>
 
@@ -702,9 +862,13 @@ export default function HandoutManager() {
                                         <Typography variant="caption" color="text.secondary">
                                             Status
                                         </Typography>
-                                        <Typography variant="body2" fontWeight={500}>
-                                            {viewingItem.data.status}
-                                        </Typography>
+                                        <Box sx={{ mt: 0.5 }}>
+                                            <Chip
+                                                label={viewingItem.data.status}
+                                                color={viewingItem.data.status === "PUBLISHED" ? "success" : viewingItem.data.status === "DRAFT" ? "default" : "error"}
+                                                size="small"
+                                            />
+                                        </Box>
                                     </Box>
 
                                     <Box>
@@ -744,14 +908,16 @@ export default function HandoutManager() {
                                         </Box>
                                     )}
 
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary">
-                                            Created
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            {new Date(viewingItem.data.created_at).toLocaleString()}
-                                        </Typography>
-                                    </Box>
+                                    {viewingItem.data.created_at && (
+                                        <Box>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Created Date
+                                            </Typography>
+                                            <Typography variant="body2">
+                                                {new Date(viewingItem.data.created_at).toLocaleString()}
+                                            </Typography>
+                                        </Box>
+                                    )}
                                 </>
                             ) : (
                                 <>
@@ -759,8 +925,8 @@ export default function HandoutManager() {
                                         <Typography variant="caption" color="text.secondary">
                                             Student
                                         </Typography>
-                                        <Typography variant="body2" fontWeight={500}>
-                                            {viewingItem.data.student_name}
+                                        <Typography variant="body2" fontWeight={600}>
+                                            {viewingItem.data.student_name || "—"}
                                         </Typography>
                                     </Box>
 
@@ -769,7 +935,7 @@ export default function HandoutManager() {
                                             Handout
                                         </Typography>
                                         <Typography variant="body2" fontWeight={500}>
-                                            {viewingItem.data.handout_title}
+                                            {viewingItem.data.handout_title || "—"}
                                         </Typography>
                                     </Box>
 
@@ -777,8 +943,8 @@ export default function HandoutManager() {
                                         <Typography variant="caption" color="text.secondary">
                                             Amount Paid
                                         </Typography>
-                                        <Typography variant="body2" fontWeight={500}>
-                                            ₦{parseFloat(viewingItem.data.amount_paid).toLocaleString()}
+                                        <Typography variant="body2" fontWeight={600}>
+                                            ₦{parseFloat(viewingItem.data.amount_paid || 0).toLocaleString()}
                                         </Typography>
                                     </Box>
 
@@ -786,36 +952,31 @@ export default function HandoutManager() {
                                         <Typography variant="caption" color="text.secondary">
                                             Status
                                         </Typography>
-                                        <Typography variant="body2" fontWeight={500}>
-                                            {viewingItem.data.status}
-                                        </Typography>
+                                        <Box sx={{ mt: 0.5 }}>
+                                            <Chip
+                                                label={viewingItem.data.status}
+                                                color={viewingItem.data.status === "COMPLETED" ? "success" : viewingItem.data.status === "PENDING" ? "warning" : "error"}
+                                                size="small"
+                                            />
+                                        </Box>
                                     </Box>
 
                                     <Box>
                                         <Typography variant="caption" color="text.secondary">
                                             Transaction ID
                                         </Typography>
-                                        <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
-                                            {viewingItem.data.transaction_id}
+                                        <Typography variant="body2" sx={{ wordBreak: "break-all", fontFamily: "monospace" }}>
+                                            {viewingItem.data.transaction_id || "—"}
                                         </Typography>
                                     </Box>
 
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary">
-                                            Purchased Date
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            {new Date(viewingItem.data.purchased_at).toLocaleString()}
-                                        </Typography>
-                                    </Box>
-
-                                    {viewingItem.data.expires_at && (
+                                    {viewingItem.data.purchased_at && (
                                         <Box>
                                             <Typography variant="caption" color="text.secondary">
-                                                Expires
+                                                Purchase Date
                                             </Typography>
                                             <Typography variant="body2">
-                                                {new Date(viewingItem.data.expires_at).toLocaleString()}
+                                                {new Date(viewingItem.data.purchased_at).toLocaleString()}
                                             </Typography>
                                         </Box>
                                     )}
@@ -828,6 +989,32 @@ export default function HandoutManager() {
                     <Button onClick={() => setViewOpen(false)}>Close</Button>
                 </DialogActions>
             </Dialog>
+
+            {/* STATUS MENU */}
+            <Menu
+                anchorEl={statusMenuAnchor}
+                open={Boolean(statusMenuAnchor)}
+                onClose={() => setStatusMenuAnchor(null)}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            borderRadius: 2,
+                            minWidth: 160,
+                            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.15)",
+                        },
+                    },
+                }}
+            >
+                <MenuItem onClick={() => handleStatusChange("DRAFT")} sx={{ py: 1, px: 2 }}>
+                    <Chip size="small" label="DRAFT" />
+                </MenuItem>
+                <MenuItem onClick={() => handleStatusChange("PUBLISHED")} sx={{ py: 1, px: 2 }}>
+                    <Chip size="small" label="PUBLISHED" color="success" />
+                </MenuItem>
+                <MenuItem onClick={() => handleStatusChange("ARCHIVED")} sx={{ py: 1, px: 2 }}>
+                    <Chip size="small" label="ARCHIVED" color="error" />
+                </MenuItem>
+            </Menu>
         </Box>
     );
 }

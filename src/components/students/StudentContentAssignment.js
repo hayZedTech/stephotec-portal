@@ -31,13 +31,13 @@ export default function StudentContentAssignment({
     const [courses, setCourses] = useState([]);
 
     useEffect(() => {
-        if (courseId) {
+        if (studentId) {
             loadItems();
         }
     }, [studentId, courseId, contentType]);
 
     const loadItems = async () => {
-        if (!courseId) return;
+        if (!studentId) return;
         try {
             setLoading(true);
             let data = [];
@@ -65,8 +65,29 @@ export default function StudentContentAssignment({
         }
     };
 
+    const getItemTitle = (item) => {
+        return (
+            item.title ||
+            item.learning_content_title ||
+            item.assignment_title ||
+            item.certificate_title ||
+            item.handout_title ||
+            (item.certificate_number ? `Certificate ${item.certificate_number}` : "Item")
+        );
+    };
+
+    const getItemDate = (item) => {
+        const raw = item.assigned_at || item.earned_date || item.issued_date || item.purchased_at || item.created_at;
+        if (!raw) return "";
+        return new Date(raw).toLocaleDateString();
+    };
+
+    const getItemCourse = (item) => {
+        return item.course_name || item.course?.name || item.student_course?.course?.name || "";
+    };
+
     const handleUnassign = async (item) => {
-        const title = item.learning_content_title || item.assignment_title || item.certificate_title || item.handout_title;
+        const title = getItemTitle(item);
         const confirmed = await confirmAction(`Remove "${title}"?`);
         if (!confirmed) return;
 
@@ -88,9 +109,10 @@ export default function StudentContentAssignment({
     };
 
     const filteredItems = items.filter(item => {
-        const title = item.learning_content_title || item.assignment_title || item.certificate_title || item.handout_title;
+        const title = getItemTitle(item);
+        const courseName = getItemCourse(item);
         const matchesSearch = title?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCourse = !filterCourse || item.course_name === filterCourse;
+        const matchesCourse = !filterCourse || courseName === filterCourse;
         return matchesSearch && matchesCourse;
     });
 
@@ -130,7 +152,9 @@ export default function StudentContentAssignment({
             ) : filteredItems.length > 0 ? (
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 2 }}>
                     {filteredItems.map(item => {
-                        const title = item.learning_content_title || item.assignment_title || item.certificate_title || item.handout_title;
+                        const title = getItemTitle(item);
+                        const courseName = getItemCourse(item);
+                        const dateFormatted = getItemDate(item);
                         return (
                             <Box
                                 key={item.id}
@@ -146,17 +170,24 @@ export default function StudentContentAssignment({
                                 <Box>
                                     <div style={{ fontWeight: 500 }}>
                                         {title}
+                                        {item.status && (
+                                            <span style={{ marginLeft: 8, fontSize: "0.75rem", padding: "2px 8px", borderRadius: 4, backgroundColor: item.status === "ISSUED" || item.status === "PUBLISHED" ? "#dcfce7" : "#e0f2fe", color: item.status === "ISSUED" || item.status === "PUBLISHED" ? "#166534" : "#0369a1" }}>
+                                                {item.status}
+                                            </span>
+                                        )}
                                     </div>
-                                    {item.course_name && (
+                                    {courseName && (
                                         <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                                            {item.course_name}
+                                            {courseName}
                                         </div>
                                     )}
                                 </Box>
                                 <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                                    <div style={{ fontSize: "0.875rem", color: "#9ca3af" }}>
-                                        Assigned on {new Date(item.assigned_at).toLocaleDateString()}
-                                    </div>
+                                    {dateFormatted && (
+                                        <div style={{ fontSize: "0.875rem", color: "#9ca3af" }}>
+                                            {item.earned_date ? `Earned: ${dateFormatted}` : `Assigned: ${dateFormatted}`}
+                                        </div>
+                                    )}
                                     <Button
                                         size="small"
                                         variant="outlined"

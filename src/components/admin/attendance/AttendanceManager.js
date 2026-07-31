@@ -18,6 +18,7 @@ import {
     TextField,
     Select,
     MenuItem,
+    Menu,
     CircularProgress,
     Chip,
     IconButton,
@@ -77,6 +78,33 @@ export default function AttendanceManager() {
     const [filterCourse, setFilterCourse] = useState("");
     const [filterApproval, setFilterApproval] = useState("");
     const [selectedIds, setSelectedIds] = useState(new Set());
+    const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
+    const [statusMenuRecord, setStatusMenuRecord] = useState(null);
+
+    const handleStatusClick = (record, event) => {
+        setStatusMenuRecord(record);
+        setStatusMenuAnchor(event.currentTarget);
+    };
+
+    const handleStatusChange = async (newStatus) => {
+        if (!statusMenuRecord) return;
+        try {
+            if (newStatus === "APPROVED") {
+                await api.post(`/learning/attendance/${statusMenuRecord.id}/approve/`);
+            } else if (newStatus === "REJECTED") {
+                await api.post(`/learning/attendance/${statusMenuRecord.id}/reject/`);
+            } else {
+                await api.patch(`/learning/attendance/${statusMenuRecord.id}/`, { approval_status: newStatus });
+            }
+            successToast(`Attendance status updated to ${newStatus}`);
+            loadData();
+        } catch (error) {
+            errorToast(error, "Failed to update attendance status");
+        } finally {
+            setStatusMenuAnchor(null);
+            setStatusMenuRecord(null);
+        }
+    };
     const [rejectDialogId, setRejectDialogId] = useState(null);
     const [rejectRemark, setRejectRemark] = useState("");
 
@@ -497,11 +525,14 @@ export default function AttendanceManager() {
                                             </TableCell>
                                             <TableCell>
                                                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                                    <Chip
-                                                        label={STATUS_META[record.approval_status]?.label || record.approval_status}
-                                                        color={STATUS_META[record.approval_status]?.color || "default"}
-                                                        size="small"
-                                                    />
+                                                     <Chip
+                                                         label={STATUS_META[record.approval_status]?.label || record.approval_status}
+                                                         color={STATUS_META[record.approval_status]?.color || "default"}
+                                                         size="small"
+                                                         onClick={(e) => handleStatusClick(record, e)}
+                                                         clickable
+                                                         sx={{ cursor: "pointer" }}
+                                                     />
                                                     {record.approval_status === "PENDING" && (
                                                         <>
                                                             <Tooltip title="Approve">
@@ -654,6 +685,32 @@ export default function AttendanceManager() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* STATUS MENU */}
+            <Menu
+                anchorEl={statusMenuAnchor}
+                open={Boolean(statusMenuAnchor)}
+                onClose={() => setStatusMenuAnchor(null)}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            borderRadius: 2,
+                            minWidth: 160,
+                            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.15)",
+                        },
+                    },
+                }}
+            >
+                <MenuItem onClick={() => handleStatusChange("PENDING")} sx={{ py: 1, px: 2 }}>
+                    <Chip size="small" label="PENDING" color="warning" />
+                </MenuItem>
+                <MenuItem onClick={() => handleStatusChange("APPROVED")} sx={{ py: 1, px: 2 }}>
+                    <Chip size="small" label="APPROVED" color="success" />
+                </MenuItem>
+                <MenuItem onClick={() => handleStatusChange("REJECTED")} sx={{ py: 1, px: 2 }}>
+                    <Chip size="small" label="REJECTED" color="error" />
+                </MenuItem>
+            </Menu>
         </Box>
     );
 }

@@ -14,6 +14,7 @@ import {
     Divider,
 } from "@mui/material";
 import ImageZoom from "@/components/ui/ImageZoom";
+import api from "@/lib/axios";
 import {
     School,
     Person,
@@ -22,18 +23,38 @@ import {
     Badge,
     CheckCircle,
     Info,
+    CardGiftcard,
+    MenuBook,
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 
 export default function StudentDashboardPage() {
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
+    const [certCount, setCertCount] = useState(0);
+    const [handoutCount, setHandoutCount] = useState(0);
 
     useEffect(() => {
         if (user) {
             setLoading(false);
+            loadStats();
         }
     }, [user]);
+
+    const loadStats = async () => {
+        try {
+            const [certsRes, purchasesRes] = await Promise.all([
+                api.get("/learning/certificates/").catch(() => ({ data: [] })),
+                api.get("/learning/handout-purchases/").catch(() => ({ data: [] })),
+            ]);
+            const certs = certsRes.data.results || certsRes.data || [];
+            const purchases = purchasesRes.data.results || purchasesRes.data || [];
+            setCertCount(Array.isArray(certs) ? certs.length : 0);
+            setHandoutCount(Array.isArray(purchases) ? purchases.filter(p => p.status === "COMPLETED").length : 0);
+        } catch (error) {
+            console.error("Error loading student stats:", error);
+        }
+    };
 
     if (!user) {
         return (
@@ -250,11 +271,11 @@ export default function StudentDashboardPage() {
                             textAlign: "center",
                         }}
                     >
-                        <Typography variant="h4" fontWeight={700} color="#0ea5e9">
-                            {completedCourses.length}
+                        <Typography variant="h4" fontWeight={700} color="#7c3aed">
+                            {certCount}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" mt={1}>
-                            Completed
+                            Certificates
                         </Typography>
                     </Paper>
                 </Grid>
@@ -270,15 +291,11 @@ export default function StudentDashboardPage() {
                             textAlign: "center",
                         }}
                     >
-                        <Typography
-                            variant="h4"
-                            fontWeight={700}
-                            color={primaryCourse ? "#2563eb" : "text.secondary"}
-                        >
-                            {primaryCourse ? "✓" : "—"}
+                        <Typography variant="h4" fontWeight={700} color="#059669">
+                            {handoutCount}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" mt={1}>
-                            Primary Course
+                            Study Handouts
                         </Typography>
                     </Paper>
                 </Grid>

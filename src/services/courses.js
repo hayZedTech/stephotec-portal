@@ -23,6 +23,11 @@ export const updateCourse = async (id, payload) => {
     return data;
 };
 
+export const patchCourse = async (id, payload) => {
+    const { data } = await api.patch(`/courses/${id}/`, payload);
+    return data;
+};
+
 export const deleteCourse = async (id) => {
     const { data } = await api.delete(`/courses/${id}/`);
     return data;

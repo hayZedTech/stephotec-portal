@@ -11,20 +11,31 @@ const normalizeListResponse = (data) => {
 };
 
 export const getStudentLearningContent = async (studentId, courseId) => {
-    const { data } = await api.get(
-        `/learning/student-learning-content/student_content/?student_id=${studentId}&course_id=${courseId}`
-    );
+    const url = courseId
+        ? `/learning/student-learning-content/student_content/?student_id=${studentId}&course_id=${courseId}`
+        : `/learning/student-learning-content/student_content/?student_id=${studentId}`;
+    const { data } = await api.get(url);
     return normalizeListResponse(data);
 };
 
 export const getStudentAssignments = async (studentId, courseId) => {
-    const { data } = await api.get(
-        `/learning/student-assignments/student_assignments/?student_id=${studentId}&course_id=${courseId}`
-    );
+    const url = courseId
+        ? `/learning/student-assignments/student_assignments/?student_id=${studentId}&course_id=${courseId}`
+        : `/learning/student-assignments/student_assignments/?student_id=${studentId}`;
+    const { data } = await api.get(url);
     return normalizeListResponse(data);
 };
 
 export const getStudentCertificates = async (studentId) => {
+    try {
+        const { data } = await api.get(
+            `/learning/certificates/?student_course__student=${studentId}`
+        );
+        const res = normalizeListResponse(data);
+        if (res.length > 0) return res;
+    } catch (e) {
+        // Fallback
+    }
     const { data } = await api.get(
         `/learning/student-certificates/?student_id=${studentId}`
     );
@@ -32,6 +43,15 @@ export const getStudentCertificates = async (studentId) => {
 };
 
 export const getStudentHandouts = async (studentId) => {
+    try {
+        const { data } = await api.get(
+            `/learning/handout-purchases/?student=${studentId}`
+        );
+        const res = normalizeListResponse(data);
+        if (res.length > 0) return res;
+    } catch (e) {
+        // Fallback
+    }
     const { data } = await api.get(
         `/learning/student-handouts/?student_id=${studentId}`
     );

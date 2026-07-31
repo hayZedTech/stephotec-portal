@@ -25,6 +25,7 @@ export default function CoursesTable({
     onView,
     onEdit,
     onDelete,
+    onStatusToggle,
 }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -43,7 +44,7 @@ export default function CoursesTable({
                         width: "100%",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
+                        textAlign: "center",
                     }}
                 >
                     {value}
@@ -52,23 +53,32 @@ export default function CoursesTable({
         },
         {
             field: "code_prefix",
-            headerName: "Code",
-            width: 120,
+            headerName: "Code Prefix",
+            width: 140,
             align: "center",
             headerAlign: "center",
         },
         {
             field: "default_fee",
             headerName: "Default Fee",
-            width: 160,
+            width: 150,
             align: "center",
             headerAlign: "center",
             renderCell: ({ value }) => (
-                <Typography variant="body2" fontWeight={600} sx={{ color: value > 0 ? "#2563eb" : "text.disabled" }}>
+                <span
+                    style={{
+                        fontWeight: 600,
+                        color: value > 0 ? "#2563eb" : "#9ca3af",
+                    }}
+                >
                     {value > 0
-                        ? Number(value).toLocaleString("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0 })
+                        ? Number(value).toLocaleString("en-NG", {
+                              style: "currency",
+                              currency: "NGN",
+                              minimumFractionDigits: 0,
+                          })
                         : "—"}
-                </Typography>
+                </span>
             ),
         },
         {
@@ -84,11 +94,14 @@ export default function CoursesTable({
             width: 140,
             align: "center",
             headerAlign: "center",
-            renderCell: ({ value }) => (
+            renderCell: ({ row, value }) => (
                 <Chip
                     size="small"
                     color={value ? "success" : "default"}
                     label={value ? "ACTIVE" : "INACTIVE"}
+                    onClick={() => onStatusToggle?.(row)}
+                    clickable
+                    sx={{ cursor: "pointer" }}
                 />
             ),
         },
@@ -175,6 +188,9 @@ export default function CoursesTable({
                                     size="small"
                                     color={row.is_active ? "success" : "default"}
                                     label={row.is_active ? "ACTIVE" : "INACTIVE"}
+                                    onClick={() => onStatusToggle?.(row)}
+                                    clickable
+                                    sx={{ cursor: "pointer" }}
                                 />
                             </Box>
                         </Stack>

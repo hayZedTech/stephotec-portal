@@ -26,6 +26,7 @@ import {
 import {
     getCourses,
     deleteCourse,
+    patchCourse,
 } from "@/services/courses";
 
 import {
@@ -137,6 +138,16 @@ export default function CoursesPage() {
             "Cancel",
             true
         );
+    }
+
+    async function handleStatusToggle(course) {
+        try {
+            await patchCourse(course.id, { is_active: !course.is_active });
+            successToast(`Course status updated to ${!course.is_active ? "ACTIVE" : "INACTIVE"}`);
+            await loadCourses();
+        } catch (error) {
+            errorToast(error, "Failed to update course status.");
+        }
     }
 
     return (
@@ -272,6 +283,7 @@ export default function CoursesPage() {
                         onView={handleViewCourse}
                         onEdit={handleEditCourse}
                         onDelete={handleDeleteCourse}
+                        onStatusToggle={handleStatusToggle}
                     />
                 </Paper>
             </Box>
