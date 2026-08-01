@@ -12,6 +12,7 @@ import {
     MenuItem,
     Dialog,
     Box,
+    Tooltip,
 } from "@mui/material";
 
 import {
@@ -22,6 +23,7 @@ import {
     Person,
     Settings,
     Close,
+    Home as HomeIcon,
 } from "@mui/icons-material";
 
 import { useLayout } from "@/providers/LayoutProvider";
@@ -66,22 +68,43 @@ function Header() {
 
     return (
         <>
-            <header className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-white/30 bg-white/80 px-4 backdrop-blur-xl lg:px-8">
+            <header className="sticky top-0 z-40 flex h-20 items-center justify-between border-b border-white/30 bg-white/80 px-3 backdrop-blur-xl sm:px-6 lg:px-8">
 
                 {/* Left Section */}
-                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
 
                     {/* Mobile Menu Toggle */}
                     <IconButton
                         onClick={toggleSidebar}
                         className="lg:!hidden"
+                        size="small"
                     >
-                        <MenuIcon />
+                        <MenuIcon fontSize="small" />
                     </IconButton>
 
+                    {/* Home Website Link Icon */}
+                    <Tooltip title="Go to Stephotec Website">
+                        <IconButton
+                            component="a"
+                            href="https://stephotec.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{
+                                border: "1px solid #e2e8f0",
+                                borderRadius: 2.5,
+                                color: "#2563eb",
+                                p: 1,
+                                "&:hover": { bgcolor: "#eff6ff", borderColor: "#bfdbfe" },
+                            }}
+                            size="small"
+                        >
+                            <HomeIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+
                     {/* Header Typography Wrapper */}
-                    <div className="min-w-0">
-                        <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl lg:text-2xl">
+                    <div className="min-w-0 max-w-[110px] sm:max-w-none">
+                        <h1 className="truncate text-base font-bold text-slate-900 sm:text-xl lg:text-2xl">
                             {pageTitle}
                         </h1>
                         <p className="mt-0.5 hidden truncate text-xs text-slate-500 sm:block lg:text-sm">

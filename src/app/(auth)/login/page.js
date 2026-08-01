@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { errorToast } from "@/lib/toast";
 import { IconButton, InputAdornment } from "@mui/material";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { Visibility, VisibilityOff, Home as HomeIcon } from "@mui/icons-material";
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -50,6 +50,17 @@ export default function LoginPage() {
         }}>
             {/* Overlay */}
             <div className="absolute inset-0 bg-black/40"></div>
+
+            {/* Top Right Home Button */}
+            <a
+                href="https://stephotec.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute top-4 right-4 z-10 flex items-center gap-1.5 rounded-full bg-white/90 px-3.5 py-1.5 text-xs font-semibold text-zinc-800 shadow-md backdrop-blur-md transition-all hover:bg-white hover:text-blue-600"
+            >
+                <HomeIcon sx={{ fontSize: 16 }} />
+                <span>Home Website</span>
+            </a>
             
             <div className="relative w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 shadow-lg">
 
@@ -125,6 +136,18 @@ export default function LoginPage() {
                     )}
 
                 </form>
+
+                <div className="mt-6 pt-4 border-t border-zinc-100 text-center">
+                    <a
+                        href="https://stephotec.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                    >
+                        <HomeIcon sx={{ fontSize: 16 }} />
+                        <span>Return to Stephotec Website</span>
+                    </a>
+                </div>
 
             </div>
         </div>
