@@ -2,6 +2,8 @@ import {
     Dashboard,
     People,
     School,
+    AdminPanelSettings,
+    VerifiedUser,
     Settings,
 } from "@mui/icons-material";
 
@@ -17,9 +19,19 @@ const adminNavigation = [
         icon: People,
     },
     {
+        title: "Staff & Admins",
+        href: "/admin/staff",
+        icon: AdminPanelSettings,
+    },
+    {
         title: "Courses",
         href: "/admin/courses",
         icon: School,
+    },
+    {
+        title: "Verify / Scan ID",
+        href: "/verify",
+        icon: VerifiedUser,
     },
     {
         title: "Settings",

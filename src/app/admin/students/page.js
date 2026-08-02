@@ -11,7 +11,7 @@ import StudentViewModal from "@/components/students/StudentViewModal";
 import {Paper, Typography, TextField, InputAdornment, Button, Box, CircularProgress, Menu, MenuItem, Chip,
 } from "@mui/material";
 
-import { Search, Add } from "@mui/icons-material";
+import { Search, Add, VerifiedUser } from "@mui/icons-material";
 import { successToast, errorToast } from "@/lib/toast";
 
 import {
@@ -251,6 +251,23 @@ export default function StudentsPage() {
                         <StudentFilters
                             onFilterChange={setFilters}
                         />
+
+                        <Button
+                            variant="outlined"
+                            component="a"
+                            href="/verify"
+                            startIcon={<VerifiedUser />}
+                            size="small"
+                            sx={{
+                                borderRadius: 2,
+                                p: 2,
+                                textTransform: "none",
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                            }}
+                        >
+                            Scan / Verify ID
+                        </Button>
 
                         <Button
                             variant="contained"
