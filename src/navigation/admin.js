@@ -4,6 +4,7 @@ import {
     School,
     AdminPanelSettings,
     VerifiedUser,
+    WorkspacePremium,
     Settings,
 } from "@mui/icons-material";
 
@@ -29,9 +30,14 @@ const adminNavigation = [
         icon: School,
     },
     {
-        title: "Verify / Scan ID",
+        title: "Verify Student ID",
         href: "/verify",
         icon: VerifiedUser,
+    },
+    {
+        title: "Verify Certificate",
+        href: "/verify-certificate",
+        icon: WorkspacePremium,
     },
     {
         title: "Settings",

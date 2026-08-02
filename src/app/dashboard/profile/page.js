@@ -26,9 +26,10 @@ import {
     MenuItem,
     Stack,
 } from "@mui/material";
-import { School, DateRange, Edit, CloudUpload, Close, Badge, BadgeOutlined } from "@mui/icons-material";
+import { School, DateRange, Edit, CloudUpload, Close, Badge as BadgeIcon, BadgeOutlined } from "@mui/icons-material";
 import ImageZoom from "@/components/ui/ImageZoom";
 import StudentIDCardModal from "@/components/common/StudentIDCardModal";
+import StaffIDCardModal from "@/components/common/StaffIDCardModal";
 
 const NIGERIAN_STATES = [
     "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
@@ -489,7 +490,7 @@ export default function ProfilePage() {
                             }}
                         >
                             <CardContent sx={{ textAlign: "center", p: { xs: 2, sm: 3 } }}>
-                                <Badge sx={{ fontSize: { xs: 28, sm: 32 }, color: "#8b5cf6", mb: 1 }} />
+                                <BadgeIcon sx={{ fontSize: { xs: 28, sm: 32 }, color: "#8b5cf6", mb: 1 }} />
                                 <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.75rem", sm: "2.125rem" } }}>
                                     {user?.status === "ACTIVE" ? "✓" : "—"}
                                 </Typography>
@@ -702,12 +703,28 @@ export default function ProfilePage() {
                 </DialogActions>
             </Dialog>
 
-            {/* DIGITAL STUDENT ID CARD MODAL */}
-            <StudentIDCardModal
-                open={showIDCard}
-                onClose={() => setShowIDCard(false)}
-                student={user}
-            />
+            {/* DIGITAL ID CARD MODAL */}
+            {user?.role === "ADMIN" ? (
+                <StaffIDCardModal
+                    open={showIDCard}
+                    onClose={() => setShowIDCard(false)}
+                    staff={{
+                        username: user?.username,
+                        first_name: user?.firstName || user?.first_name,
+                        last_name: user?.lastName || user?.last_name,
+                        email: user?.email,
+                        phone: user?.phone,
+                        role_title: user?.job_title || user?.jobTitle || "System Administrator",
+                        profile_picture_url: user?.profilePictureUrl || user?.profile_picture_url,
+                    }}
+                />
+            ) : (
+                <StudentIDCardModal
+                    open={showIDCard}
+                    onClose={() => setShowIDCard(false)}
+                    student={user}
+                />
+            )}
 
         </div>
     );

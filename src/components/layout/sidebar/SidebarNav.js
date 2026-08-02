@@ -19,6 +19,9 @@ import {
     Lock,
     EventAvailable,
     Payment,
+    AdminPanelSettings,
+    VerifiedUser,
+    WorkspacePremium,
 } from "@mui/icons-material";
 
 export default function SidebarNav({ user, collapsed }) {
@@ -39,9 +42,24 @@ export default function SidebarNav({ user, collapsed }) {
                     icon: <People fontSize="small" />,
                 },
                 {
+                    label: "Staff & Admins",
+                    href: "/admin/staff",
+                    icon: <AdminPanelSettings fontSize="small" />,
+                },
+                {
                     label: "Courses",
                     href: "/admin/courses",
                     icon: <School fontSize="small" />,
+                },
+                {
+                    label: "Verify Student ID",
+                    href: "/verify",
+                    icon: <VerifiedUser fontSize="small" />,
+                },
+                {
+                    label: "Verify Certificate",
+                    href: "/verify-certificate",
+                    icon: <WorkspacePremium fontSize="small" />,
                 },
                 {
                     label: "Notifications",
@@ -99,6 +117,11 @@ export default function SidebarNav({ user, collapsed }) {
                     label: "Attendance",
                     href: "/dashboard/attendance",
                     icon: <EventAvailable fontSize="small" />,
+                },
+                {
+                    label: "Verify Certificate",
+                    href: "/verify-certificate",
+                    icon: <WorkspacePremium fontSize="small" />,
                 },
                 {
                     label: "Payments",
