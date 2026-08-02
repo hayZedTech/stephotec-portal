@@ -29,7 +29,11 @@ export default function StudentIDCardModal({ open, onClose, student }) {
         .join(" ")
         .trim() || student.username || "Student Name";
 
-    const username = student.username || "SE/26/0000";
+    const username =
+        student.courses?.find((c) => c.is_primary)?.enrollment_id ||
+        student.courses?.[0]?.enrollment_id ||
+        student.username ||
+        "SE/26/0000";
     const primaryCourse =
         student.courses?.find((c) => c.is_primary)?.course?.name ||
         student.courses?.[0]?.course?.name ||
