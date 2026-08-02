@@ -6,6 +6,8 @@ import {
     VerifiedUser,
     WorkspacePremium,
     Settings,
+    Assignment,
+    LibraryBooks,
 } from "@mui/icons-material";
 
 const adminNavigation = [
@@ -15,19 +17,29 @@ const adminNavigation = [
         icon: Dashboard,
     },
     {
-        title: "Students",
-        href: "/admin/students",
-        icon: People,
-    },
-    {
         title: "Staff & Admins",
         href: "/admin/staff",
         icon: AdminPanelSettings,
     },
     {
+        title: "Students",
+        href: "/admin/students",
+        icon: People,
+    },
+    {
         title: "Courses",
         href: "/admin/courses",
         icon: School,
+    },
+    {
+        title: "Learning Management",
+        href: "/dashboard/admin/learning",
+        icon: LibraryBooks,
+    },
+    {
+        title: "Assignments & Quizzes",
+        href: "/admin/assessments",
+        icon: Assignment,
     },
     {
         title: "Verify Student ID",

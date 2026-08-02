@@ -34,10 +34,14 @@ import api from "@/lib/axios";
 import { getCourses } from "@/services/courses";
 import { successToast, errorToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
+import CertificateModal from "@/components/common/CertificateModal";
+import { WorkspacePremium } from "@mui/icons-material";
 
 export default function CertificateManager() {
     const [certificates, setCertificates] = useState([]);
     const [filteredCertificates, setFilteredCertificates] = useState([]);
+    const [openCertModal, setOpenCertModal] = useState(false);
+    const [selectedCertForModal, setSelectedCertForModal] = useState(null);
     const [courses, setCourses] = useState([]);
     const [students, setStudents] = useState([]);
     const [studentCourses, setStudentCourses] = useState([]);
@@ -222,21 +226,32 @@ export default function CertificateManager() {
                 data.append("file", formData.file);
             }
 
+            let res;
             if (editingId) {
-                await api.patch(`/learning/certificates/${editingId}/`, data, {
+                res = await api.patch(`/learning/certificates/${editingId}/`, data, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
                 successToast("Certificate updated successfully");
             } else {
-                await api.post("/learning/certificates/", data, {
+                res = await api.post("/learning/certificates/", data, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
                 successToast("Certificate created successfully");
             }
             setOpenDialog(false);
             loadData();
+            return res.data;
         } catch (error) {
             errorToast(error, "Failed to save certificate");
+            return null;
+        }
+    };
+
+    const handleGenerateAndSave = async () => {
+        const saved = await handleSubmit();
+        if (saved) {
+            setSelectedCertForModal(saved);
+            setOpenCertModal(true);
         }
     };
 
@@ -496,6 +511,17 @@ export default function CertificateManager() {
                                             <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", flexWrap: "wrap" }}>
                                                 <IconButton
                                                     size="small"
+                                                    onClick={() => {
+                                                        setSelectedCertForModal(cert);
+                                                        setOpenCertModal(true);
+                                                    }}
+                                                    title="Generate / Print Certificate"
+                                                    sx={{ color: "#d97706" }}
+                                                >
+                                                    <WorkspacePremium fontSize="small" />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
                                                     onClick={() => handleViewCert(cert)}
                                                     title="View details"
                                                     sx={{ color: "primary.main" }}
@@ -639,11 +665,21 @@ export default function CertificateManager() {
                         </Button>
                     </Stack>
                 </DialogContent>
-                <DialogActions>
+                <DialogActions sx={{ p: 2.5, bgcolor: "#f8fafc", justifyContent: "space-between" }}>
                     <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-                    <Button onClick={handleSubmit} variant="contained">
-                        Save
-                    </Button>
+                    <Stack direction="row" spacing={1.5}>
+                        <Button
+                            onClick={handleGenerateAndSave}
+                            variant="contained"
+                            startIcon={<WorkspacePremium />}
+                            sx={{ bgcolor: "#d97706", "&:hover": { bgcolor: "#b45309" }, fontWeight: 700, textTransform: "none" }}
+                        >
+                            Generate & Preview Certificate
+                        </Button>
+                        <Button onClick={handleSubmit} variant="outlined" sx={{ fontWeight: 700, textTransform: "none" }}>
+                            Save Only
+                        </Button>
+                    </Stack>
                 </DialogActions>
             </Dialog>
 
@@ -791,6 +827,13 @@ export default function CertificateManager() {
                     <Chip size="small" label="REVOKED" color="error" />
                 </MenuItem>
             </Menu>
+
+            {/* OFFICIAL CERTIFICATE MODAL */}
+            <CertificateModal
+                open={openCertModal}
+                onClose={() => setOpenCertModal(false)}
+                certificate={selectedCertForModal}
+            />
         </Box>
     );
 }

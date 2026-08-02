@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayout } from "@/providers/LayoutProvider";
@@ -22,11 +23,22 @@ import {
     AdminPanelSettings,
     VerifiedUser,
     WorkspacePremium,
+    Quiz,
+    ExpandMore,
+    ChevronRight,
+    Verified,
 } from "@mui/icons-material";
 
 export default function SidebarNav({ user, collapsed }) {
     const pathname = usePathname();
     const { closeSidebar } = useLayout();
+
+    const isVerificationRoute =
+        pathname === "/verify" ||
+        pathname === "/verify-certificate" ||
+        pathname === "/verify-staff";
+
+    const [verificationOpen, setVerificationOpen] = useState(isVerificationRoute);
 
     const links =
         user?.role === "ADMIN"
@@ -37,14 +49,14 @@ export default function SidebarNav({ user, collapsed }) {
                     icon: <Dashboard fontSize="small" />,
                 },
                 {
-                    label: "Students",
-                    href: "/admin/students",
-                    icon: <People fontSize="small" />,
-                },
-                {
                     label: "Staff & Admins",
                     href: "/admin/staff",
                     icon: <AdminPanelSettings fontSize="small" />,
+                },
+                {
+                    label: "Students",
+                    href: "/admin/students",
+                    icon: <People fontSize="small" />,
                 },
                 {
                     label: "Courses",
@@ -52,14 +64,35 @@ export default function SidebarNav({ user, collapsed }) {
                     icon: <School fontSize="small" />,
                 },
                 {
-                    label: "Verify Student ID",
-                    href: "/verify",
-                    icon: <VerifiedUser fontSize="small" />,
+                    label: "Learning Management",
+                    href: "/dashboard/admin/learning",
+                    icon: <LibraryBooks fontSize="small" />,
                 },
                 {
-                    label: "Verify Certificate",
-                    href: "/verify-certificate",
-                    icon: <WorkspacePremium fontSize="small" />,
+                    label: "Assignments & Quizzes",
+                    href: "/admin/assessments",
+                    icon: <Assignment fontSize="small" />,
+                },
+                {
+                    label: "Verification Portal",
+                    icon: <VerifiedUser fontSize="small" />,
+                    children: [
+                        {
+                            label: "Verify Student ID",
+                            href: "/verify",
+                            icon: <VerifiedUser fontSize="small" />,
+                        },
+                        {
+                            label: "Verify Certificate",
+                            href: "/verify-certificate",
+                            icon: <WorkspacePremium fontSize="small" />,
+                        },
+                        {
+                            label: "Verify Staff ID",
+                            href: "/verify-staff",
+                            icon: <AdminPanelSettings fontSize="small" />,
+                        },
+                    ],
                 },
                 {
                     label: "Notifications",
@@ -70,11 +103,6 @@ export default function SidebarNav({ user, collapsed }) {
                     label: "Payments",
                     href: "/admin/payments",
                     icon: <Payment fontSize="small" />,
-                },
-                {
-                    label: "Learning Management",
-                    href: "/dashboard/admin/learning",
-                    icon: <LibraryBooks fontSize="small" />,
                 },
                 {
                     label: "Audit Logs",
@@ -109,6 +137,11 @@ export default function SidebarNav({ user, collapsed }) {
                     icon: <MenuBook fontSize="small" />,
                 },
                 {
+                    label: "Quizzes & Tests",
+                    href: "/dashboard/quizzes",
+                    icon: <Quiz fontSize="small" />,
+                },
+                {
                     label: "Assignments",
                     href: "/dashboard/assignments",
                     icon: <Assignment fontSize="small" />,
@@ -118,11 +151,7 @@ export default function SidebarNav({ user, collapsed }) {
                     href: "/dashboard/attendance",
                     icon: <EventAvailable fontSize="small" />,
                 },
-                {
-                    label: "Verify Certificate",
-                    href: "/verify-certificate",
-                    icon: <WorkspacePremium fontSize="small" />,
-                },
+
                 {
                     label: "Payments",
                     href: "/dashboard/payments",
@@ -152,8 +181,67 @@ export default function SidebarNav({ user, collapsed }) {
 
     return (
         <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto overflow-x-hidden">
-
             {links.map((item) => {
+                if (item.children) {
+                    const isParentActive = item.children.some((child) => child.href === pathname);
+                    return (
+                        <div key={item.label} className="space-y-1">
+                            <button
+                                type="button"
+                                onClick={() => setVerificationOpen((prev) => !prev)}
+                                className={`
+                                    w-full group relative flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-base font-medium transition-all
+                                    ${isParentActive || verificationOpen
+                                        ? "bg-slate-800 text-white"
+                                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                                    }
+                                `}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="transition-transform duration-200 group-hover:scale-110">
+                                        {item.icon}
+                                    </span>
+                                    {!collapsed && (
+                                        <span className="transition-opacity duration-200">
+                                            {item.label}
+                                        </span>
+                                    )}
+                                </div>
+                                {!collapsed && (
+                                    <span>
+                                        {verificationOpen ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />}
+                                    </span>
+                                )}
+                            </button>
+
+                            {verificationOpen && (
+                                <div className="pl-4 space-y-1">
+                                    {item.children.map((child) => {
+                                        const isChildActive = pathname === child.href;
+                                        return (
+                                            <Link
+                                                key={child.href}
+                                                href={child.href}
+                                                onClick={closeSidebar}
+                                                className={`
+                                                    group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all
+                                                    ${isChildActive
+                                                        ? "bg-blue-600 text-white shadow-md"
+                                                        : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                                                    }
+                                                `}
+                                            >
+                                                <span>{child.icon}</span>
+                                                {!collapsed && <span>{child.label}</span>}
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                }
+
                 const active = pathname === item.href;
 
                 return (
@@ -163,7 +251,6 @@ export default function SidebarNav({ user, collapsed }) {
                         onClick={closeSidebar}
                         className={`
                             group relative flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-all
-                            
                             ${user?.role === "ADMIN"
                                 ? active
                                     ? "bg-blue-600 text-white shadow-md"
@@ -174,8 +261,6 @@ export default function SidebarNav({ user, collapsed }) {
                             }
                         `}
                     >
-
-                        {/* Active indicator bar */}
                         <span
                             className={`
                                 absolute left-0 top-2 h-8 w-1 rounded-r-full transition-all
@@ -186,27 +271,18 @@ export default function SidebarNav({ user, collapsed }) {
                             `}
                         />
 
-                        {/* Icon */}
-                        <span
-                            className="
-                                transition-transform duration-200
-                                group-hover:scale-110
-                            "
-                        >
+                        <span className="transition-transform duration-200 group-hover:scale-110">
                             {item.icon}
                         </span>
 
-                        {/* Label */}
                         {!collapsed && (
                             <span className="transition-opacity duration-200">
                                 {item.label}
                             </span>
                         )}
-
                     </Link>
                 );
             })}
-
         </nav>
     );
 }

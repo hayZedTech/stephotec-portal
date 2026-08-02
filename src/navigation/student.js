@@ -2,6 +2,7 @@ import {
     Dashboard,
     Person,
     Workspaces,
+    Quiz,
 } from "@mui/icons-material";
 
 const studentNavigation = [
@@ -9,6 +10,11 @@ const studentNavigation = [
         title: "Dashboard",
         href: "/dashboard",
         icon: Dashboard,
+    },
+    {
+        title: "Quizzes & Tests",
+        href: "/dashboard/quizzes",
+        icon: Quiz,
     },
     {
         title: "Profile",

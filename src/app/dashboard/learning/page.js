@@ -40,7 +40,13 @@ import {
     HourglassEmpty,
     AccountBalance,
     Info,
+    Quiz as QuizIcon,
+    PlayArrow,
+    WorkspacePremium,
+    Print,
 } from "@mui/icons-material";
+import CertificateModal from "@/components/common/CertificateModal";
+import QuizPlayerModal from "@/components/quizzes/QuizPlayerModal";
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -64,6 +70,11 @@ export default function LearningPage() {
     const [filterType, setFilterType] = useState("");
     const [filterCourse, setFilterCourse] = useState("");
 
+    // Quizzes State
+    const [quizzes, setQuizzes] = useState([]);
+    const [selectedQuizId, setSelectedQuizId] = useState(null);
+    const [openQuizPlayer, setOpenQuizPlayer] = useState(false);
+
     // Handouts State
     const [handouts, setHandouts] = useState([]);
     const [purchases, setPurchases] = useState([]);
@@ -80,7 +91,7 @@ export default function LearningPage() {
     const [certificates, setCertificates] = useState([]);
     const [filteredCertificates, setFilteredCertificates] = useState([]);
     const [selectedCertificate, setSelectedCertificate] = useState(null);
-    const [viewCertOpen, setViewCertOpen] = useState(false);
+    const [openCertModal, setOpenCertModal] = useState(false);
     const [searchTermCertificates, setSearchTermCertificates] = useState("");
 
     // Brochure State
@@ -118,7 +129,7 @@ export default function LearningPage() {
             setLoading(true);
             const courseId = filterCourse || user.courses?.[0]?.course?.id || "";
 
-            const [contentRes, handoutsRes, purchasesRes, certsRes, bankAccountsRes, brochuresRes] = await Promise.all([
+            const [contentRes, handoutsRes, purchasesRes, certsRes, bankAccountsRes, brochuresRes, quizzesRes] = await Promise.all([
                 api.get("/learning/student-learning-content/student_content/", {
                     params: { student_id: user.id, course_id: courseId },
                 }).catch(() => ({ data: [] })),
@@ -127,6 +138,7 @@ export default function LearningPage() {
                 api.get("/learning/certificates/").catch(() => ({ data: { results: [] } })),
                 api.get("/payments/bank-accounts/").catch(() => ({ data: { results: [] } })),
                 api.get("/learning/brochures/").catch(() => ({ data: { results: [] } })),
+                api.get("/learning/quizzes/").catch(() => ({ data: { results: [] } })),
             ]);
 
             // Transform learning content
@@ -163,6 +175,10 @@ export default function LearningPage() {
             // Brochures
             const brochureData = brochuresRes.data.results || brochuresRes.data || [];
             setBrochures(Array.isArray(brochureData) ? brochureData : []);
+
+            // Quizzes
+            const quizData = quizzesRes.data.results || quizzesRes.data || [];
+            setQuizzes(Array.isArray(quizData) ? quizData : []);
         } catch (error) {
             console.error("Failed to load student learning data:", error);
             errorToast(error, "Failed to load learning resources");
@@ -179,14 +195,11 @@ export default function LearningPage() {
             filtered = filtered.filter(
                 (item) =>
                     item.title.toLowerCase().includes(term) ||
-                    item.description.toLowerCase().includes(term)
+                    (item.description && item.description.toLowerCase().includes(term))
             );
         }
         if (filterType) {
             filtered = filtered.filter((item) => item.content_type === filterType);
-        }
-        if (filterCourse) {
-            filtered = filtered.filter((item) => item.course?.id === parseInt(filterCourse));
         }
         setFilteredContents(filtered);
     };
@@ -224,7 +237,7 @@ export default function LearningPage() {
             const term = searchTermBrochures.toLowerCase();
             filtered = filtered.filter(
                 (item) =>
-                    (item.title && item.title.toLowerCase().includes(term)) ||
+                    item.title.toLowerCase().includes(term) ||
                     (item.description && item.description.toLowerCase().includes(term)) ||
                     (item.course_name && item.course_name.toLowerCase().includes(term))
             );
@@ -232,24 +245,28 @@ export default function LearningPage() {
         setFilteredBrochures(filtered);
     };
 
-    // Open Payment Modal
-    const handleOpenPaymentModal = (handout) => {
+    const handleOpenContent = (content) => {
+        setSelectedContent(content);
+        setViewContentOpen(true);
+    };
+
+    const handleOpenRequestModal = (handout) => {
         setRequestingHandout(handout);
         setPaymentModalOpen(true);
     };
 
-    // Handout Purchase Handler
-    const handlePurchaseHandout = async () => {
+    const handleConfirmHandoutRequest = async () => {
         if (!requestingHandout) return;
         try {
             setPurchasingId(requestingHandout.id);
             await api.post("/learning/handout-purchases/purchase/", {
                 handout_id: requestingHandout.id,
             });
-            successToast("Handout request submitted! Admin will confirm your payment.");
+            successToast(
+                `Payment request for "${requestingHandout.title}" submitted successfully! Please transfer the payment to complete order.`
+            );
             setPaymentModalOpen(false);
             setRequestingHandout(null);
-            // Reload purchases
             const purchasesRes = await api.get("/learning/handout-purchases/");
             setPurchases(purchasesRes.data.results || purchasesRes.data || []);
         } catch (error) {
@@ -278,8 +295,6 @@ export default function LearningPage() {
                 return <School sx={{ fontSize: 24, color: "#6b7280" }} />;
         }
     };
-
-    const coursesList = user?.courses || [];
 
     return (
         <div className="space-y-6">
@@ -326,7 +341,7 @@ export default function LearningPage() {
                     Learning Portal
                 </Typography>
                 <Typography color="text.secondary">
-                    Access assigned course materials, study handouts, and earned certificates.
+                    Access assigned course materials, practice quizzes, study handouts, and earned certificates.
                 </Typography>
             </div>
 
@@ -344,23 +359,23 @@ export default function LearningPage() {
                             fontSize: { xs: "0.75rem", sm: "0.875rem" },
                             minHeight: { xs: 48, sm: 56 },
                             textTransform: "none",
-                            fontWeight: 600,
+                            fontWeight: 700,
                         },
                     }}
                     variant="scrollable"
                     scrollButtons="auto"
                 >
                     <Tab label="Learning Materials" icon={<MenuBook />} iconPosition="start" />
+                    <Tab label="Quizzes & Practice Tests" icon={<QuizIcon />} iconPosition="start" />
                     <Tab label="Handouts & Study Materials" icon={<School />} iconPosition="start" />
-                    <Tab label="My Certificates" icon={<CardGiftcard />} iconPosition="start" />
-                    <Tab label="Course Brochure / Outline" icon={<MenuBook />} iconPosition="start" />
+                    <Tab label="My Certificates" icon={<WorkspacePremium />} iconPosition="start" />
+                    <Tab label="Course Brochure / Outline" icon={<Description />} iconPosition="start" />
                 </Tabs>
 
                 <Box sx={{ p: { xs: 2, sm: 3 } }}>
                     {/* TAB 0: LEARNING MATERIALS */}
                     <TabPanel value={tabValue} index={0}>
                         <Stack spacing={3}>
-                            {/* Filter Bar */}
                             <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
                                 <Stack spacing={2}>
                                     <TextField
@@ -370,376 +385,29 @@ export default function LearningPage() {
                                         onChange={(e) => setSearchTermContent(e.target.value)}
                                         size="small"
                                     />
-                                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                                        <FormControl sx={{ minWidth: 150 }} size="small">
+                                    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                                        <FormControl size="small" sx={{ minWidth: 150 }}>
                                             <InputLabel>Content Type</InputLabel>
                                             <Select
                                                 value={filterType}
-                                                onChange={(e) => setFilterType(e.target.value)}
                                                 label="Content Type"
+                                                onChange={(e) => setFilterType(e.target.value)}
                                             >
                                                 <MenuItem value="">All Types</MenuItem>
-                                                <MenuItem value="VIDEO">Videos</MenuItem>
-                                                <MenuItem value="DOCUMENT">Documents</MenuItem>
-                                                <MenuItem value="ARTICLE">Articles</MenuItem>
-                                                <MenuItem value="RESOURCE">Resources</MenuItem>
+                                                <MenuItem value="VIDEO">Video</MenuItem>
+                                                <MenuItem value="DOCUMENT">Document</MenuItem>
+                                                <MenuItem value="ARTICLE">Article</MenuItem>
+                                                <MenuItem value="RESOURCE">Resource</MenuItem>
                                             </Select>
                                         </FormControl>
-
-                                        <FormControl sx={{ minWidth: 150 }} size="small">
-                                            <InputLabel>Course</InputLabel>
-                                            <Select
-                                                value={filterCourse}
-                                                onChange={(e) => setFilterCourse(e.target.value)}
-                                                label="Course"
-                                            >
-                                                <MenuItem value="">All Courses</MenuItem>
-                                                {coursesList.map((course) => (
-                                                    <MenuItem key={course.id} value={course.course.id}>
-                                                        {course.course.name}
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                        </FormControl>
-                                    </Stack>
+                                    </Box>
                                 </Stack>
                             </Paper>
 
-                            {/* Content Grid */}
                             {filteredContents.length > 0 ? (
                                 <Grid container spacing={3}>
-                                    {filteredContents.map((content) => (
-                                        <Grid xs={12} sm={6} md={4} key={content.id}>
-                                            <Card
-                                                sx={{
-                                                    borderRadius: 3,
-                                                    border: "1px solid",
-                                                    borderColor: "grey.200",
-                                                    height: "100%",
-                                                    transition: "all 0.3s ease",
-                                                    "&:hover": {
-                                                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                                                        transform: "translateY(-4px)",
-                                                    },
-                                                }}
-                                            >
-                                                <CardContent>
-                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-                                                        {getContentIcon(content.content_type)}
-                                                        <Chip label={content.content_type} size="small" variant="outlined" />
-                                                    </Box>
-
-                                                    <Typography variant="h6" fontWeight={700} mb={1}>
-                                                        {content.title}
-                                                    </Typography>
-
-                                                    <Typography variant="body2" color="text.secondary" mb={2}>
-                                                        {content.description || "No description"}
-                                                    </Typography>
-
-                                                    <Stack spacing={1} sx={{ mt: 2 }}>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            {content.course?.name || "Course"}
-                                                        </Typography>
-                                                        <Button
-                                                            fullWidth
-                                                            variant="outlined"
-                                                            startIcon={<Visibility />}
-                                                            onClick={() => {
-                                                                setSelectedContent(content);
-                                                                setViewContentOpen(true);
-                                                            }}
-                                                        >
-                                                            View
-                                                        </Button>
-                                                    </Stack>
-                                                </CardContent>
-                                            </Card>
-                                        </Grid>
-                                    ))}
-                                </Grid>
-                            ) : (
-                                <Paper
-                                    elevation={0}
-                                    sx={{
-                                        borderRadius: 3,
-                                        border: "1px solid",
-                                        borderColor: "grey.200",
-                                        p: 5,
-                                        textAlign: "center",
-                                    }}
-                                >
-                                    <School sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
-                                    <Typography color="text.secondary">
-                                        No learning materials assigned yet.
-                                    </Typography>
-                                </Paper>
-                            )}
-                        </Stack>
-                    </TabPanel>
-
-                    {/* TAB 1: HANDOUTS & STUDY MATERIALS */}
-                    <TabPanel value={tabValue} index={1}>
-                        <Stack spacing={3}>
-                            <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
-                                <TextField
-                                    fullWidth
-                                    placeholder="Search handouts by title or description..."
-                                    value={searchTermHandouts}
-                                    onChange={(e) => setSearchTermHandouts(e.target.value)}
-                                    size="small"
-                                />
-                            </Paper>
-
-                            {filteredHandouts.length > 0 ? (
-                                <Grid container spacing={3}>
-                                    {filteredHandouts.map((handout) => {
-                                        const purchaseStatus = getHandoutPurchaseStatus(handout.id);
-                                        const isFree = parseFloat(handout.price || 0) === 0;
-                                        const isApproved = purchaseStatus === "COMPLETED";
-                                        const isPending = purchaseStatus === "PENDING";
-
-                                        let borderColor = "grey.200";
-                                        if (isApproved) borderColor = "success.light";
-                                        if (isPending) borderColor = "warning.light";
-
-                                        return (
-                                            <Grid xs={12} sm={6} md={4} key={handout.id}>
-                                                <Card
-                                                    sx={{
-                                                        borderRadius: 3,
-                                                        border: "1px solid",
-                                                        borderColor,
-                                                        height: "100%",
-                                                        display: "flex",
-                                                        flexDirection: "column",
-                                                        justifyContent: "space-between",
-                                                        transition: "box-shadow 0.2s",
-                                                        "&:hover": { boxShadow: "0 4px 20px rgba(0,0,0,0.1)" },
-                                                    }}
-                                                >
-                                                    <CardContent>
-                                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-                                                            <Chip
-                                                                label={isFree ? "FREE" : `₦${parseFloat(handout.price).toLocaleString()}`}
-                                                                color={isFree ? "success" : "primary"}
-                                                                size="small"
-                                                                sx={{ fontWeight: 700 }}
-                                                            />
-                                                            {isApproved && (
-                                                                <Chip
-                                                                    icon={<CheckCircle sx={{ fontSize: 14 }} />}
-                                                                    label="Approved"
-                                                                    color="success"
-                                                                    size="small"
-                                                                />
-                                                            )}
-                                                            {isPending && (
-                                                                <Chip
-                                                                    icon={<HourglassEmpty sx={{ fontSize: 14 }} />}
-                                                                    label="Awaiting Approval"
-                                                                    color="warning"
-                                                                    size="small"
-                                                                />
-                                                            )}
-                                                        </Box>
-
-                                                        <Typography variant="h6" fontWeight={700} mb={1}>
-                                                            {handout.title}
-                                                        </Typography>
-
-                                                        <Typography variant="body2" color="text.secondary" mb={2}>
-                                                            {handout.description || "No description provided."}
-                                                        </Typography>
-                                                    </CardContent>
-
-                                                    <Box sx={{ p: 2, pt: 0 }}>
-                                                        {(isApproved || isFree) ? (
-                                                            <Button
-                                                                fullWidth
-                                                                variant="contained"
-                                                                color="success"
-                                                                startIcon={<Download />}
-                                                                href={handout.file}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                            >
-                                                                Download Handout
-                                                            </Button>
-                                                        ) : isPending ? (
-                                                            <Button
-                                                                fullWidth
-                                                                variant="outlined"
-                                                                color="warning"
-                                                                startIcon={<HourglassEmpty />}
-                                                                disabled
-                                                            >
-                                                                Awaiting Payment Confirmation
-                                                            </Button>
-                                                        ) : (
-                                                            <Button
-                                                                fullWidth
-                                                                variant="contained"
-                                                                color="primary"
-                                                                startIcon={<AccountBalance />}
-                                                                onClick={() => handleOpenPaymentModal(handout)}
-                                                            >
-                                                                Request Handout
-                                                            </Button>
-                                                        )}
-                                                    </Box>
-                                                </Card>
-                                            </Grid>
-                                        );
-                                    })}
-                                </Grid>
-                            ) : (
-                                <Paper
-                                    elevation={0}
-                                    sx={{
-                                        borderRadius: 3,
-                                        border: "1px solid",
-                                        borderColor: "grey.200",
-                                        p: 5,
-                                        textAlign: "center",
-                                    }}
-                                >
-                                    <MenuBook sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
-                                    <Typography color="text.secondary">
-                                        No study handouts available at this time.
-                                    </Typography>
-                                </Paper>
-                            )}
-                        </Stack>
-                    </TabPanel>
-
-                    {/* TAB 2: MY CERTIFICATES */}
-                    <TabPanel value={tabValue} index={2}>
-                        <Stack spacing={3}>
-                            <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
-                                <TextField
-                                    fullWidth
-                                    placeholder="Search certificates by title, course, or certificate number..."
-                                    value={searchTermCertificates}
-                                    onChange={(e) => setSearchTermCertificates(e.target.value)}
-                                    size="small"
-                                />
-                            </Paper>
-
-                            {filteredCertificates.length > 0 ? (
-                                <Grid container spacing={3}>
-                                    {filteredCertificates.map((cert) => (
-                                        <Grid xs={12} sm={6} md={4} key={cert.id}>
-                                            <Card
-                                                sx={{
-                                                    borderRadius: 3,
-                                                    border: "1px solid",
-                                                    borderColor: cert.status === "ISSUED" ? "success.main" : "grey.200",
-                                                    height: "100%",
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    justifyContent: "space-between",
-                                                }}
-                                            >
-                                                <CardContent>
-                                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                                                        <CardGiftcard sx={{ fontSize: 32, color: "#7c3aed" }} />
-                                                        <Chip
-                                                            label={cert.status}
-                                                            color={cert.status === "ISSUED" ? "success" : cert.status === "EARNED" ? "info" : "error"}
-                                                            size="small"
-                                                        />
-                                                    </Box>
-
-                                                    <Typography variant="h6" fontWeight={700} mb={0.5}>
-                                                        {cert.title}
-                                                    </Typography>
-
-                                                    <Typography variant="caption" color="text.secondary" display="block" mb={1.5}>
-                                                        {cert.course_name || "Course Certificate"}
-                                                    </Typography>
-
-                                                    <Box sx={{ bgcolor: "grey.50", p: 1.5, borderRadius: 2, mb: 2 }}>
-                                                        <Typography variant="caption" color="text.secondary" display="block">
-                                                            Certificate #: <strong>{cert.certificate_number}</strong>
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary" display="block">
-                                                            Earned Date: {cert.earned_date}
-                                                        </Typography>
-                                                        {cert.issued_date && (
-                                                            <Typography variant="caption" color="text.secondary" display="block">
-                                                                Issued Date: {cert.issued_date}
-                                                            </Typography>
-                                                        )}
-                                                    </Box>
-                                                </CardContent>
-
-                                                <Box sx={{ p: 2, pt: 0 }}>
-                                                    {cert.file ? (
-                                                        <Button
-                                                            fullWidth
-                                                            variant="contained"
-                                                            color="primary"
-                                                            startIcon={<Download />}
-                                                            href={cert.file}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                        >
-                                                            Download Certificate
-                                                        </Button>
-                                                    ) : (
-                                                        <Button
-                                                            fullWidth
-                                                            variant="outlined"
-                                                            disabled
-                                                        >
-                                                            {cert.status === "ISSUED" ? "File Pending Upload" : "Processing Issue"}
-                                                        </Button>
-                                                    )}
-                                                </Box>
-                                            </Card>
-                                        </Grid>
-                                    ))}
-                                </Grid>
-                            ) : (
-                                <Paper
-                                    elevation={0}
-                                    sx={{
-                                        borderRadius: 3,
-                                        border: "1px solid",
-                                        borderColor: "grey.200",
-                                        p: 5,
-                                        textAlign: "center",
-                                    }}
-                                >
-                                    <CardGiftcard sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
-                                    <Typography color="text.secondary">
-                                        No certificates earned yet. Complete your courses to earn certificates!
-                                    </Typography>
-                                </Paper>
-                            )}
-                        </Stack>
-                    </TabPanel>
-
-                    {/* TAB 3: BROCHURES / COURSE OUTLINES */}
-                    <TabPanel value={tabValue} index={3}>
-                        <Stack spacing={3}>
-                            {/* Search Filter */}
-                            <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
-                                <TextField
-                                    fullWidth
-                                    placeholder="Search course brochures / outlines by title, course, description..."
-                                    value={searchTermBrochures}
-                                    onChange={(e) => setSearchTermBrochures(e.target.value)}
-                                    size="small"
-                                />
-                            </Paper>
-
-                            {/* Brochures Grid */}
-                            {filteredBrochures.length > 0 ? (
-                                <Grid container spacing={3}>
-                                    {filteredBrochures.map((brochure) => (
-                                        <Grid xs={12} sm={6} md={4} key={brochure.id}>
+                                    {filteredContents.map((item) => (
+                                        <Grid xs={12} sm={6} md={4} key={item.id}>
                                             <Card
                                                 sx={{
                                                     borderRadius: 3,
@@ -756,67 +424,269 @@ export default function LearningPage() {
                                                 <CardContent>
                                                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
                                                         <Chip
-                                                            label={brochure.course_name || "Course Brochure"}
-                                                            color="primary"
+                                                            label={item.content_type}
                                                             size="small"
-                                                            sx={{ fontWeight: 700 }}
+                                                            color={
+                                                                item.content_type === "VIDEO"
+                                                                    ? "error"
+                                                                    : item.content_type === "DOCUMENT"
+                                                                    ? "primary"
+                                                                    : "secondary"
+                                                            }
                                                         />
-                                                        <MenuBook sx={{ fontSize: 24, color: "primary.main" }} />
+                                                        {getContentIcon(item.content_type)}
                                                     </Box>
-
                                                     <Typography variant="h6" fontWeight={700} mb={1}>
-                                                        {brochure.title}
+                                                        {item.title}
                                                     </Typography>
-
                                                     <Typography variant="body2" color="text.secondary" mb={2}>
-                                                        {brochure.description || "Official course brochure and outline."}
+                                                        {item.description ? item.description.slice(0, 100) + "..." : "No description provided."}
                                                     </Typography>
-
-                                                    {brochure.created_at && (
-                                                        <Typography variant="caption" color="text.secondary" display="block">
-                                                            Uploaded: {new Date(brochure.created_at).toLocaleDateString()}
-                                                        </Typography>
-                                                    )}
                                                 </CardContent>
-
                                                 <Box sx={{ p: 2, pt: 0 }}>
-                                                    {brochure.file ? (
-                                                        <Button
-                                                            fullWidth
-                                                            variant="contained"
-                                                            color="primary"
-                                                            startIcon={<Download />}
-                                                            href={brochure.file}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                        >
-                                                            Download Brochure
-                                                        </Button>
-                                                    ) : (
-                                                        <Button fullWidth variant="outlined" disabled>
-                                                            No File Attached
-                                                        </Button>
-                                                    )}
+                                                    <Button
+                                                        fullWidth
+                                                        variant="outlined"
+                                                        startIcon={<Visibility />}
+                                                        onClick={() => handleOpenContent(item)}
+                                                    >
+                                                        View Material
+                                                    </Button>
                                                 </Box>
                                             </Card>
                                         </Grid>
                                     ))}
                                 </Grid>
                             ) : (
-                                <Paper
-                                    elevation={0}
-                                    sx={{
-                                        borderRadius: 3,
-                                        border: "1px solid",
-                                        borderColor: "grey.200",
-                                        p: 5,
-                                        textAlign: "center",
-                                    }}
-                                >
+                                <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", p: 5, textAlign: "center" }}>
                                     <MenuBook sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
-                                    <Typography color="text.secondary">
-                                        No course brochures or outlines available at the moment.
-                                    </Typography>
+                                    <Typography color="text.secondary">No learning materials found.</Typography>
+                                </Paper>
+                            )}
+                        </Stack>
+                    </TabPanel>
+
+                    {/* TAB 1: QUIZZES & PRACTICE TESTS */}
+                    <TabPanel value={tabValue} index={1}>
+                        <Stack spacing={3}>
+                            <Paper elevation={0} sx={{ p: 3, bgcolor: "#fffbeb", border: "1px solid #fde68a", borderRadius: 3 }}>
+                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+                                    <Box>
+                                        <Typography variant="h6" fontWeight={800} color="slate.900">
+                                            100% Free Practice Tests & Quizzes
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Test your knowledge with instant scoring, countdown timers, and detailed explanations.
+                                        </Typography>
+                                    </Box>
+                                    <Chip label="INCLUDED FREE" color="warning" sx={{ fontWeight: 800 }} />
+                                </Box>
+                            </Paper>
+
+                            {quizzes.length > 0 ? (
+                                <Grid container spacing={3}>
+                                    {quizzes.map((quiz) => (
+                                        <Grid xs={12} sm={6} md={4} key={quiz.id}>
+                                            <Card sx={{ borderRadius: 3, border: "1px solid #e2e8f0", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                                                <CardContent>
+                                                    <Chip label={quiz.course_name || "General"} size="small" color="primary" sx={{ mb: 1.5, fontWeight: 700 }} />
+                                                    <Typography variant="h6" fontWeight={700} mb={1}>
+                                                        {quiz.title}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary" mb={2}>
+                                                        {quiz.description || "Practice test with instant score calculation."}
+                                                    </Typography>
+                                                    <Stack spacing={1} sx={{ p: 1.5, bgcolor: "#f8fafc", borderRadius: 2 }}>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Duration: <strong>{quiz.duration_minutes} Mins</strong>
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Pass Score: <strong>{quiz.passing_score_percentage}%</strong>
+                                                        </Typography>
+                                                    </Stack>
+                                                </CardContent>
+                                                <Box sx={{ p: 2, pt: 0 }}>
+                                                    <Button
+                                                        fullWidth
+                                                        variant="contained"
+                                                        startIcon={<PlayArrow />}
+                                                        onClick={() => {
+                                                            setSelectedQuizId(quiz.id);
+                                                            setOpenQuizPlayer(true);
+                                                        }}
+                                                        sx={{ bgcolor: "#0f172a", textTransform: "none", fontWeight: 700 }}
+                                                    >
+                                                        Start Practice Test
+                                                    </Button>
+                                                </Box>
+                                            </Card>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            ) : (
+                                <Paper elevation={0} sx={{ p: 5, textAlign: "center", borderRadius: 3, border: "1px solid #e2e8f0" }}>
+                                    <QuizIcon sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
+                                    <Typography color="text.secondary">No practice quizzes available at the moment.</Typography>
+                                </Paper>
+                            )}
+                        </Stack>
+                    </TabPanel>
+
+                    {/* TAB 2: HANDOUTS & STUDY MATERIALS */}
+                    <TabPanel value={tabValue} index={2}>
+                        <Stack spacing={3}>
+                            <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
+                                <TextField
+                                    fullWidth
+                                    placeholder="Search handouts by title or description..."
+                                    value={searchTermHandouts}
+                                    onChange={(e) => setSearchTermHandouts(e.target.value)}
+                                    size="small"
+                                />
+                            </Paper>
+
+                            {filteredHandouts.length > 0 ? (
+                                <Grid container spacing={3}>
+                                    {filteredHandouts.map((handout) => {
+                                        const pStatus = getHandoutPurchaseStatus(handout.id);
+                                        return (
+                                            <Grid xs={12} sm={6} md={4} key={handout.id}>
+                                                <Card sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                                                    <CardContent>
+                                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+                                                            <Chip label={handout.course_name || "Handout"} size="small" color="secondary" />
+                                                            <Typography variant="h6" fontWeight={700} color="primary.main">
+                                                                ₦{parseFloat(handout.price || 0).toLocaleString()}
+                                                            </Typography>
+                                                        </Box>
+                                                        <Typography variant="h6" fontWeight={700} mb={1}>
+                                                            {handout.title}
+                                                        </Typography>
+                                                        <Typography variant="body2" color="text.secondary" mb={2}>
+                                                            {handout.description ? handout.description.slice(0, 100) + "..." : "No description provided."}
+                                                        </Typography>
+                                                    </CardContent>
+                                                    <Box sx={{ p: 2, pt: 0 }}>
+                                                        {pStatus === "COMPLETED" ? (
+                                                            <Button fullWidth variant="contained" color="success" startIcon={<Download />} href={handout.file} target="_blank" rel="noopener noreferrer">
+                                                                Download Handout
+                                                            </Button>
+                                                        ) : pStatus === "PENDING" ? (
+                                                            <Button fullWidth variant="outlined" color="warning" startIcon={<HourglassEmpty />} disabled>
+                                                                Payment Pending Confirmation
+                                                            </Button>
+                                                        ) : (
+                                                            <Button fullWidth variant="contained" color="primary" startIcon={<ShoppingCart />} onClick={() => handleOpenRequestModal(handout)}>
+                                                                Request / Purchase Handout
+                                                            </Button>
+                                                        )}
+                                                    </Box>
+                                                </Card>
+                                            </Grid>
+                                        );
+                                    })}
+                                </Grid>
+                            ) : (
+                                <Paper elevation={0} sx={{ p: 5, textAlign: "center", borderRadius: 3, border: "1px solid #e2e8f0" }}>
+                                    <School sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
+                                    <Typography color="text.secondary">No handouts available.</Typography>
+                                </Paper>
+                            )}
+                        </Stack>
+                    </TabPanel>
+
+                    {/* TAB 3: MY CERTIFICATES */}
+                    <TabPanel value={tabValue} index={3}>
+                        <Stack spacing={3}>
+                            <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
+                                <TextField
+                                    fullWidth
+                                    placeholder="Search certificates by title, course, or serial number..."
+                                    value={searchTermCertificates}
+                                    onChange={(e) => setSearchTermCertificates(e.target.value)}
+                                    size="small"
+                                />
+                            </Paper>
+
+                            {filteredCertificates.length > 0 ? (
+                                <Grid container spacing={3}>
+                                    {filteredCertificates.map((cert) => (
+                                        <Grid xs={12} sm={6} md={4} key={cert.id}>
+                                            <Card sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                                                <CardContent>
+                                                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                                                        <Chip label={cert.status} color={cert.status === "ISSUED" ? "success" : "info"} size="small" />
+                                                        <WorkspacePremium sx={{ color: "#d97706" }} />
+                                                    </Box>
+                                                    <Typography variant="h6" fontWeight={700} mb={1}>
+                                                        {cert.title}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary" fontFamily="monospace" display="block">
+                                                        No: {cert.certificate_number}
+                                                    </Typography>
+                                                </CardContent>
+                                                <Box sx={{ p: 2, pt: 0 }}>
+                                                    <Button
+                                                        fullWidth
+                                                        variant="contained"
+                                                        startIcon={<WorkspacePremium />}
+                                                        onClick={() => {
+                                                            setSelectedCertificate(cert);
+                                                            setOpenCertModal(true);
+                                                        }}
+                                                        sx={{ bgcolor: "#d97706", "&:hover": { bgcolor: "#b45309" }, textTransform: "none", fontWeight: 700 }}
+                                                    >
+                                                        View / Generate Certificate
+                                                    </Button>
+                                                </Box>
+                                            </Card>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            ) : (
+                                <Paper elevation={0} sx={{ p: 5, textAlign: "center", borderRadius: 3, border: "1px solid #e2e8f0" }}>
+                                    <WorkspacePremium sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
+                                    <Typography color="text.secondary">No certificates earned yet. Complete your courses to earn certificates!</Typography>
+                                </Paper>
+                            )}
+                        </Stack>
+                    </TabPanel>
+
+                    {/* TAB 4: BROCHURES */}
+                    <TabPanel value={tabValue} index={4}>
+                        <Stack spacing={3}>
+                            <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
+                                <TextField
+                                    fullWidth
+                                    placeholder="Search course brochures / outlines..."
+                                    value={searchTermBrochures}
+                                    onChange={(e) => setSearchTermBrochures(e.target.value)}
+                                    size="small"
+                                />
+                            </Paper>
+
+                            {filteredBrochures.length > 0 ? (
+                                <Grid container spacing={3}>
+                                    {filteredBrochures.map((b) => (
+                                        <Grid xs={12} sm={6} md={4} key={b.id}>
+                                            <Card sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                                                <CardContent>
+                                                    <Typography variant="h6" fontWeight={700} mb={1}>{b.title}</Typography>
+                                                    <Typography variant="body2" color="text.secondary">{b.description}</Typography>
+                                                </CardContent>
+                                                <Box sx={{ p: 2, pt: 0 }}>
+                                                    <Button fullWidth variant="outlined" startIcon={<Download />} href={b.file} target="_blank" rel="noopener noreferrer">
+                                                        Download Brochure
+                                                    </Button>
+                                                </Box>
+                                            </Card>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            ) : (
+                                <Paper elevation={0} sx={{ p: 5, textAlign: "center", borderRadius: 3, border: "1px solid #e2e8f0" }}>
+                                    <Description sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
+                                    <Typography color="text.secondary">No course brochures available.</Typography>
                                 </Paper>
                             )}
                         </Stack>
@@ -824,208 +694,20 @@ export default function LearningPage() {
                 </Box>
             </Paper>
 
-            {/* View Content Dialog */}
-            <Dialog open={viewContentOpen} onClose={() => setViewContentOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Learning Material</DialogTitle>
-                <DialogContent sx={{ pt: 2 }}>
-                    {selectedContent && (
-                        <Stack spacing={2}>
-                            <Box>
-                                <Typography variant="caption" color="text.secondary">
-                                    Title
-                                </Typography>
-                                <Typography variant="body2" fontWeight={600}>
-                                    {selectedContent.title}
-                                </Typography>
-                            </Box>
+            {/* CERTIFICATE GENERATOR MODAL */}
+            <CertificateModal
+                open={openCertModal}
+                onClose={() => setOpenCertModal(false)}
+                certificate={selectedCertificate}
+            />
 
-                            <Box>
-                                <Typography variant="caption" color="text.secondary">
-                                    Type
-                                </Typography>
-                                <Box sx={{ mt: 0.5 }}>
-                                    <Chip label={selectedContent.content_type} size="small" variant="outlined" />
-                                </Box>
-                            </Box>
-
-                            <Box>
-                                <Typography variant="caption" color="text.secondary">
-                                    Description
-                                </Typography>
-                                <Typography variant="body2">
-                                    {selectedContent.description || "—"}
-                                </Typography>
-                            </Box>
-
-                            {selectedContent.video_url && (
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">
-                                        Video Link
-                                    </Typography>
-                                    <Typography
-                                        variant="body2"
-                                        component="a"
-                                        href={selectedContent.video_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        sx={{ color: "primary.main", textDecoration: "none", wordBreak: "break-all", display: "block" }}
-                                    >
-                                        {selectedContent.video_url}
-                                    </Typography>
-                                </Box>
-                            )}
-
-                            {selectedContent.file && (
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary">
-                                        Attachment File
-                                    </Typography>
-                                    <Button
-                                        fullWidth
-                                        variant="outlined"
-                                        startIcon={<Download />}
-                                        href={selectedContent.file}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        sx={{ mt: 0.5 }}
-                                    >
-                                        Download File
-                                    </Button>
-                                </Box>
-                            )}
-                        </Stack>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setViewContentOpen(false)}>Close</Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Bank Payment Modal */}
-            <Dialog
-                open={paymentModalOpen}
-                onClose={() => {
-                    if (!purchasingId) {
-                        setPaymentModalOpen(false);
-                        setRequestingHandout(null);
-                    }
-                }}
-                maxWidth="sm"
-                fullWidth
-            >
-                <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <AccountBalance sx={{ color: "primary.main" }} />
-                    Request Handout
-                </DialogTitle>
-                <DialogContent sx={{ pt: 2 }}>
-                    {requestingHandout && (
-                        <Stack spacing={3}>
-                            {/* Handout summary */}
-                            <Box sx={{ bgcolor: "primary.50", border: "1px solid", borderColor: "primary.100", borderRadius: 2, p: 2 }}>
-                                <Typography variant="subtitle2" color="primary.main" fontWeight={700} mb={0.5}>
-                                    {requestingHandout.title}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    {requestingHandout.description || "Study handout"}
-                                </Typography>
-                                <Box sx={{ mt: 1, display: "flex", alignItems: "center", gap: 1 }}>
-                                    <Typography variant="h6" fontWeight={800} color="primary.main">
-                                        ₦{parseFloat(requestingHandout.price).toLocaleString()}
-                                    </Typography>
-                                </Box>
-                            </Box>
-
-                            {/* Bank account details */}
-                            <Box>
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
-                                    <AccountBalance sx={{ color: "success.main", fontSize: 20 }} />
-                                    <Typography variant="subtitle1" fontWeight={700}>Payment Account Details</Typography>
-                                </Box>
-                                {bankAccounts.length === 0 ? (
-                                    <Box sx={{ bgcolor: "grey.50", border: "1px solid", borderColor: "grey.200", borderRadius: 2, p: 2, textAlign: "center" }}>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Bank account details will be provided by the admin. Please contact support.
-                                        </Typography>
-                                    </Box>
-                                ) : (
-                                    <Stack spacing={1.5}>
-                                        {bankAccounts.map((acct) => (
-                                            <Box
-                                                key={acct.id}
-                                                sx={{
-                                                    bgcolor: "success.50",
-                                                    border: "1px solid",
-                                                    borderColor: "success.200",
-                                                    borderRadius: 2,
-                                                    p: 2,
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    gap: 0.75,
-                                                }}
-                                            >
-                                                {acct.description && (
-                                                    <Typography variant="caption" color="success.dark" fontWeight={700} textTransform="uppercase" letterSpacing={0.5}>
-                                                        {acct.description}
-                                                    </Typography>
-                                                )}
-                                                {[
-                                                    { label: "Bank Name", value: acct.bank_name },
-                                                    { label: "Account Name", value: acct.account_name },
-                                                    { label: "Account Number", value: acct.account_number },
-                                                    { label: "Amount", value: `₦${parseFloat(requestingHandout.price).toLocaleString()}` },
-                                                    { label: "Reference", value: `HANDOUT-${requestingHandout.id}` },
-                                                ].map(({ label, value }) => (
-                                                    <Box key={label} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 130 }}>{label}:</Typography>
-                                                        <Typography
-                                                            variant="body2"
-                                                            fontWeight={label === "Account Number" ? 800 : 600}
-                                                            fontFamily={label === "Account Number" ? "monospace" : "inherit"}
-                                                            letterSpacing={label === "Account Number" ? 1 : 0}
-                                                            sx={{ textAlign: "right", wordBreak: "break-all" }}
-                                                        >
-                                                            {value}
-                                                        </Typography>
-                                                    </Box>
-                                                ))}
-                                            </Box>
-                                        ))}
-                                    </Stack>
-                                )}
-                            </Box>
-
-                            {/* Instructions */}
-                            <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start", bgcolor: "info.50", border: "1px solid", borderColor: "info.100", borderRadius: 2, p: 1.5 }}>
-                                <Info sx={{ color: "info.main", fontSize: 18, mt: 0.2, flexShrink: 0 }} />
-                                <Typography variant="body2" color="text.secondary">
-                                    After clicking <strong>"Submit Request"</strong>, your request will be marked as <strong>Pending</strong>. Once you make the bank transfer, our team will verify and approve your access. You\'ll receive a notification when approved.
-                                </Typography>
-                            </Box>
-                        </Stack>
-                    )}
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-                    <Button
-                        onClick={() => {
-                            setPaymentModalOpen(false);
-                            setRequestingHandout(null);
-                        }}
-                        disabled={!!purchasingId}
-                        color="inherit"
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handlePurchaseHandout}
-                        disabled={!!purchasingId}
-                        startIcon={purchasingId ? <CircularProgress size={16} color="inherit" /> : <AccountBalance />}
-                    >
-                        {purchasingId ? "Submitting..." : "Submit Request"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            {/* QUIZ PLAYER MODAL */}
+            <QuizPlayerModal
+                open={openQuizPlayer}
+                onClose={() => setOpenQuizPlayer(false)}
+                quizId={selectedQuizId}
+                onAttemptComplete={loadAllData}
+            />
         </div>
     );
 }

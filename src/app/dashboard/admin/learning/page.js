@@ -11,13 +11,11 @@ import {
 } from "@mui/material";
 import {
     School,
-    Assignment,
     CheckCircle,
     CardGiftcard,
     MenuBook,
 } from "@mui/icons-material";
 import LearningContentManager from "@/components/admin/learning/LearningContentManager";
-import AssignmentManager from "@/components/admin/assignments/AssignmentManager";
 import AttendanceManager from "@/components/admin/attendance/AttendanceManager";
 import CertificateManager from "@/components/admin/certificates/CertificateManager";
 import HandoutManager from "@/components/admin/handouts/HandoutManager";
@@ -82,17 +80,17 @@ export default function AdminLearningPage() {
                     >
                         <CircularProgress size={48} />
                         <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-                            Loading learning materials...
+                            Loading learning resources...
                         </Typography>
                     </Box>
                 </Box>
             )}
             <div>
                 <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}>
-                    Learning Management
+                    Learning Management Hub
                 </Typography>
                 <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-                    Manage courses, assignments, attendance, certificates, handouts, and brochures.
+                    Manage course learning materials, attendance records, student certificates, handouts, and brochures.
                 </Typography>
             </div>
 
@@ -118,47 +116,41 @@ export default function AdminLearningPage() {
                             py: { xs: 1, sm: 1.5 },
                             px: { xs: 1, sm: 2 },
                             textTransform: "none",
-                            fontWeight: 500,
+                            fontWeight: 700,
                         },
                     }}
                     variant="scrollable"
                     scrollButtons="auto"
                 >
                     <Tab
-                        label="Learning"
+                        label="Learning Materials"
                         icon={<School />}
                         iconPosition="start"
                         id="tab-0"
                     />
                     <Tab
-                        label="Assignments"
-                        icon={<Assignment />}
-                        iconPosition="start"
-                        id="tab-1"
-                    />
-                    <Tab
                         label="Attendance"
                         icon={<CheckCircle />}
                         iconPosition="start"
-                        id="tab-2"
+                        id="tab-1"
                     />
                     <Tab
                         label="Certificates"
                         icon={<CardGiftcard />}
                         iconPosition="start"
+                        id="tab-2"
+                    />
+                    <Tab
+                        label="Handouts & Study Materials"
+                        icon={<School />}
+                        iconPosition="start"
                         id="tab-3"
                     />
                     <Tab
-                        label="Handouts"
-                        icon={<School />}
-                        iconPosition="start"
-                        id="tab-4"
-                    />
-                    <Tab
-                        label="Brochure"
+                        label="Brochures / Outlines"
                         icon={<MenuBook />}
                         iconPosition="start"
-                        id="tab-5"
+                        id="tab-4"
                     />
                 </Tabs>
 
@@ -168,22 +160,18 @@ export default function AdminLearningPage() {
                     </TabPanel>
 
                     <TabPanel value={tabValue} index={1}>
-                        <AssignmentManager />
-                    </TabPanel>
-
-                    <TabPanel value={tabValue} index={2}>
                         <AttendanceManager />
                     </TabPanel>
 
-                    <TabPanel value={tabValue} index={3}>
+                    <TabPanel value={tabValue} index={2}>
                         <CertificateManager />
                     </TabPanel>
 
-                    <TabPanel value={tabValue} index={4}>
+                    <TabPanel value={tabValue} index={3}>
                         <HandoutManager />
                     </TabPanel>
 
-                    <TabPanel value={tabValue} index={5}>
+                    <TabPanel value={tabValue} index={4}>
                         <BrochureManager />
                     </TabPanel>
                 </Box>
