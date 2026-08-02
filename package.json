@@ -18,6 +18,8 @@
     "@mui/x-data-grid": "^9.7.0",
     "axios": "^1.18.1",
     "clsx": "^2.1.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "jwt-decode": "^4.0.0",
     "motion": "^12.42.2",
     "next": "16.2.10",

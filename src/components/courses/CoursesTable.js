@@ -229,44 +229,53 @@ export default function CoursesTable({
     }
 
     return (
-        <DataGrid
-            rows={rows}
-            columns={columns}
-            loading={loading}
-            getRowId={(row) => row.id}
-            disableRowSelectionOnClick
-            pageSizeOptions={[10, 25, 50]}
-            initialState={{
-                pagination: {
-                    paginationModel: {
-                        page: 0,
-                        pageSize: 10,
+        <Box sx={{ height: 720, width: "100%" }}>
+            <DataGrid
+                rows={rows}
+                columns={columns}
+                loading={loading}
+                getRowId={(row) => row.id}
+                rowHeight={60}
+                columnHeaderHeight={52}
+                disableRowSelectionOnClick
+                pageSizeOptions={[10, 25, 50]}
+                initialState={{
+                    pagination: {
+                        paginationModel: {
+                            page: 0,
+                            pageSize: 10,
+                        },
                     },
-                },
-            }}
-            sx={{
-                border: 0,
-                "& .MuiDataGrid-columnHeaders": {
-                    backgroundColor: "#f8fafc",
-                    fontWeight: 700,
-                },
-                "& .MuiDataGrid-columnHeaderTitle": {
-                    fontWeight: 700,
-                    justifyContent: "center",
-                },
-                "& .MuiDataGrid-cell": {
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                },
-                "& .MuiDataGrid-cell:first-of-type": {
-                    justifyContent: "flex-start",
-                },
-                "& .MuiDataGrid-row": {
-                    minHeight: "58px !important",
-                    maxHeight: "58px !important",
-                },
-            }}
-        />
+                }}
+                sx={{
+                    border: 0,
+                    "& .MuiDataGrid-columnHeaders": {
+                        backgroundColor: "#f8fafc",
+                        borderBottom: "1px solid #e5e7eb",
+                        fontWeight: 700,
+                    },
+                    "& .MuiDataGrid-columnHeaderTitle": {
+                        fontWeight: 700,
+                        justifyContent: "center",
+                    },
+                    "& .MuiDataGrid-cell": {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderBottom: "1px solid #e5e7eb",
+                    },
+                    "& .MuiDataGrid-cell:first-of-type": {
+                        justifyContent: "flex-start",
+                    },
+                    "& .MuiDataGrid-footerContainer": {
+                        borderTop: "1px solid #e5e7eb",
+                        backgroundColor: "#f8fafc",
+                    },
+                    "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus-within": {
+                        outline: "none",
+                    },
+                }}
+            />
+        </Box>
     );
 }

@@ -272,55 +272,61 @@ export default function StudentsTable({
     }
 
     return (
-        <DataGrid
-            rows={rows}
-            columns={columns}
-            loading={loading}
-            getRowId={(row) => row.id}
-            rowHeight={74}
-            columnHeaderHeight={56}
-            disableRowSelectionOnClick
-            checkboxSelection={checkboxSelection}
-            onRowSelectionModelChange={onRowSelectionChange}
-            pageSizeOptions={[10, 25, 50]}
-            paginationMode={page !== undefined ? "server" : "client"}
-            rowCount={rowCount}
-            paginationModel={page !== undefined ? { page, pageSize } : undefined}
-            onPaginationModelChange={(model) => {
-                onPageChange?.(model.page);
-                onPageSizeChange?.(model.pageSize);
-            }}
-            initialState={{
-                pagination: {
-                    paginationModel: {
-                        pageSize: 10,
-                        page: 0,
+        <Box sx={{ height: 720, width: "100%" }}>
+            <DataGrid
+                rows={rows}
+                columns={columns}
+                loading={loading}
+                getRowId={(row) => row.id}
+                rowHeight={64}
+                columnHeaderHeight={52}
+                disableRowSelectionOnClick
+                checkboxSelection={checkboxSelection}
+                onRowSelectionModelChange={onRowSelectionChange}
+                pageSizeOptions={[10, 25, 50]}
+                paginationMode={page !== undefined ? "server" : "client"}
+                rowCount={rowCount}
+                paginationModel={page !== undefined ? { page, pageSize } : undefined}
+                onPaginationModelChange={(model) => {
+                    onPageChange?.(model.page);
+                    onPageSizeChange?.(model.pageSize);
+                }}
+                initialState={{
+                    pagination: {
+                        paginationModel: {
+                            pageSize: 10,
+                            page: 0,
+                        },
                     },
-                },
-            }}
-            sx={{
-                border: 0,
-                "& .MuiDataGrid-columnHeaders": {
-                    backgroundColor: "#f8fafc",
-                    borderBottom: "1px solid #e5e7eb",
-                    fontWeight: 700,
-                },
-                "& .MuiDataGrid-columnHeaderTitle": {
-                    fontWeight: 700,
-                },
-                "& .MuiDataGrid-row": {
-                    borderBottom: "1px solid #f1f5f9",
-                },
-                "& .MuiDataGrid-cell": {
-                    display: "flex",
-                    alignItems: "center",
-                    borderBottom: "1px solid #e5e7eb",
-                    py: 0,
-                },
-                "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus-within": {
-                    outline: "none",
-                },
-            }}
-        />
+                }}
+                sx={{
+                    border: 0,
+                    "& .MuiDataGrid-columnHeaders": {
+                        backgroundColor: "#f8fafc",
+                        borderBottom: "1px solid #e5e7eb",
+                        fontWeight: 700,
+                    },
+                    "& .MuiDataGrid-columnHeaderTitle": {
+                        fontWeight: 700,
+                    },
+                    "& .MuiDataGrid-row": {
+                        borderBottom: "1px solid #f1f5f9",
+                    },
+                    "& .MuiDataGrid-cell": {
+                        display: "flex",
+                        alignItems: "center",
+                        borderBottom: "1px solid #e5e7eb",
+                        py: 0,
+                    },
+                    "& .MuiDataGrid-footerContainer": {
+                        borderTop: "1px solid #e5e7eb",
+                        backgroundColor: "#f8fafc",
+                    },
+                    "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus-within": {
+                        outline: "none",
+                    },
+                }}
+            />
+        </Box>
     );
 }

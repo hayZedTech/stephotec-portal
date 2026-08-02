@@ -16,12 +16,15 @@ import {
     Tab,
     Menu,
     MenuItem,
+    Tooltip,
 } from "@mui/material";
 
-import { Close } from "@mui/icons-material";
+import { Close, ContentCopy, Check, Badge as BadgeIcon } from "@mui/icons-material";
 import ImageZoom from "@/components/ui/ImageZoom";
 import StudentCoursesManager from "./StudentCoursesManager";
 import StudentContentAssignment from "./StudentContentAssignment";
+import StudentIDCardModal from "@/components/common/StudentIDCardModal";
+import { successToast } from "@/lib/toast";
 
 export default function StudentViewModal({
     open,
@@ -36,12 +39,23 @@ export default function StudentViewModal({
     const [tabValue, setTabValue] = useState(0);
     const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
 
+    const [copied, setCopied] = useState(false);
+    const [showIDCardModal, setShowIDCardModal] = useState(false);
+
     if (!student) return null;
 
     const fullName = [student.first_name, student.last_name].filter(Boolean).join(" ").trim() || "—";
     const primaryCourse = student.courses?.find((course) => course.is_primary)?.course?.name || "—";
     const courseNames = student.courses?.map((course) => course.course?.name).filter(Boolean) || [];
     const temporaryPassword = student.temporary_password || student.temp_password || "";
+
+    const handleCopyPassword = () => {
+        if (!temporaryPassword) return;
+        navigator.clipboard.writeText(temporaryPassword);
+        setCopied(true);
+        successToast("Temporary password copied to clipboard!");
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     const handleCoursesUpdated = () => {
         setRefreshKey((prev) => prev + 1);
@@ -313,9 +327,22 @@ export default function StudentViewModal({
                                     <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1, fontSize: { xs: "0.65rem", sm: "0.75rem" } }}>
                                         Temporary Password
                                     </Typography>
-                                    <Typography variant="body2" sx={{ fontFamily: "monospace", fontWeight: 700, color: temporaryPassword ? "#b45309" : "text.secondary", fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
-                                        {temporaryPassword || "No temporary password available."}
-                                    </Typography>
+                                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                                        <Typography variant="body2" sx={{ fontFamily: "monospace", fontWeight: 700, color: temporaryPassword ? "#b45309" : "text.secondary", fontSize: { xs: "0.85rem", sm: "0.95rem" }, wordBreak: "break-all" }}>
+                                            {temporaryPassword || "No temporary password available."}
+                                        </Typography>
+                                        {temporaryPassword && (
+                                            <Tooltip title={copied ? "Copied!" : "Copy Temporary Password"}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={handleCopyPassword}
+                                                    sx={{ color: copied ? "#16a34a" : "#b45309", bgcolor: copied ? "#dcfce7" : "#ffedd5", "&:hover": { bgcolor: copied ? "#bbf7d0" : "#fed7aa" }, p: 0.75 }}
+                                                >
+                                                    {copied ? <Check fontSize="small" /> : <ContentCopy fontSize="small" />}
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
+                                    </Box>
                                 </Box>
                             </Box>
                         </Box>
@@ -458,6 +485,15 @@ export default function StudentViewModal({
 
             <DialogActions sx={{ p: { xs: 1.5, sm: 2 }, gap: 1, display: "flex", justifyContent: "flex-end" }}>
                 <Button
+                    variant="outlined"
+                    startIcon={<BadgeIcon />}
+                    onClick={() => setShowIDCardModal(true)}
+                    sx={{ textTransform: "none", fontWeight: 600, borderColor: "#0f172a", color: "#0f172a", "&:hover": { bgcolor: "#f8fafc" } }}
+                >
+                    Print / Download ID Card
+                </Button>
+
+                <Button
                     variant="contained"
                     onClick={() => onEdit?.(student)}
                 >
@@ -472,6 +508,12 @@ export default function StudentViewModal({
                     Delete
                 </Button>
             </DialogActions>
+
+            <StudentIDCardModal
+                open={showIDCardModal}
+                onClose={() => setShowIDCardModal(false)}
+                student={student}
+            />
         </Dialog>
     );
 }

@@ -26,8 +26,9 @@ import {
     MenuItem,
     Stack,
 } from "@mui/material";
-import { School, DateRange, Edit, CloudUpload, Close, Badge } from "@mui/icons-material";
+import { School, DateRange, Edit, CloudUpload, Close, Badge, BadgeOutlined } from "@mui/icons-material";
 import ImageZoom from "@/components/ui/ImageZoom";
+import StudentIDCardModal from "@/components/common/StudentIDCardModal";
 
 const NIGERIAN_STATES = [
     "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
@@ -53,6 +54,7 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [showIDCard, setShowIDCard] = useState(false);
     const [profilePictureFile, setProfilePictureFile] = useState(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState(null);
     const [showPictureDialog, setShowPictureDialog] = useState(false);
@@ -263,14 +265,34 @@ export default function ProfilePage() {
                 </Box>
             )}
 
-            <div>
-                <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}>
-                    My Profile
-                </Typography>
-                <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-                    View and manage your profile information.
-                </Typography>
-            </div>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
+                <div>
+                    <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}>
+                        My Profile
+                    </Typography>
+                    <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                        View and manage your profile information.
+                    </Typography>
+                </div>
+
+                <Button
+                    variant="contained"
+                    startIcon={<BadgeIcon />}
+                    onClick={() => setShowIDCard(true)}
+                    sx={{
+                        borderRadius: 2.5,
+                        bgcolor: "#0f172a",
+                        "&:hover": { bgcolor: "#1e1b4b" },
+                        textTransform: "none",
+                        fontWeight: 600,
+                        px: { xs: 2, sm: 3 },
+                        py: 1,
+                        boxShadow: "0 4px 14px rgba(15,23,42,0.2)",
+                    }}
+                >
+                    Digital ID Card
+                </Button>
+            </Box>
 
             <Paper
                 elevation={0}
@@ -678,7 +700,12 @@ export default function ProfilePage() {
                         {loading ? "Saving..." : "Save Changes"}
                     </Button>
                 </DialogActions>
-            </Dialog>
+            {/* DIGITAL STUDENT ID CARD MODAL */}
+            <StudentIDCardModal
+                open={showIDCard}
+                onClose={() => setShowIDCard(false)}
+                student={user}
+            />
 
         </div>
     );

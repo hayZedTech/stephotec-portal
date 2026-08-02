@@ -278,8 +278,8 @@ export default function StudentsPage() {
                         borderRadius: 4,
                         border: "1px solid",
                         borderColor: "grey.200",
-                        height: { xs: "auto", md: 700 },
-                        overflow: "auto",
+                        height: { xs: "auto", md: 720 },
+                        overflow: "hidden",
                     }}
                 >
                     <StudentsTable
