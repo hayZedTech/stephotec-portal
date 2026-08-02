@@ -700,6 +700,8 @@ export default function ProfilePage() {
                         {loading ? "Saving..." : "Save Changes"}
                     </Button>
                 </DialogActions>
+            </Dialog>
+
             {/* DIGITAL STUDENT ID CARD MODAL */}
             <StudentIDCardModal
                 open={showIDCard}
