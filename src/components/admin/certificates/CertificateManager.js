@@ -255,6 +255,29 @@ export default function CertificateManager() {
         }
     };
 
+    const handlePreviewOnly = () => {
+        if (!editingId && !formData.student_course) {
+            errorToast(null, "Please select a student and course for preview");
+            return;
+        }
+        if (!formData.title) {
+            errorToast(null, "Title is required for preview");
+            return;
+        }
+
+        const studentCourseObj = studentCourses.find(sc => sc.id === formData.student_course);
+        const cert = {
+            title: formData.title,
+            certificate_number: formData.certificate_number,
+            earned_date: formData.earned_date,
+            student_name: selectedStudent ? `${selectedStudent.first_name} ${selectedStudent.last_name}` : "",
+            course_name: studentCourseObj?.course?.name || "Course Name",
+        };
+
+        setSelectedCertForModal(cert);
+        setOpenCertModal(true);
+    };
+
     const handleIssue = async (id) => {
         confirmAction(
             "Issue this certificate to the student?",
@@ -667,17 +690,24 @@ export default function CertificateManager() {
                 </DialogContent>
                 <DialogActions sx={{ p: 2.5, bgcolor: "#f8fafc", justifyContent: "space-between" }}>
                     <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-                    <Stack direction="row" spacing={1.5}>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                        <Button
+                            onClick={handlePreviewOnly}
+                            variant="outlined"
+                            sx={{ fontWeight: 700, textTransform: "none" }}
+                        >
+                            Preview Only
+                        </Button>
+                        <Button onClick={handleSubmit} variant="outlined" sx={{ fontWeight: 700, textTransform: "none" }}>
+                            Save Only
+                        </Button>
                         <Button
                             onClick={handleGenerateAndSave}
                             variant="contained"
                             startIcon={<WorkspacePremium />}
                             sx={{ bgcolor: "#d97706", "&:hover": { bgcolor: "#b45309" }, fontWeight: 700, textTransform: "none" }}
                         >
-                            Generate & Preview Certificate
-                        </Button>
-                        <Button onClick={handleSubmit} variant="outlined" sx={{ fontWeight: 700, textTransform: "none" }}>
-                            Save Only
+                            Generate & Preview
                         </Button>
                     </Stack>
                 </DialogActions>
