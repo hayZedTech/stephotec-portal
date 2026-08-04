@@ -366,7 +366,6 @@ export default function LearningPage() {
                     scrollButtons="auto"
                 >
                     <Tab label="Learning Materials" icon={<MenuBook />} iconPosition="start" />
-                    <Tab label="Quizzes & Practice Tests" icon={<QuizIcon />} iconPosition="start" />
                     <Tab label="Handouts & Study Materials" icon={<School />} iconPosition="start" />
                     <Tab label="My Certificates" icon={<WorkspacePremium />} iconPosition="start" />
                     <Tab label="Course Brochure / Outline" icon={<Description />} iconPosition="start" />
@@ -466,74 +465,9 @@ export default function LearningPage() {
                         </Stack>
                     </TabPanel>
 
-                    {/* TAB 1: QUIZZES & PRACTICE TESTS */}
+
+                    {/* TAB 1: HANDOUTS & STUDY MATERIALS */}
                     <TabPanel value={tabValue} index={1}>
-                        <Stack spacing={3}>
-                            <Paper elevation={0} sx={{ p: 3, bgcolor: "#fffbeb", border: "1px solid #fde68a", borderRadius: 3 }}>
-                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
-                                    <Box>
-                                        <Typography variant="h6" fontWeight={800} color="slate.900">
-                                            100% Free Practice Tests & Quizzes
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Test your knowledge with instant scoring, countdown timers, and detailed explanations.
-                                        </Typography>
-                                    </Box>
-                                    <Chip label="INCLUDED FREE" color="warning" sx={{ fontWeight: 800 }} />
-                                </Box>
-                            </Paper>
-
-                            {quizzes.length > 0 ? (
-                                <Grid container spacing={3}>
-                                    {quizzes.map((quiz) => (
-                                        <Grid xs={12} sm={6} md={4} key={quiz.id}>
-                                            <Card sx={{ borderRadius: 3, border: "1px solid #e2e8f0", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                                                <CardContent>
-                                                    <Chip label={quiz.course_name || "General"} size="small" color="primary" sx={{ mb: 1.5, fontWeight: 700 }} />
-                                                    <Typography variant="h6" fontWeight={700} mb={1}>
-                                                        {quiz.title}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary" mb={2}>
-                                                        {quiz.description || "Practice test with instant score calculation."}
-                                                    </Typography>
-                                                    <Stack spacing={1} sx={{ p: 1.5, bgcolor: "#f8fafc", borderRadius: 2 }}>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Duration: <strong>{quiz.duration_minutes} Mins</strong>
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Pass Score: <strong>{quiz.passing_score_percentage}%</strong>
-                                                        </Typography>
-                                                    </Stack>
-                                                </CardContent>
-                                                <Box sx={{ p: 2, pt: 0 }}>
-                                                    <Button
-                                                        fullWidth
-                                                        variant="contained"
-                                                        startIcon={<PlayArrow />}
-                                                        onClick={() => {
-                                                            setSelectedQuizId(quiz.id);
-                                                            setOpenQuizPlayer(true);
-                                                        }}
-                                                        sx={{ bgcolor: "#0f172a", textTransform: "none", fontWeight: 700 }}
-                                                    >
-                                                        Start Practice Test
-                                                    </Button>
-                                                </Box>
-                                            </Card>
-                                        </Grid>
-                                    ))}
-                                </Grid>
-                            ) : (
-                                <Paper elevation={0} sx={{ p: 5, textAlign: "center", borderRadius: 3, border: "1px solid #e2e8f0" }}>
-                                    <QuizIcon sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
-                                    <Typography color="text.secondary">No practice quizzes available at the moment.</Typography>
-                                </Paper>
-                            )}
-                        </Stack>
-                    </TabPanel>
-
-                    {/* TAB 2: HANDOUTS & STUDY MATERIALS */}
-                    <TabPanel value={tabValue} index={2}>
                         <Stack spacing={3}>
                             <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
                                 <TextField
@@ -595,8 +529,8 @@ export default function LearningPage() {
                         </Stack>
                     </TabPanel>
 
-                    {/* TAB 3: MY CERTIFICATES */}
-                    <TabPanel value={tabValue} index={3}>
+                    {/* TAB 2: MY CERTIFICATES */}
+                    <TabPanel value={tabValue} index={2}>
                         <Stack spacing={3}>
                             <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
                                 <TextField
@@ -652,8 +586,8 @@ export default function LearningPage() {
                         </Stack>
                     </TabPanel>
 
-                    {/* TAB 4: BROCHURES */}
-                    <TabPanel value={tabValue} index={4}>
+                    {/* TAB 3: BROCHURES */}
+                    <TabPanel value={tabValue} index={3}>
                         <Stack spacing={3}>
                             <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
                                 <TextField
@@ -708,6 +642,38 @@ export default function LearningPage() {
                 quizId={selectedQuizId}
                 onAttemptComplete={loadAllData}
             />
+            {/* CONTENT VIEWER MODAL */}
+            <Dialog
+                open={viewContentOpen}
+                onClose={() => setViewContentOpen(false)}
+                maxWidth="lg"
+                fullWidth
+                slotProps={{ paper: { sx: { height: "85vh", borderRadius: { xs: 2, sm: 4 }, bgcolor: "#f8fafc" } } }}
+            >
+                <DialogTitle sx={{ p: 2, bgcolor: "#0f172a", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography variant="h6" fontWeight={700}>
+                        {selectedContent?.title || "Learning Material"}
+                    </Typography>
+                    <Button onClick={() => setViewContentOpen(false)} sx={{ color: "white" }}>
+                        Close
+                    </Button>
+                </DialogTitle>
+                <DialogContent sx={{ p: 0, bgcolor: "#e2e8f0" }}>
+                    {selectedContent && (selectedContent.file || selectedContent.video_url) ? (
+                        <iframe
+                            src={selectedContent.file || selectedContent.video_url}
+                            width="100%"
+                            height="100%"
+                            style={{ border: "none" }}
+                            title={selectedContent.title}
+                        />
+                    ) : (
+                        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", p: 4 }}>
+                            <Typography color="text.secondary">No preview available for this material.</Typography>
+                        </Box>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -35,6 +35,8 @@ import {
     CircularProgress,
     IconButton,
     InputAdornment,
+    useMediaQuery,
+    useTheme,
 } from "@mui/material";
 import {
     Quiz as QuizIcon,
@@ -60,6 +62,9 @@ import { successToast, errorToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
 
 export default function AdminQuizManager() {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
     const [quizzes, setQuizzes] = useState([]);
     const [filteredQuizzes, setFilteredQuizzes] = useState([]);
     const [courses, setCourses] = useState([]);
@@ -615,7 +620,7 @@ export default function AdminQuizManager() {
             {/* NAVIGATION & FILTERS */}
             <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", p: 1 }}>
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2, px: 2, pt: 1 }}>
-                    <Tabs value={tabValue} onChange={(e, val) => setTabValue(val)} sx={{ "& .MuiTab-root": { textTransform: "none", fontWeight: 700 } }}>
+                    <Tabs value={tabValue} onChange={(e, val) => setTabValue(val)} variant="scrollable" scrollButtons="auto" sx={{ "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}>
                         <Tab icon={<QuizIcon />} iconPosition="start" label={`Quizzes (${filteredQuizzes.length})`} />
                         <Tab icon={<People />} iconPosition="start" label={`Student Test Performance (${attempts.length})`} />
                     </Tabs>
@@ -747,38 +752,74 @@ export default function AdminQuizManager() {
                 {/* TAB 1: STUDENT TEST PERFORMANCE TABLE */}
                 {tabValue === 1 && (
                     <Box sx={{ p: 2, pt: 3 }}>
-                        <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0" }}>
-                            <Table sx={{ minWidth: 650 }}>
-                                <TableHead sx={{ bgcolor: "#f8fafc" }}>
-                                    <TableRow>
-                                        <TableCell sx={{ fontWeight: 700 }}>Student Name</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Quiz Title</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Course</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, textAlign: "center" }}>Score (%)</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, textAlign: "center" }}>Status</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, textAlign: "right" }}>Completed Date</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {attempts.map((att) => (
-                                        <TableRow key={att.id} hover>
-                                            <TableCell sx={{ fontWeight: 700, color: "slate.900" }}>{att.student_name || "Student"}</TableCell>
-                                            <TableCell>{att.quiz_title}</TableCell>
-                                            <TableCell>{att.course_name}</TableCell>
-                                            <TableCell align="center" sx={{ fontWeight: 800, color: att.passed ? "success.main" : "warning.main" }}>
-                                                {att.score_percentage}%
-                                            </TableCell>
-                                            <TableCell align="center">
-                                                <Chip label={att.passed ? "PASSED" : "FAILED"} color={att.passed ? "success" : "error"} size="small" sx={{ fontWeight: 800 }} />
-                                            </TableCell>
-                                            <TableCell align="right" sx={{ color: "text.secondary", fontSize: "0.85rem" }}>
-                                                {new Date(att.completed_at).toLocaleString()}
-                                            </TableCell>
+                        {isMobile ? (
+                            <Stack spacing={2}>
+                                {attempts.map((att) => (
+                                    <Card key={att.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                        <CardContent>
+                                            <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                                                {att.student_name || "Student"}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                                                {att.quiz_title} • {att.course_name}
+                                            </Typography>
+                                            
+                                            <Stack spacing={1.5} mb={2}>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Score</Typography>
+                                                    <Typography variant="body2" fontWeight={800} color={att.passed ? "success.main" : "warning.main"}>
+                                                        {att.score_percentage}%
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Status</Typography>
+                                                    <Chip label={att.passed ? "PASSED" : "FAILED"} color={att.passed ? "success" : "error"} size="small" sx={{ fontWeight: 800 }} />
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Completed</Typography>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {new Date(att.completed_at).toLocaleString()}
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </Stack>
+                        ) : (
+                            <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0" }}>
+                                <Table sx={{ minWidth: 650 }}>
+                                    <TableHead sx={{ bgcolor: "#f8fafc" }}>
+                                        <TableRow>
+                                            <TableCell sx={{ fontWeight: 700 }}>Student Name</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Quiz Title</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Course</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, textAlign: "center" }}>Score (%)</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, textAlign: "center" }}>Status</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, textAlign: "right" }}>Completed Date</TableCell>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
+                                    </TableHead>
+                                    <TableBody>
+                                        {attempts.map((att) => (
+                                            <TableRow key={att.id} hover>
+                                                <TableCell sx={{ fontWeight: 700, color: "slate.900" }}>{att.student_name || "Student"}</TableCell>
+                                                <TableCell>{att.quiz_title}</TableCell>
+                                                <TableCell>{att.course_name}</TableCell>
+                                                <TableCell align="center" sx={{ fontWeight: 800, color: att.passed ? "success.main" : "warning.main" }}>
+                                                    {att.score_percentage}%
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <Chip label={att.passed ? "PASSED" : "FAILED"} color={att.passed ? "success" : "error"} size="small" sx={{ fontWeight: 800 }} />
+                                                </TableCell>
+                                                <TableCell align="right" sx={{ color: "text.secondary", fontSize: "0.85rem" }}>
+                                                    {new Date(att.completed_at).toLocaleString()}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        )}
                     </Box>
                 )}
             </Paper>
@@ -890,7 +931,7 @@ export default function AdminQuizManager() {
                 </DialogTitle>
 
                 <DialogContent dividers sx={{ p: 3 }}>
-                    <Tabs value={questionMode} onChange={(e, val) => setQuestionMode(val)} sx={{ mb: 3, borderBottom: "1px solid #e2e8f0" }}>
+                    <Tabs value={questionMode} onChange={(e, val) => setQuestionMode(val)} variant="scrollable" scrollButtons="auto" sx={{ mb: 3, borderBottom: "1px solid #e2e8f0", "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}>
                         <Tab icon={<AddCircle />} iconPosition="start" label="Single Question Builder" value="SINGLE" sx={{ fontWeight: 700 }} />
                         <Tab icon={<ContentPaste />} iconPosition="start" label="Bulk Import Questions" value="BULK" sx={{ fontWeight: 700 }} />
                     </Tabs>

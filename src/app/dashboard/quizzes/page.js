@@ -23,6 +23,8 @@ import {
     TableHead,
     TableRow,
     Alert,
+    useMediaQuery,
+    useTheme,
 } from "@mui/material";
 import {
     Quiz as QuizIcon,
@@ -54,6 +56,8 @@ function TabPanel(props) {
 
 export default function StudentQuizzesPage() {
     const { user } = useAuth();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
     const [tabValue, setTabValue] = useState(0);
 
     const [quizzes, setQuizzes] = useState([]);
@@ -146,7 +150,9 @@ export default function StudentQuizzesPage() {
                         onChange={(e, val) => setTabValue(val)}
                         textColor="primary"
                         indicatorColor="primary"
-                        sx={{ "& .MuiTab-root": { textTransform: "none", fontWeight: 700 } }}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        sx={{ "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}
                     >
                         <Tab icon={<QuizIcon fontSize="small" />} iconPosition="start" label={`Available Quizzes (${filteredQuizzes.length})`} />
                         <Tab icon={<History fontSize="small" />} iconPosition="start" label={`My Test History (${attempts.length})`} />
@@ -300,6 +306,58 @@ export default function StudentQuizzesPage() {
                             <EmojiEvents sx={{ fontSize: 56, color: "text.disabled", mb: 1 }} />
                             <Typography color="text.secondary">You haven't completed any practice tests yet.</Typography>
                         </Box>
+                    ) : isMobile ? (
+                        <Stack spacing={2} sx={{ p: 2 }}>
+                            {attempts.map((att) => (
+                                <Card key={att.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                    <CardContent>
+                                        <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                                            {att.quiz_title}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                                            {att.course_name} • {new Date(att.completed_at).toLocaleDateString()}
+                                        </Typography>
+                                        
+                                        <Stack spacing={1.5} mb={2}>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>Score</Typography>
+                                                <Typography variant="body2" fontWeight={800} color={att.passed ? "success.main" : "warning.main"}>
+                                                    {att.score_percentage}%
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>Status</Typography>
+                                                <Chip
+                                                    label={att.passed ? "PASSED" : "RETRY RECOMMENDED"}
+                                                    color={att.passed ? "success" : "warning"}
+                                                    size="small"
+                                                    sx={{ fontWeight: 700, fontSize: "0.65rem" }}
+                                                />
+                                            </Box>
+                                        </Stack>
+                                        
+                                        <Stack direction="row" spacing={1} sx={{ justifyContent: "space-between", mt: 2, pt: 2, borderTop: "1px solid", borderColor: "grey.100" }}>
+                                            <Button
+                                                size="small"
+                                                startIcon={<Visibility fontSize="small" />}
+                                                onClick={() => handleViewHistory(att)}
+                                                sx={{ textTransform: "none", fontWeight: 700, color: "#2563eb", flex: 1 }}
+                                            >
+                                                History
+                                            </Button>
+                                            <Button
+                                                size="small"
+                                                startIcon={<PlayArrow fontSize="small" />}
+                                                onClick={() => handleStartQuiz(att.quiz)}
+                                                sx={{ textTransform: "none", fontWeight: 700, color: "#d97706", flex: 1 }}
+                                            >
+                                                Retake
+                                            </Button>
+                                        </Stack>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </Stack>
                     ) : (
                         <TableContainer>
                             <Table sx={{ minWidth: 650 }}>
