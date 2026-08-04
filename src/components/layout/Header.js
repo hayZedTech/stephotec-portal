@@ -40,7 +40,7 @@ function Header() {
     const [anchorEl, setAnchorEl] = useState(null);
     const [zoomOpen, setZoomOpen] = useState(false);
     const { unreadCount } = useNotifications();
-    const profilePic = user?.role === "STUDENT" ? user?.profilePictureUrl : undefined;
+    const profilePic = user?.profilePictureUrl;
 
     const open = Boolean(anchorEl);
 

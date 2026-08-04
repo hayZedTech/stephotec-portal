@@ -34,7 +34,7 @@ export default function SidebarUser({
             >
 
                 <ImageZoom
-                    src={user?.role === "STUDENT" ? user?.profilePictureUrl : undefined}
+                    src={user?.profilePictureUrl}
                     alt={initials}
                     avatarProps={{
                         sx: {
