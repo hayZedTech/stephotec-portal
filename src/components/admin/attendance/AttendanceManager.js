@@ -33,6 +33,10 @@ import {
     LinearProgress,
     Avatar,
     Autocomplete,
+    Card,
+    CardContent,
+    useMediaQuery,
+    useTheme,
 } from "@mui/material";
 import {
     Edit,
@@ -64,7 +68,9 @@ const ATTENDANCE_STATUS_COLORS = {
 };
 
 export default function AttendanceManager() {
-    const [tabValue, setTabValue] = useState(0); // 0=Pending, 1=All Records, 2=Add New
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+    const [tabValue, setTabValue] = useState(0); // 0=Pending, 1=All Records
     const [attendance, setAttendance] = useState([]);
     const [pending, setPending] = useState([]);
     const [courses, setCourses] = useState([]);
@@ -276,7 +282,9 @@ export default function AttendanceManager() {
             <Tabs
                 value={tabValue}
                 onChange={(_, v) => setTabValue(v)}
-                sx={{ mb: 3, borderBottom: "1px solid", borderColor: "grey.200" }}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{ mb: 3, borderBottom: "1px solid", borderColor: "grey.200", "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}
             >
                 <Tab
                     label={
@@ -455,33 +463,12 @@ export default function AttendanceManager() {
                             <Typography color="text.secondary">No attendance records found.</Typography>
                         </Paper>
                     ) : (
-                        <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
-                            <Table size="small">
-                                <TableHead sx={{ bgcolor: "#f8fafc" }}>
-                                    <TableRow>
-                                        <TableCell padding="checkbox">
-                                            <Checkbox
-                                                checked={selectedIds.size === filteredAttendance.length && filteredAttendance.length > 0}
-                                                indeterminate={selectedIds.size > 0 && selectedIds.size < filteredAttendance.length}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) setSelectedIds(new Set(filteredAttendance.map((i) => i.id)));
-                                                    else setSelectedIds(new Set());
-                                                }}
-                                            />
-                                        </TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Student</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Course</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Approval</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Remarks</TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {filteredAttendance.map((record) => (
-                                        <TableRow key={record.id} hover>
-                                            <TableCell padding="checkbox">
+                        isMobile ? (
+                            <Stack spacing={2}>
+                                {filteredAttendance.map((record) => (
+                                    <Card key={record.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                        <CardContent>
+                                            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, mb: 1 }}>
                                                 <Checkbox
                                                     checked={selectedIds.has(record.id)}
                                                     onChange={() => {
@@ -489,95 +476,215 @@ export default function AttendanceManager() {
                                                         s.has(record.id) ? s.delete(record.id) : s.add(record.id);
                                                         setSelectedIds(s);
                                                     }}
+                                                    sx={{ p: 0 }}
                                                 />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                                    <Avatar sx={{ width: 32, height: 32, bgcolor: "#7c3aed", fontSize: 13, fontWeight: 700 }}>
+                                                <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                                                    <Avatar sx={{ width: 24, height: 24, bgcolor: "#7c3aed", fontSize: 11, fontWeight: 700 }}>
                                                         {record.student_name?.charAt(0) || "S"}
                                                     </Avatar>
                                                     <Box>
-                                                        <Typography variant="body2" fontWeight={600}>
+                                                        <Typography variant="subtitle2" fontWeight={700}>
                                                             {record.student_name || record.student_username}
                                                         </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
+                                                        <Typography variant="caption" color="text.secondary" display="block">
                                                             {record.enrollment_id}
                                                         </Typography>
                                                     </Box>
                                                 </Box>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2">{record.course_name}</Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2">
-                                                    {new Date(record.date).toLocaleDateString("en-US", {
-                                                        month: "short", day: "numeric", year: "numeric",
-                                                    })}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={record.status}
-                                                    color={ATTENDANCE_STATUS_COLORS[record.status] || "default"}
-                                                    size="small"
+                                            </Box>
+                                            <Stack spacing={1.5} mb={2} pl={4}>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Course</Typography>
+                                                    <Typography variant="caption">{record.course_name}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Date</Typography>
+                                                    <Typography variant="caption">
+                                                        {new Date(record.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Status</Typography>
+                                                    <Chip label={record.status} color={ATTENDANCE_STATUS_COLORS[record.status] || "default"} size="small" />
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Approval</Typography>
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                        <Chip
+                                                            label={STATUS_META[record.approval_status]?.label || record.approval_status}
+                                                            color={STATUS_META[record.approval_status]?.color || "default"}
+                                                            size="small"
+                                                            onClick={(e) => handleStatusClick(record, e)}
+                                                            clickable
+                                                            sx={{ cursor: "pointer" }}
+                                                        />
+                                                        {record.approval_status === "PENDING" && (
+                                                            <>
+                                                                <Tooltip title="Approve">
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="success"
+                                                                        onClick={() => handleApprove(record.id)}
+                                                                        disabled={!!actionLoading[record.id]}
+                                                                    >
+                                                                        {actionLoading[record.id] === "approve"
+                                                                            ? <CircularProgress size={14} />
+                                                                            : <CheckCircle fontSize="small" />}
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                                <Tooltip title="Reject">
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="error"
+                                                                        onClick={() => { setRejectDialogId(record.id); setRejectRemark(""); }}
+                                                                    >
+                                                                        <Cancel fontSize="small" />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                            </>
+                                                        )}
+                                                    </Box>
+                                                </Box>
+                                                {record.remarks && (
+                                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                        <Typography variant="caption" color="text.secondary" fontWeight={600}>Remarks</Typography>
+                                                        <Typography variant="caption" color="text.secondary">{record.remarks}</Typography>
+                                                    </Box>
+                                                )}
+                                            </Stack>
+                                            <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", borderTop: "1px solid #f1f5f9", pt: 1.5 }}>
+                                                <IconButton size="small" onClick={() => handleOpenDialog(record)}><Edit fontSize="small" /></IconButton>
+                                                <IconButton size="small" onClick={() => handleDelete(record.id)}><Delete fontSize="small" /></IconButton>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </Stack>
+                        ) : (
+                            <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
+                                <Table size="small">
+                                    <TableHead sx={{ bgcolor: "#f8fafc" }}>
+                                        <TableRow>
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    checked={selectedIds.size === filteredAttendance.length && filteredAttendance.length > 0}
+                                                    indeterminate={selectedIds.size > 0 && selectedIds.size < filteredAttendance.length}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) setSelectedIds(new Set(filteredAttendance.map((i) => i.id)));
+                                                        else setSelectedIds(new Set());
+                                                    }}
                                                 />
                                             </TableCell>
-                                            <TableCell>
-                                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                                     <Chip
-                                                         label={STATUS_META[record.approval_status]?.label || record.approval_status}
-                                                         color={STATUS_META[record.approval_status]?.color || "default"}
-                                                         size="small"
-                                                         onClick={(e) => handleStatusClick(record, e)}
-                                                         clickable
-                                                         sx={{ cursor: "pointer" }}
-                                                     />
-                                                    {record.approval_status === "PENDING" && (
-                                                        <>
-                                                            <Tooltip title="Approve">
-                                                                <IconButton
-                                                                    size="small"
-                                                                    color="success"
-                                                                    onClick={() => handleApprove(record.id)}
-                                                                    disabled={!!actionLoading[record.id]}
-                                                                >
-                                                                    {actionLoading[record.id] === "approve"
-                                                                        ? <CircularProgress size={14} />
-                                                                        : <CheckCircle fontSize="small" />}
-                                                                </IconButton>
-                                                            </Tooltip>
-                                                            <Tooltip title="Reject">
-                                                                <IconButton
-                                                                    size="small"
-                                                                    color="error"
-                                                                    onClick={() => { setRejectDialogId(record.id); setRejectRemark(""); }}
-                                                                >
-                                                                    <Cancel fontSize="small" />
-                                                                </IconButton>
-                                                            </Tooltip>
-                                                        </>
-                                                    )}
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {record.remarks || "—"}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <IconButton size="small" onClick={() => handleOpenDialog(record)}>
-                                                    <Edit fontSize="small" />
-                                                </IconButton>
-                                                <IconButton size="small" onClick={() => handleDelete(record.id)}>
-                                                    <Delete fontSize="small" />
-                                                </IconButton>
-                                            </TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Student</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Course</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Approval</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Remarks</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
+                                    </TableHead>
+                                    <TableBody>
+                                        {filteredAttendance.map((record) => (
+                                            <TableRow key={record.id} hover>
+                                                <TableCell padding="checkbox">
+                                                    <Checkbox
+                                                        checked={selectedIds.has(record.id)}
+                                                        onChange={() => {
+                                                            const s = new Set(selectedIds);
+                                                            s.has(record.id) ? s.delete(record.id) : s.add(record.id);
+                                                            setSelectedIds(s);
+                                                        }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                                        <Avatar sx={{ width: 32, height: 32, bgcolor: "#7c3aed", fontSize: 13, fontWeight: 700 }}>
+                                                            {record.student_name?.charAt(0) || "S"}
+                                                        </Avatar>
+                                                        <Box>
+                                                            <Typography variant="body2" fontWeight={600}>
+                                                                {record.student_name || record.student_username}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {record.enrollment_id}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2">{record.course_name}</Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2">
+                                                        {new Date(record.date).toLocaleDateString("en-US", {
+                                                            month: "short", day: "numeric", year: "numeric",
+                                                        })}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Chip
+                                                        label={record.status}
+                                                        color={ATTENDANCE_STATUS_COLORS[record.status] || "default"}
+                                                        size="small"
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                         <Chip
+                                                             label={STATUS_META[record.approval_status]?.label || record.approval_status}
+                                                             color={STATUS_META[record.approval_status]?.color || "default"}
+                                                             size="small"
+                                                             onClick={(e) => handleStatusClick(record, e)}
+                                                             clickable
+                                                             sx={{ cursor: "pointer" }}
+                                                         />
+                                                        {record.approval_status === "PENDING" && (
+                                                            <>
+                                                                <Tooltip title="Approve">
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="success"
+                                                                        onClick={() => handleApprove(record.id)}
+                                                                        disabled={!!actionLoading[record.id]}
+                                                                    >
+                                                                        {actionLoading[record.id] === "approve"
+                                                                            ? <CircularProgress size={14} />
+                                                                            : <CheckCircle fontSize="small" />}
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                                <Tooltip title="Reject">
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="error"
+                                                                        onClick={() => { setRejectDialogId(record.id); setRejectRemark(""); }}
+                                                                    >
+                                                                        <Cancel fontSize="small" />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                            </>
+                                                        )}
+                                                    </Box>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {record.remarks || "—"}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <IconButton size="small" onClick={() => handleOpenDialog(record)}>
+                                                        <Edit fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton size="small" onClick={() => handleDelete(record.id)}>
+                                                        <Delete fontSize="small" />
+                                                    </IconButton>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        )
                     )}
                 </Box>
             )}

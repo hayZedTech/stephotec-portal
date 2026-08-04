@@ -28,6 +28,10 @@ import {
     Stack,
     Checkbox,
     Autocomplete,
+    Card,
+    CardContent,
+    useMediaQuery,
+    useTheme,
 } from "@mui/material";
 import { Edit, Delete, Add, CheckCircle, CloudUpload, Visibility, Download, DeleteOutlined } from "@mui/icons-material";
 import api from "@/lib/axios";
@@ -38,6 +42,8 @@ import CertificateModal from "@/components/common/CertificateModal";
 import { WorkspacePremium } from "@mui/icons-material";
 
 export default function CertificateManager() {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
     const [certificates, setCertificates] = useState([]);
     const [filteredCertificates, setFilteredCertificates] = useState([]);
     const [openCertModal, setOpenCertModal] = useState(false);
@@ -472,119 +478,178 @@ export default function CertificateManager() {
                 </Paper>
             ) : (
                 <Box sx={{ overflowX: "auto", borderRadius: 2 }}>
-                    <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
-                        <Table size="small">
-                            <TableHead sx={{ bgcolor: "grey.50" }}>
-                                <TableRow>
-                                    <TableCell padding="checkbox">
-                                        <Checkbox
-                                            checked={selectedIds.size === filteredCertificates.length && filteredCertificates.length > 0}
-                                            indeterminate={selectedIds.size > 0 && selectedIds.size < filteredCertificates.length}
-                                            onChange={handleSelectAll}
-                                        />
-                                    </TableCell>
-                                    <TableCell sx={{ fontWeight: 700 }}>Student</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, display: { xs: "none", md: "table-cell" } }}>Username</TableCell>
-                                    <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
-                                    <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Course</TableCell>
-                                    <TableCell>Status</TableCell>
-                                    <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Earned Date</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filteredCertificates.map((cert) => (
-                                    <TableRow key={cert.id} hover>
-                                        <TableCell padding="checkbox">
+                    {isMobile ? (
+                        <Stack spacing={2}>
+                            {filteredCertificates.map((cert) => (
+                                <Card key={cert.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                    <CardContent>
+                                        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, mb: 1 }}>
                                             <Checkbox
                                                 checked={selectedIds.has(cert.id)}
                                                 onChange={() => handleSelectItem(cert.id)}
+                                                sx={{ p: 0 }}
                                             />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2" fontWeight={600}>
-                                                {cert.student_name || "N/A"}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2">{cert.title}</Typography>
-                                        </TableCell>
-                                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
-                                            {cert.course_name || "N/A"}
-                                        </TableCell>
-                                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
-                                            <Typography variant="body2" fontFamily="monospace" color="text.secondary">
-                                                {cert.student_username || "—"}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={cert.status}
-                                                color={cert.status === "ISSUED" ? "success" : cert.status === "EARNED" ? "info" : "error"}
-                                                size="small"
-                                                onClick={(e) => handleStatusClick(cert, e)}
-                                                clickable
-                                                sx={{ cursor: "pointer" }}
-                                            />
-                                        </TableCell>
-                                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                                            {cert.earned_date}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => {
-                                                        setSelectedCertForModal(cert);
-                                                        setOpenCertModal(true);
-                                                    }}
-                                                    title="Generate / Print Certificate"
-                                                    sx={{ color: "#d97706" }}
-                                                >
-                                                    <WorkspacePremium fontSize="small" />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleViewCert(cert)}
-                                                    title="View details"
-                                                    sx={{ color: "primary.main" }}
-                                                >
-                                                    <Visibility fontSize="small" />
-                                                </IconButton>
-                                                {cert.status === "EARNED" && (
-                                                    <Button
-                                                        size="small"
-                                                        startIcon={<CheckCircle />}
-                                                        color="success"
-                                                        onClick={() => handleIssue(cert.id)}
-                                                        sx={{ fontSize: "0.75rem", py: 0.2 }}
-                                                    >
-                                                        Issue
-                                                    </Button>
-                                                )}
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleOpenDialog(cert)}
-                                                    title="Edit"
-                                                    sx={{ color: "warning.main" }}
-                                                >
-                                                    <Edit fontSize="small" />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleDelete(cert.id)}
-                                                    title="Delete"
-                                                    sx={{ color: "error.main" }}
-                                                >
-                                                    <Delete fontSize="small" />
-                                                </IconButton>
+                                            <Box>
+                                                <Typography variant="subtitle2" fontWeight={700}>
+                                                    {cert.student_name || "N/A"}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" display="block" fontFamily="monospace">
+                                                    {cert.student_username || "—"}
+                                                </Typography>
                                             </Box>
+                                        </Box>
+                                        <Stack spacing={1.5} mb={2} pl={4}>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>Title</Typography>
+                                                <Typography variant="caption">{cert.title}</Typography>
+                                            </Box>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>Course</Typography>
+                                                <Typography variant="caption">{cert.course_name || "N/A"}</Typography>
+                                            </Box>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>Earned Date</Typography>
+                                                <Typography variant="caption">{cert.earned_date}</Typography>
+                                            </Box>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>Status</Typography>
+                                                <Chip
+                                                    label={cert.status}
+                                                    color={cert.status === "ISSUED" ? "success" : cert.status === "EARNED" ? "info" : "error"}
+                                                    size="small"
+                                                    onClick={(e) => handleStatusClick(cert, e)}
+                                                    clickable
+                                                />
+                                            </Box>
+                                        </Stack>
+                                        <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", borderTop: "1px solid #f1f5f9", pt: 1.5, flexWrap: "wrap" }}>
+                                            <IconButton size="small" onClick={() => { setSelectedCertForModal(cert); setOpenCertModal(true); }} sx={{ color: "#d97706" }}><WorkspacePremium fontSize="small" /></IconButton>
+                                            <IconButton size="small" onClick={() => handleViewCert(cert)} sx={{ color: "primary.main" }}><Visibility fontSize="small" /></IconButton>
+                                            {cert.status === "EARNED" && (
+                                                <Button size="small" startIcon={<CheckCircle />} color="success" onClick={() => handleIssue(cert.id)}>Issue</Button>
+                                            )}
+                                            <IconButton size="small" onClick={() => handleOpenDialog(cert)} sx={{ color: "warning.main" }}><Edit fontSize="small" /></IconButton>
+                                            <IconButton size="small" onClick={() => handleDelete(cert.id)} sx={{ color: "error.main" }}><Delete fontSize="small" /></IconButton>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </Stack>
+                    ) : (
+                        <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
+                            <Table size="small">
+                                <TableHead sx={{ bgcolor: "grey.50" }}>
+                                    <TableRow>
+                                        <TableCell padding="checkbox">
+                                            <Checkbox
+                                                checked={selectedIds.size === filteredCertificates.length && filteredCertificates.length > 0}
+                                                indeterminate={selectedIds.size > 0 && selectedIds.size < filteredCertificates.length}
+                                                onChange={handleSelectAll}
+                                            />
                                         </TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Student</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Username</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Course</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Earned Date</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                                </TableHead>
+                                <TableBody>
+                                    {filteredCertificates.map((cert) => (
+                                        <TableRow key={cert.id} hover>
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    checked={selectedIds.has(cert.id)}
+                                                    onChange={() => handleSelectItem(cert.id)}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {cert.student_name || "N/A"}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontFamily="monospace" color="text.secondary">
+                                                    {cert.student_username || "—"}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2">{cert.title}</Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                {cert.course_name || "N/A"}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={cert.status}
+                                                    color={cert.status === "ISSUED" ? "success" : cert.status === "EARNED" ? "info" : "error"}
+                                                    size="small"
+                                                    onClick={(e) => handleStatusClick(cert, e)}
+                                                    clickable
+                                                    sx={{ cursor: "pointer" }}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                {cert.earned_date}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => {
+                                                            setSelectedCertForModal(cert);
+                                                            setOpenCertModal(true);
+                                                        }}
+                                                        title="Generate / Print Certificate"
+                                                        sx={{ color: "#d97706" }}
+                                                    >
+                                                        <WorkspacePremium fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleViewCert(cert)}
+                                                        title="View details"
+                                                        sx={{ color: "primary.main" }}
+                                                    >
+                                                        <Visibility fontSize="small" />
+                                                    </IconButton>
+                                                    {cert.status === "EARNED" && (
+                                                        <Button
+                                                            size="small"
+                                                            startIcon={<CheckCircle />}
+                                                            color="success"
+                                                            onClick={() => handleIssue(cert.id)}
+                                                            sx={{ fontSize: "0.75rem", py: 0.2 }}
+                                                        >
+                                                            Issue
+                                                        </Button>
+                                                    )}
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleOpenDialog(cert)}
+                                                        title="Edit"
+                                                        sx={{ color: "warning.main" }}
+                                                    >
+                                                        <Edit fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleDelete(cert.id)}
+                                                        title="Delete"
+                                                        sx={{ color: "error.main" }}
+                                                    >
+                                                        <Delete fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
                 </Box>
             )}
 

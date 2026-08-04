@@ -29,6 +29,10 @@ import {
     InputLabel,
     Stack,
     Checkbox,
+    Card,
+    CardContent,
+    useMediaQuery,
+    useTheme,
 } from "@mui/material";
 import { Edit, Delete, Add, Download, CloudUpload, Visibility, DeleteOutlined, CheckCircle, Cancel } from "@mui/icons-material";
 import api from "@/lib/axios";
@@ -46,6 +50,8 @@ function TabPanel(props) {
 }
 
 export default function HandoutManager() {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
     const [handouts, setHandouts] = useState([]);
     const [filteredHandouts, setFilteredHandouts] = useState([]);
     const [purchases, setPurchases] = useState([]);
@@ -380,7 +386,9 @@ export default function HandoutManager() {
             <Tabs
                 value={tabValue}
                 onChange={(e, v) => setTabValue(v)}
-                sx={{ mb: 3, borderBottom: "1px solid", borderColor: "grey.200" }}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{ mb: 3, borderBottom: "1px solid", borderColor: "grey.200", "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}
             >
                 <Tab label="Handouts" />
                 <Tab label="Purchases" />
@@ -480,96 +488,147 @@ export default function HandoutManager() {
                     </Paper>
                 ) : (
                     <Box sx={{ overflowX: "auto", borderRadius: 2 }}>
-                        <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
-                            <Table size="small">
-                                <TableHead sx={{ bgcolor: "grey.50" }}>
-                                    <TableRow>
-                                        <TableCell padding="checkbox">
-                                            <Checkbox
-                                                checked={selectedHandoutIds.size === filteredHandouts.length && filteredHandouts.length > 0}
-                                                indeterminate={selectedHandoutIds.size > 0 && selectedHandoutIds.size < filteredHandouts.length}
-                                                onChange={handleSelectAllHandouts}
-                                            />
-                                        </TableCell>
-                                        <TableCell fontWeight={700}>Title</TableCell>
-                                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Course</TableCell>
-                                        <TableCell>Price</TableCell>
-                                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Purchases</TableCell>
-                                        <TableCell>Status</TableCell>
-                                        <TableCell align="right" fontWeight={700}>Actions</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {filteredHandouts.map((handout) => (
-                                        <TableRow key={handout.id} hover>
-                                            <TableCell padding="checkbox">
+                        {isMobile ? (
+                            <Stack spacing={2}>
+                                {filteredHandouts.map((handout) => (
+                                    <Card key={handout.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                        <CardContent>
+                                            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, mb: 1 }}>
                                                 <Checkbox
                                                     checked={selectedHandoutIds.has(handout.id)}
                                                     onChange={() => handleSelectHandout(handout.id)}
+                                                    sx={{ p: 0 }}
                                                 />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" fontWeight={600}>
-                                                    {handout.title}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: "block", md: "none" } }}>
-                                                    {getCourseName(handout.course)}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
-                                                {getCourseName(handout.course)}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" fontWeight={500}>
-                                                    ₦{parseFloat(handout.price || 0).toLocaleString()}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                                                {handout.purchase_count || 0}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={handout.status}
-                                                    color={handout.status === "PUBLISHED" ? "success" : handout.status === "DRAFT" ? "default" : "error"}
-                                                    size="small"
-                                                    onClick={(e) => handleStatusClick(handout, e)}
-                                                    clickable
-                                                    sx={{ cursor: "pointer" }}
-                                                />
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => handleViewHandout(handout)}
-                                                        title="View details"
-                                                        sx={{ color: "primary.main" }}
-                                                    >
-                                                        <Visibility fontSize="small" />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => handleOpenDialog(handout)}
-                                                        title="Edit"
-                                                        sx={{ color: "warning.main" }}
-                                                    >
-                                                        <Edit fontSize="small" />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => handleDelete(handout.id)}
-                                                        title="Delete"
-                                                        sx={{ color: "error.main" }}
-                                                    >
-                                                        <Delete fontSize="small" />
-                                                    </IconButton>
+                                                <Box>
+                                                    <Typography variant="subtitle2" fontWeight={700}>
+                                                        {handout.title}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary" display="block">
+                                                        {getCourseName(handout.course)}
+                                                    </Typography>
                                                 </Box>
+                                            </Box>
+                                            <Stack spacing={1.5} mb={2} pl={4}>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Price</Typography>
+                                                    <Typography variant="caption" fontWeight={500}>₦{parseFloat(handout.price || 0).toLocaleString()}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Purchases</Typography>
+                                                    <Typography variant="caption">{handout.purchase_count || 0}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Status</Typography>
+                                                    <Chip
+                                                        label={handout.status}
+                                                        color={handout.status === "PUBLISHED" ? "success" : handout.status === "DRAFT" ? "default" : "error"}
+                                                        size="small"
+                                                        onClick={(e) => handleStatusClick(handout, e)}
+                                                        clickable
+                                                    />
+                                                </Box>
+                                            </Stack>
+                                            <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", borderTop: "1px solid #f1f5f9", pt: 1.5, flexWrap: "wrap" }}>
+                                                <IconButton size="small" onClick={() => handleViewHandout(handout)} sx={{ color: "primary.main" }}><Visibility fontSize="small" /></IconButton>
+                                                <IconButton size="small" onClick={() => handleOpenDialog(handout)} sx={{ color: "warning.main" }}><Edit fontSize="small" /></IconButton>
+                                                <IconButton size="small" onClick={() => handleDelete(handout.id)} sx={{ color: "error.main" }}><Delete fontSize="small" /></IconButton>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </Stack>
+                        ) : (
+                            <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
+                                <Table size="small">
+                                    <TableHead sx={{ bgcolor: "grey.50" }}>
+                                        <TableRow>
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    checked={selectedHandoutIds.size === filteredHandouts.length && filteredHandouts.length > 0}
+                                                    indeterminate={selectedHandoutIds.size > 0 && selectedHandoutIds.size < filteredHandouts.length}
+                                                    onChange={handleSelectAllHandouts}
+                                                />
                                             </TableCell>
+                                            <TableCell fontWeight={700}>Title</TableCell>
+                                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Course</TableCell>
+                                            <TableCell>Price</TableCell>
+                                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Purchases</TableCell>
+                                            <TableCell>Status</TableCell>
+                                            <TableCell align="right" fontWeight={700}>Actions</TableCell>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
+                                    </TableHead>
+                                    <TableBody>
+                                        {filteredHandouts.map((handout) => (
+                                            <TableRow key={handout.id} hover>
+                                                <TableCell padding="checkbox">
+                                                    <Checkbox
+                                                        checked={selectedHandoutIds.has(handout.id)}
+                                                        onChange={() => handleSelectHandout(handout.id)}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2" fontWeight={600}>
+                                                        {handout.title}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: { xs: "block", md: "none" } }}>
+                                                        {getCourseName(handout.course)}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
+                                                    {getCourseName(handout.course)}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        ₦{parseFloat(handout.price || 0).toLocaleString()}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                                                    {handout.purchase_count || 0}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Chip
+                                                        label={handout.status}
+                                                        color={handout.status === "PUBLISHED" ? "success" : handout.status === "DRAFT" ? "default" : "error"}
+                                                        size="small"
+                                                        onClick={(e) => handleStatusClick(handout, e)}
+                                                        clickable
+                                                        sx={{ cursor: "pointer" }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleViewHandout(handout)}
+                                                            title="View details"
+                                                            sx={{ color: "primary.main" }}
+                                                        >
+                                                            <Visibility fontSize="small" />
+                                                        </IconButton>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleOpenDialog(handout)}
+                                                            title="Edit"
+                                                            sx={{ color: "warning.main" }}
+                                                        >
+                                                            <Edit fontSize="small" />
+                                                        </IconButton>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleDelete(handout.id)}
+                                                            title="Delete"
+                                                            sx={{ color: "error.main" }}
+                                                        >
+                                                            <Delete fontSize="small" />
+                                                        </IconButton>
+                                                    </Box>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        )}
                     </Box>
                 )}
             </TabPanel>
@@ -632,91 +691,141 @@ export default function HandoutManager() {
                     </Paper>
                 ) : (
                     <Box sx={{ overflowX: "auto", borderRadius: 2 }}>
-                        <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
-                            <Table size="small">
-                                <TableHead sx={{ bgcolor: "grey.50" }}>
-                                    <TableRow>
-                                        <TableCell sx={{ fontWeight: 700 }}>Student</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, display: { xs: "none", md: "table-cell" } }}>Username</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Handout</TableCell>
-                                        <TableCell>Amount</TableCell>
-                                        <TableCell>Status</TableCell>
-                                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Date</TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {filteredPurchases.map((purchase) => (
-                                        <TableRow key={purchase.id} hover>
-                                            <TableCell>
-                                                <Typography variant="body2" fontWeight={600}>
+                        {isMobile ? (
+                            <Stack spacing={2}>
+                                {filteredPurchases.map((purchase) => (
+                                    <Card key={purchase.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                        <CardContent>
+                                            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mb: 2 }}>
+                                                <Typography variant="subtitle2" fontWeight={700}>
                                                     {purchase.student_name || "N/A"}
                                                 </Typography>
-                                            </TableCell>
-                                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
-                                                <Typography variant="body2" fontFamily="monospace" color="text.secondary">
+                                                <Typography variant="caption" color="text.secondary" fontFamily="monospace">
                                                     {purchase.student_username || "—"}
                                                 </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2">{purchase.handout_title || "N/A"}</Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" fontWeight={500}>
-                                                    ₦{parseFloat(purchase.amount_paid || 0).toLocaleString()}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={purchase.status}
-                                                    color={purchase.status === "COMPLETED" ? "success" : purchase.status === "PENDING" ? "warning" : "error"}
-                                                    size="small"
-                                                />
-                                            </TableCell>
-                                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                            {purchase.purchased_at ? new Date(purchase.purchased_at).toLocaleDateString() : "—"}
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", flexWrap: "wrap", alignItems: "center" }}>
-                                                    {purchase.status === "PENDING" && (
-                                                        <>
-                                                            <Button
-                                                                size="small"
-                                                                variant="contained"
-                                                                color="success"
-                                                                startIcon={<CheckCircle />}
-                                                                onClick={() => handleApprovePurchase(purchase.id)}
-                                                                sx={{ fontSize: "0.75rem", py: 0.2 }}
-                                                            >
-                                                                Approve
-                                                            </Button>
-                                                            <Button
-                                                                size="small"
-                                                                variant="outlined"
-                                                                color="error"
-                                                                startIcon={<Cancel />}
-                                                                onClick={() => handleRejectPurchase(purchase.id)}
-                                                                sx={{ fontSize: "0.75rem", py: 0.2 }}
-                                                            >
-                                                                Reject
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => handleViewPurchase(purchase)}
-                                                        title="View details"
-                                                        sx={{ color: "primary.main" }}
-                                                    >
-                                                        <Visibility fontSize="small" />
-                                                    </IconButton>
+                                            </Box>
+                                            <Stack spacing={1.5} mb={2}>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Handout</Typography>
+                                                    <Typography variant="caption">{purchase.handout_title || "N/A"}</Typography>
                                                 </Box>
-                                            </TableCell>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Amount</Typography>
+                                                    <Typography variant="caption" fontWeight={500}>₦{parseFloat(purchase.amount_paid || 0).toLocaleString()}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Date</Typography>
+                                                    <Typography variant="caption">{purchase.purchased_at ? new Date(purchase.purchased_at).toLocaleDateString() : "—"}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Status</Typography>
+                                                    <Chip
+                                                        label={purchase.status}
+                                                        color={purchase.status === "COMPLETED" ? "success" : purchase.status === "PENDING" ? "warning" : "error"}
+                                                        size="small"
+                                                    />
+                                                </Box>
+                                            </Stack>
+                                            <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", borderTop: "1px solid #f1f5f9", pt: 1.5, flexWrap: "wrap", alignItems: "center" }}>
+                                                {purchase.status === "PENDING" && (
+                                                    <>
+                                                        <Button size="small" variant="contained" color="success" startIcon={<CheckCircle />} onClick={() => handleApprovePurchase(purchase.id)}>Approve</Button>
+                                                        <Button size="small" variant="outlined" color="error" startIcon={<Cancel />} onClick={() => handleRejectPurchase(purchase.id)}>Reject</Button>
+                                                    </>
+                                                )}
+                                                <IconButton size="small" onClick={() => handleViewPurchase(purchase)} sx={{ color: "primary.main" }}><Visibility fontSize="small" /></IconButton>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </Stack>
+                        ) : (
+                            <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
+                                <Table size="small">
+                                    <TableHead sx={{ bgcolor: "grey.50" }}>
+                                        <TableRow>
+                                            <TableCell sx={{ fontWeight: 700 }}>Student</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, display: { xs: "none", md: "table-cell" } }}>Username</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Handout</TableCell>
+                                            <TableCell>Amount</TableCell>
+                                            <TableCell>Status</TableCell>
+                                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Date</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
+                                    </TableHead>
+                                    <TableBody>
+                                        {filteredPurchases.map((purchase) => (
+                                            <TableRow key={purchase.id} hover>
+                                                <TableCell>
+                                                    <Typography variant="body2" fontWeight={600}>
+                                                        {purchase.student_name || "N/A"}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
+                                                    <Typography variant="body2" fontFamily="monospace" color="text.secondary">
+                                                        {purchase.student_username || "—"}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2">{purchase.handout_title || "N/A"}</Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2" fontWeight={500}>
+                                                        ₦{parseFloat(purchase.amount_paid || 0).toLocaleString()}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Chip
+                                                        label={purchase.status}
+                                                        color={purchase.status === "COMPLETED" ? "success" : purchase.status === "PENDING" ? "warning" : "error"}
+                                                        size="small"
+                                                    />
+                                                </TableCell>
+                                                <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                                {purchase.purchased_at ? new Date(purchase.purchased_at).toLocaleDateString() : "—"}
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", flexWrap: "wrap", alignItems: "center" }}>
+                                                        {purchase.status === "PENDING" && (
+                                                            <>
+                                                                <Button
+                                                                    size="small"
+                                                                    variant="contained"
+                                                                    color="success"
+                                                                    startIcon={<CheckCircle />}
+                                                                    onClick={() => handleApprovePurchase(purchase.id)}
+                                                                    sx={{ fontSize: "0.75rem", py: 0.2 }}
+                                                                >
+                                                                    Approve
+                                                                </Button>
+                                                                <Button
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    color="error"
+                                                                    startIcon={<Cancel />}
+                                                                    onClick={() => handleRejectPurchase(purchase.id)}
+                                                                    sx={{ fontSize: "0.75rem", py: 0.2 }}
+                                                                >
+                                                                    Reject
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleViewPurchase(purchase)}
+                                                            title="View details"
+                                                            sx={{ color: "primary.main" }}
+                                                        >
+                                                            <Visibility fontSize="small" />
+                                                        </IconButton>
+                                                    </Box>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        )}
                     </Box>
                 )}
             </TabPanel>

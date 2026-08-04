@@ -53,13 +53,16 @@ export default function AdminAssessmentsPage() {
                     value={tabValue}
                     onChange={(e, val) => setTabValue(val)}
                     aria-label="assessments management tabs"
+                    variant="scrollable"
+                    scrollButtons="auto"
                     sx={{
                         borderBottom: "1px solid",
                         borderColor: "grey.200",
                         px: { xs: 1, sm: 3 },
                         "& .MuiTab-root": {
-                            fontSize: { xs: "0.875rem", sm: "1rem" },
+                            fontSize: { xs: "0.75rem", sm: "0.875rem" },
                             minHeight: { xs: 48, sm: 56 },
+                            px: { xs: 1, sm: 2 },
                             textTransform: "none",
                             fontWeight: 700,
                         },

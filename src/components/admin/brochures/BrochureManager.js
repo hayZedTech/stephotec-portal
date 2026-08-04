@@ -24,6 +24,10 @@ import {
     InputLabel,
     Select,
     Stack,
+    Card,
+    CardContent,
+    useMediaQuery,
+    useTheme,
 } from "@mui/material";
 import { Add, CloudUpload, Edit, Delete, Download, Visibility } from "@mui/icons-material";
 import { getCourses } from "@/services/courses";
@@ -32,6 +36,8 @@ import { errorToast, successToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
 
 export default function BrochureManager() {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
     const [courses, setCourses] = useState([]);
     const [brochures, setBrochures] = useState([]);
     const [filteredBrochures, setFilteredBrochures] = useState([]);
@@ -287,73 +293,109 @@ export default function BrochureManager() {
                     </Typography>
                 </Paper>
             ) : (
-                <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
-                    <Table size="small">
-                        <TableHead sx={{ bgcolor: "grey.50" }}>
-                            <TableRow>
-                                <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }}>Course</TableCell>
-                                <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Description</TableCell>
-                                <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Date Created</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
+                <Box sx={{ overflowX: "auto", borderRadius: 2 }}>
+                    {isMobile ? (
+                        <Stack spacing={2}>
                             {filteredBrochures.map((item) => (
-                                <TableRow key={item.id} hover>
-                                    <TableCell>
-                                        <Typography variant="body2" fontWeight={600}>
-                                            {item.title}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2">
-                                            {item.course_name || getCourseName(item.course)}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
-                                        <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 250 }}>
-                                            {item.description || "—"}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleViewBrochure(item)}
-                                                title="View details"
-                                                sx={{ color: "primary.main" }}
-                                            >
-                                                <Visibility fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleOpenDialog(item)}
-                                                title="Edit"
-                                                sx={{ color: "warning.main" }}
-                                            >
-                                                <Edit fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleDelete(item.id)}
-                                                title="Delete"
-                                                sx={{ color: "error.main" }}
-                                            >
-                                                <Delete fontSize="small" />
-                                            </IconButton>
+                                <Card key={item.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                    <CardContent>
+                                        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mb: 2 }}>
+                                            <Typography variant="subtitle2" fontWeight={700}>
+                                                {item.title}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {item.course_name || getCourseName(item.course)}
+                                            </Typography>
                                         </Box>
-                                    </TableCell>
-                                </TableRow>
+                                        <Stack spacing={1.5} mb={2}>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>Date Created</Typography>
+                                                <Typography variant="caption">{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</Typography>
+                                            </Box>
+                                            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>Description</Typography>
+                                                <Typography variant="caption">{item.description || "—"}</Typography>
+                                            </Box>
+                                        </Stack>
+                                        <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", borderTop: "1px solid #f1f5f9", pt: 1.5, flexWrap: "wrap" }}>
+                                            <IconButton size="small" onClick={() => handleViewBrochure(item)} sx={{ color: "primary.main" }}><Visibility fontSize="small" /></IconButton>
+                                            <IconButton size="small" onClick={() => handleOpenDialog(item)} sx={{ color: "warning.main" }}><Edit fontSize="small" /></IconButton>
+                                            <IconButton size="small" onClick={() => handleDelete(item.id)} sx={{ color: "error.main" }}><Delete fontSize="small" /></IconButton>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
                             ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                        </Stack>
+                    ) : (
+                        <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
+                            <Table size="small">
+                                <TableHead sx={{ bgcolor: "grey.50" }}>
+                                    <TableRow>
+                                        <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Course</TableCell>
+                                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>Description</TableCell>
+                                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>Date Created</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {filteredBrochures.map((item) => (
+                                        <TableRow key={item.id} hover>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {item.title}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2">
+                                                    {item.course_name || getCourseName(item.course)}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
+                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 250 }}>
+                                                    {item.description || "—"}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleViewBrochure(item)}
+                                                        title="View details"
+                                                        sx={{ color: "primary.main" }}
+                                                    >
+                                                        <Visibility fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleOpenDialog(item)}
+                                                        title="Edit"
+                                                        sx={{ color: "warning.main" }}
+                                                    >
+                                                        <Edit fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleDelete(item.id)}
+                                                        title="Delete"
+                                                        sx={{ color: "error.main" }}
+                                                    >
+                                                        <Delete fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
+                </Box>
             )}
 
             {/* Create/Edit Dialog */}

@@ -29,6 +29,10 @@ import {
     InputLabel,
     Select,
     Stack,
+    Card,
+    CardContent,
+    useMediaQuery,
+    useTheme,
 } from "@mui/material";
 import { Add, CloudUpload, Edit, Delete, Download, Visibility, DeleteOutlined, PersonAdd } from "@mui/icons-material";
 import { getCourses } from "@/services/courses";
@@ -46,6 +50,8 @@ function TabPanel(props) {
 }
 
 export default function LearningContentManager() {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
     const [courses, setCourses] = useState([]);
     const [contents, setContents] = useState([]);
     const [filteredContents, setFilteredContents] = useState([]);
@@ -651,115 +657,116 @@ export default function LearningContentManager() {
                 </Paper>
             ) : (
                 <Box sx={{ overflowX: "auto", borderRadius: 2 }}>
-                    <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-                        <Table size="small">
-                            <TableHead sx={{ bgcolor: "primary.50" }}>
-                                <TableRow>
-                                    <TableCell padding="checkbox" sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                                        <Checkbox
-                                            checked={selectedIds.size === filteredContents.length && filteredContents.length > 0}
-                                            indeterminate={selectedIds.size > 0 && selectedIds.size < filteredContents.length}
-                                            onChange={handleSelectAll}
-                                        />
-                                    </TableCell>
-                                    <TableCell sx={{ fontWeight: 700, fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-                                        <TableSortLabel
-                                            active={sortBy === "title"}
-                                            direction={sortBy === "title" ? sortOrder : "asc"}
-                                            onClick={() => {
-                                                if (sortBy === "title") {
-                                                    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                                                } else {
-                                                    setSortBy("title");
-                                                    setSortOrder("asc");
-                                                }
-                                            }}
-                                        >
-                                            Title
-                                        </TableSortLabel>
-                                    </TableCell>
-                                    <TableCell sx={{ display: { xs: "none", md: "table-cell" }, fontWeight: 700 }}>Course</TableCell>
-                                    <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, fontWeight: 700 }}>Type</TableCell>
-                                    <TableCell sx={{ display: { xs: "none", md: "table-cell" }, fontWeight: 700 }}>Status</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filteredContents.map((content) => (
-                                    <TableRow key={content.id} hover sx={{ "&:hover": { bgcolor: "grey.50" } }}>
-                                        <TableCell padding="checkbox" sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                    {isMobile ? (
+                        <Stack spacing={2}>
+                            {filteredContents.map((content) => (
+                                <Card key={content.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                    <CardContent>
+                                        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, mb: 1 }}>
                                             <Checkbox
                                                 checked={selectedIds.has(content.id)}
                                                 onChange={() => handleSelectItem(content.id)}
+                                                sx={{ p: 0 }}
                                             />
-                                        </TableCell>
-                                        <TableCell sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
                                             <Box>
-                                                <Typography variant="body2" fontWeight={500} noWrap>
+                                                <Typography variant="subtitle2" fontWeight={700}>
                                                     {content.title}
                                                 </Typography>
-                                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: "block", sm: "none" } }}>
+                                                <Typography variant="caption" color="text.secondary" display="block">
                                                     {getCourseName(content.course)}
                                                 </Typography>
                                             </Box>
-                                        </TableCell>
-                                        <TableCell sx={{ display: { xs: "none", md: "table-cell" }, fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-                                            {getCourseName(content.course)}
-                                        </TableCell>
-                                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-                                            <Chip label={content.content_type} size="small" variant="outlined" />
-                                        </TableCell>
-                                        <TableCell sx={{ display: { xs: "none", md: "table-cell" }, fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-                                            <Button
-                                                size="small"
-                                                variant={content.is_published ? "contained" : "outlined"}
-                                                color={content.is_published ? "success" : "default"}
-                                                onClick={() => handleTogglePublish(content.id, content.is_published)}
-                                            >
-                                                {content.is_published ? "Published" : "Draft"}
-                                            </Button>
-                                        </TableCell>
-                                        <TableCell align="right" sx={{ fontSize: { xs: "0.75rem", sm: "1rem" } }}>
-                                            <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleViewClick(content)}
-                                                    title="View details"
-                                                    sx={{ color: "primary.main" }}
-                                                >
-                                                    <Visibility fontSize="small" />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleAssignClick(content)}
-                                                    title="Assign to students"
-                                                    sx={{ color: "info.main" }}
-                                                >
-                                                    <PersonAdd fontSize="small" />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleEditClick(content)}
-                                                    title="Edit"
-                                                    sx={{ color: "warning.main" }}
-                                                >
-                                                    <Edit fontSize="small" />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleDelete(content.id)}
-                                                    title="Delete"
-                                                    sx={{ color: "error.main" }}
-                                                >
-                                                    <Delete fontSize="small" />
-                                                </IconButton>
+                                        </Box>
+                                        <Stack spacing={1.5} mb={2} pl={4}>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>Type</Typography>
+                                                <Chip label={content.content_type} size="small" variant="outlined" />
                                             </Box>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>Status</Typography>
+                                                <Button size="small" variant={content.is_published ? "contained" : "outlined"} color={content.is_published ? "success" : "default"} onClick={() => handleTogglePublish(content.id, content.is_published)}>{content.is_published ? "Published" : "Draft"}</Button>
+                                            </Box>
+                                        </Stack>
+                                        <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", borderTop: "1px solid #f1f5f9", pt: 1.5 }}>
+                                            <IconButton size="small" onClick={() => handleViewClick(content)} sx={{ color: "primary.main" }}><Visibility fontSize="small" /></IconButton>
+                                            <IconButton size="small" onClick={() => handleAssignClick(content)} sx={{ color: "info.main" }}><PersonAdd fontSize="small" /></IconButton>
+                                            <IconButton size="small" onClick={() => handleEditClick(content)} sx={{ color: "warning.main" }}><Edit fontSize="small" /></IconButton>
+                                            <IconButton size="small" onClick={() => handleDelete(content.id)} sx={{ color: "error.main" }}><Delete fontSize="small" /></IconButton>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </Stack>
+                    ) : (
+                        <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+                            <Table size="small">
+                                <TableHead sx={{ bgcolor: "primary.50" }}>
+                                    <TableRow>
+                                        <TableCell padding="checkbox">
+                                            <Checkbox
+                                                checked={selectedIds.size === filteredContents.length && filteredContents.length > 0}
+                                                indeterminate={selectedIds.size > 0 && selectedIds.size < filteredContents.length}
+                                                onChange={handleSelectAll}
+                                            />
                                         </TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>
+                                            <TableSortLabel
+                                                active={sortBy === "title"}
+                                                direction={sortBy === "title" ? sortOrder : "asc"}
+                                                onClick={() => {
+                                                    if (sortBy === "title") {
+                                                        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                                                    } else {
+                                                        setSortBy("title");
+                                                        setSortOrder("asc");
+                                                    }
+                                                }}
+                                            >
+                                                Title
+                                            </TableSortLabel>
+                                        </TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Course</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                                </TableHead>
+                                <TableBody>
+                                    {filteredContents.map((content) => (
+                                        <TableRow key={content.id} hover sx={{ "&:hover": { bgcolor: "grey.50" } }}>
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    checked={selectedIds.has(content.id)}
+                                                    onChange={() => handleSelectItem(content.id)}
+                                                />
+                                            </TableCell>
+                                            <TableCell>{content.title}</TableCell>
+                                            <TableCell>{getCourseName(content.course)}</TableCell>
+                                            <TableCell>
+                                                <Chip label={content.content_type} size="small" variant="outlined" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button
+                                                    size="small"
+                                                    variant={content.is_published ? "contained" : "outlined"}
+                                                    color={content.is_published ? "success" : "default"}
+                                                    onClick={() => handleTogglePublish(content.id, content.is_published)}
+                                                >
+                                                    {content.is_published ? "Published" : "Draft"}
+                                                </Button>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <IconButton size="small" onClick={() => handleViewClick(content)} sx={{ color: "primary.main" }}><Visibility fontSize="small" /></IconButton>
+                                                <IconButton size="small" onClick={() => handleAssignClick(content)} sx={{ color: "info.main" }}><PersonAdd fontSize="small" /></IconButton>
+                                                <IconButton size="small" onClick={() => handleEditClick(content)} sx={{ color: "warning.main" }}><Edit fontSize="small" /></IconButton>
+                                                <IconButton size="small" onClick={() => handleDelete(content.id)} sx={{ color: "error.main" }}><Delete fontSize="small" /></IconButton>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
                 </Box>
             )}
             <Dialog open={dialogOpen} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -984,7 +991,9 @@ export default function LearningContentManager() {
                 <Tabs
                     value={assignmentTabValue}
                     onChange={(e, val) => setAssignmentTabValue(val)}
-                    sx={{ borderBottom: "1px solid", borderColor: "grey.200", px: 2 }}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    sx={{ borderBottom: "1px solid", borderColor: "grey.200", px: 2, "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}
                 >
                     <Tab label={`Available (${students.filter(s => !assignedStudents.has(s.id)).length})`} />
                     <Tab label={`Assigned (${assignedStudents.size})`} />

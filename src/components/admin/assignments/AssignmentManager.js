@@ -28,6 +28,10 @@ import {
     FormControl,
     InputLabel,
     Checkbox,
+    Card,
+    CardContent,
+    useMediaQuery,
+    useTheme,
 } from "@mui/material";
 import { Edit, Delete, Add, CheckCircle, CloudUpload, Visibility, Download, PersonAdd } from "@mui/icons-material";
 import api from "@/lib/axios";
@@ -45,6 +49,9 @@ function TabPanel(props) {
 }
 
 export default function AssignmentManager() {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
     const [assignments, setAssignments] = useState([]);
     const [submissions, setSubmissions] = useState([]);
     const [courses, setCourses] = useState([]);
@@ -434,7 +441,7 @@ export default function AssignmentManager() {
 
     return (
         <Box>
-            <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ mb: 3 }}>
+            <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} variant="scrollable" scrollButtons="auto" sx={{ mb: 3, "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}>
                 <Tab label="Assignments" />
                 <Tab label="Submissions" />
             </Tabs>
@@ -516,68 +523,103 @@ export default function AssignmentManager() {
                         </Typography>
                     </Paper>
                 ) : (
-                    <TableContainer component={Paper} sx={{ border: "1px solid", borderColor: "grey.200" }}>
-                        <Table>
-                            <TableHead sx={{ bgcolor: "grey.50" }}>
-                                <TableRow>
-                                    <TableCell fontWeight={700}>Title</TableCell>
-                                    <TableCell>Course</TableCell>
-                                    <TableCell>Due Date</TableCell>
-                                    <TableCell>Status</TableCell>
-                                    <TableCell align="right">Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
+                    <Box>
+                        {isMobile ? (
+                            <Stack spacing={2}>
                                 {filteredAssignments.map((assignment) => (
-                                    <TableRow key={assignment.id} hover>
-                                        <TableCell>{assignment.title}</TableCell>
-                                        <TableCell>{getCourseName(assignment.course)}</TableCell>
-                                        <TableCell>
-                                            {new Date(assignment.due_date).toLocaleDateString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button
-                                                size="small"
-                                                variant={assignment.status === "PUBLISHED" ? "contained" : "outlined"}
-                                                color={assignment.status === "PUBLISHED" ? "success" : "default"}
-                                                onClick={() => handleToggleStatus(assignment.id, assignment.status)}
-                                            >
-                                                {assignment.status}
-                                            </Button>
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleViewAssignment(assignment)}
-                                                title="View details"
-                                            >
-                                                <Visibility fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleAssignClick(assignment)}
-                                                title="Assign to students"
-                                            >
-                                                <PersonAdd fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleOpenDialog(assignment)}
-                                            >
-                                                <Edit fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleDelete(assignment.id)}
-                                            >
-                                                <Delete fontSize="small" />
-                                            </IconButton>
-                                        </TableCell>
-                                    </TableRow>
+                                    <Card key={assignment.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                        <CardContent>
+                                            <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                                                {assignment.title}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                                                Course: {getCourseName(assignment.course)}
+                                            </Typography>
+                                            <Stack spacing={1.5} mb={2}>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Due Date</Typography>
+                                                    <Typography variant="body2">{new Date(assignment.due_date).toLocaleDateString()}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Status</Typography>
+                                                    <Button size="small" variant={assignment.status === "PUBLISHED" ? "contained" : "outlined"} color={assignment.status === "PUBLISHED" ? "success" : "default"} onClick={() => handleToggleStatus(assignment.id, assignment.status)}>{assignment.status}</Button>
+                                                </Box>
+                                            </Stack>
+                                            <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", borderTop: "1px solid #f1f5f9", pt: 1.5 }}>
+                                                <IconButton size="small" onClick={() => handleViewAssignment(assignment)}><Visibility fontSize="small" /></IconButton>
+                                                <IconButton size="small" onClick={() => handleAssignClick(assignment)}><PersonAdd fontSize="small" /></IconButton>
+                                                <IconButton size="small" onClick={() => handleOpenDialog(assignment)}><Edit fontSize="small" /></IconButton>
+                                                <IconButton size="small" onClick={() => handleDelete(assignment.id)}><Delete fontSize="small" /></IconButton>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
                                 ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                            </Stack>
+                        ) : (
+                            <TableContainer component={Paper} sx={{ border: "1px solid", borderColor: "grey.200" }}>
+                                <Table>
+                                    <TableHead sx={{ bgcolor: "grey.50" }}>
+                                        <TableRow>
+                                            <TableCell fontWeight={700}>Title</TableCell>
+                                            <TableCell>Course</TableCell>
+                                            <TableCell>Due Date</TableCell>
+                                            <TableCell>Status</TableCell>
+                                            <TableCell align="right">Actions</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {filteredAssignments.map((assignment) => (
+                                            <TableRow key={assignment.id} hover>
+                                                <TableCell>{assignment.title}</TableCell>
+                                                <TableCell>{getCourseName(assignment.course)}</TableCell>
+                                                <TableCell>
+                                                    {new Date(assignment.due_date).toLocaleDateString()}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        size="small"
+                                                        variant={assignment.status === "PUBLISHED" ? "contained" : "outlined"}
+                                                        color={assignment.status === "PUBLISHED" ? "success" : "default"}
+                                                        onClick={() => handleToggleStatus(assignment.id, assignment.status)}
+                                                    >
+                                                        {assignment.status}
+                                                    </Button>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleViewAssignment(assignment)}
+                                                        title="View details"
+                                                    >
+                                                        <Visibility fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleAssignClick(assignment)}
+                                                        title="Assign to students"
+                                                    >
+                                                        <PersonAdd fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleOpenDialog(assignment)}
+                                                    >
+                                                        <Edit fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleDelete(assignment.id)}
+                                                    >
+                                                        <Delete fontSize="small" />
+                                                    </IconButton>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        )}
+                    </Box>
                 )}
             </TabPanel>
 
@@ -633,58 +675,95 @@ export default function AssignmentManager() {
                         </Typography>
                     </Paper>
                 ) : (
-                    <TableContainer component={Paper} sx={{ border: "1px solid", borderColor: "grey.200" }}>
-                        <Table>
-                            <TableHead sx={{ bgcolor: "grey.50" }}>
-                                <TableRow>
-                                    <TableCell fontWeight={700}>Student</TableCell>
-                                    <TableCell>Assignment</TableCell>
-                                    <TableCell>Submitted</TableCell>
-                                    <TableCell>Score</TableCell>
-                                    <TableCell>Status</TableCell>
-                                    <TableCell align="right">Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
+                    <Box>
+                        {isMobile ? (
+                            <Stack spacing={2}>
                                 {filteredSubmissions.map((submission) => (
-                                    <TableRow key={submission.id} hover>
-                                        <TableCell>{submission.student_name}</TableCell>
-                                        <TableCell>{submission.assignment_title}</TableCell>
-                                        <TableCell>
-                                            {new Date(submission.submitted_at).toLocaleDateString()}
-                                        </TableCell>
-                                        <TableCell>{submission.score || "—"}</TableCell>
-                                        <TableCell>
-                                            <Chip label={submission.status} size="small" />
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleViewSubmission(submission)}
-                                                title="View details"
-                                            >
-                                                <Visibility fontSize="small" />
-                                            </IconButton>
-                                            <Button
-                                                size="small"
-                                                startIcon={<CheckCircle />}
-                                                onClick={() => {
-                                                    setSelectedSubmission(submission);
-                                                    setGradeData({
-                                                        score: submission.score || "",
-                                                        feedback: submission.feedback || "",
-                                                    });
-                                                    setOpenGradeDialog(true);
-                                                }}
-                                            >
-                                                Grade
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
+                                    <Card key={submission.id} sx={{ borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                        <CardContent>
+                                            <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                                                {submission.student_name}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                                                {submission.assignment_title}
+                                            </Typography>
+                                            <Stack spacing={1.5} mb={2}>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Submitted</Typography>
+                                                    <Typography variant="body2">{new Date(submission.submitted_at).toLocaleDateString()}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Score</Typography>
+                                                    <Typography variant="body2">{submission.score || "—"}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Status</Typography>
+                                                    <Chip label={submission.status} size="small" />
+                                                </Box>
+                                            </Stack>
+                                            <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end", borderTop: "1px solid #f1f5f9", pt: 1.5 }}>
+                                                <IconButton size="small" onClick={() => handleViewSubmission(submission)}><Visibility fontSize="small" /></IconButton>
+                                                <Button size="small" startIcon={<CheckCircle />} onClick={() => { setSelectedSubmission(submission); setGradeData({ score: submission.score || "", feedback: submission.feedback || "" }); setOpenGradeDialog(true); }}>Grade</Button>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
                                 ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                            </Stack>
+                        ) : (
+                            <TableContainer component={Paper} sx={{ border: "1px solid", borderColor: "grey.200" }}>
+                                <Table>
+                                    <TableHead sx={{ bgcolor: "grey.50" }}>
+                                        <TableRow>
+                                            <TableCell fontWeight={700}>Student</TableCell>
+                                            <TableCell>Assignment</TableCell>
+                                            <TableCell>Submitted</TableCell>
+                                            <TableCell>Score</TableCell>
+                                            <TableCell>Status</TableCell>
+                                            <TableCell align="right">Actions</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {filteredSubmissions.map((submission) => (
+                                            <TableRow key={submission.id} hover>
+                                                <TableCell>{submission.student_name}</TableCell>
+                                                <TableCell>{submission.assignment_title}</TableCell>
+                                                <TableCell>
+                                                    {new Date(submission.submitted_at).toLocaleDateString()}
+                                                </TableCell>
+                                                <TableCell>{submission.score || "—"}</TableCell>
+                                                <TableCell>
+                                                    <Chip label={submission.status} size="small" />
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleViewSubmission(submission)}
+                                                        title="View details"
+                                                    >
+                                                        <Visibility fontSize="small" />
+                                                    </IconButton>
+                                                    <Button
+                                                        size="small"
+                                                        startIcon={<CheckCircle />}
+                                                        onClick={() => {
+                                                            setSelectedSubmission(submission);
+                                                            setGradeData({
+                                                                score: submission.score || "",
+                                                                feedback: submission.feedback || "",
+                                                            });
+                                                            setOpenGradeDialog(true);
+                                                        }}
+                                                    >
+                                                        Grade
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        )}
+                    </Box>
                 )}
             </TabPanel>
 
@@ -1056,7 +1135,9 @@ export default function AssignmentManager() {
                 <Tabs
                     value={assignmentTabValue}
                     onChange={(e, val) => setAssignmentTabValue(val)}
-                    sx={{ borderBottom: "1px solid", borderColor: "grey.200", px: 2 }}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    sx={{ borderBottom: "1px solid", borderColor: "grey.200", px: 2, "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}
                 >
                     <Tab label={`Available (${students.filter(s => !assignedStudents.has(s.id)).length})`} />
                     <Tab label={`Assigned (${assignedStudents.size})`} />
