@@ -40,6 +40,8 @@ import api from "@/lib/axios";
 import { useAuth } from "@/providers/AuthProvider";
 import { errorToast } from "@/lib/toast";
 import QuizPlayerModal from "@/components/quizzes/QuizPlayerModal";
+import QuizHistoryModal from "@/components/quizzes/QuizHistoryModal";
+import { Visibility } from "@mui/icons-material";
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -62,6 +64,10 @@ export default function StudentQuizzesPage() {
     // Active Quiz Modal
     const [selectedQuizId, setSelectedQuizId] = useState(null);
     const [openPlayerModal, setOpenPlayerModal] = useState(false);
+    
+    // History Modal
+    const [openHistoryModal, setOpenHistoryModal] = useState(false);
+    const [selectedHistoryAttempt, setSelectedHistoryAttempt] = useState(null);
 
     const loadData = async () => {
         try {
@@ -105,6 +111,11 @@ export default function StudentQuizzesPage() {
     const handleStartQuiz = (quizId) => {
         setSelectedQuizId(quizId);
         setOpenPlayerModal(true);
+    };
+
+    const handleViewHistory = (attempt) => {
+        setSelectedHistoryAttempt(attempt);
+        setOpenHistoryModal(true);
     };
 
     const handleAttemptComplete = () => {
@@ -326,14 +337,24 @@ export default function StudentQuizzesPage() {
                                                 {new Date(att.completed_at).toLocaleDateString()}
                                             </TableCell>
                                             <TableCell align="center">
-                                                <Button
-                                                    size="small"
-                                                    startIcon={<PlayArrow fontSize="small" />}
-                                                    onClick={() => handleStartQuiz(att.quiz)}
-                                                    sx={{ textTransform: "none", fontWeight: 700, color: "#d97706" }}
-                                                >
-                                                    Retake
-                                                </Button>
+                                                <Stack direction="row" spacing={1} sx={{ justifyContent: "center" }}>
+                                                    <Button
+                                                        size="small"
+                                                        startIcon={<Visibility fontSize="small" />}
+                                                        onClick={() => handleViewHistory(att)}
+                                                        sx={{ textTransform: "none", fontWeight: 700, color: "#2563eb" }}
+                                                    >
+                                                        View History
+                                                    </Button>
+                                                    <Button
+                                                        size="small"
+                                                        startIcon={<PlayArrow fontSize="small" />}
+                                                        onClick={() => handleStartQuiz(att.quiz)}
+                                                        sx={{ textTransform: "none", fontWeight: 700, color: "#d97706" }}
+                                                    >
+                                                        Retake
+                                                    </Button>
+                                                </Stack>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -350,6 +371,13 @@ export default function StudentQuizzesPage() {
                 onClose={() => setOpenPlayerModal(false)}
                 quizId={selectedQuizId}
                 onAttemptComplete={handleAttemptComplete}
+            />
+
+            {/* QUIZ HISTORY MODAL */}
+            <QuizHistoryModal
+                open={openHistoryModal}
+                onClose={() => setOpenHistoryModal(false)}
+                attempt={selectedHistoryAttempt}
             />
         </Box>
     );

@@ -1095,9 +1095,8 @@ EXPLANATION: The background-color CSS property sets the background color of an e
                                                     key={opt.id} 
                                                     variant="body2" 
                                                     color={opt.is_correct ? "success.main" : "text.secondary"}
-                                                    fontWeight={opt.is_correct ? 700 : 400}
                                                 >
-                                                    • {opt.option_text} {opt.is_correct && "(Correct Answer)"}
+                                                    • {opt.option_text} {opt.is_correct && <strong>(Correct Answer)</strong>}
                                                 </Typography>
                                             ))}
                                         </Stack>

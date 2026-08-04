@@ -36,6 +36,7 @@ import {
 } from "@mui/icons-material";
 import api from "@/lib/axios";
 import { successToast, errorToast } from "@/lib/toast";
+import { confirmAction } from "@/utils/confirmAction";
 
 export default function QuizPlayerModal({ open, onClose, quizId, onAttemptComplete }) {
     const [loading, setLoading] = useState(true);
@@ -63,7 +64,7 @@ export default function QuizPlayerModal({ open, onClose, quizId, onAttemptComple
             setTimeRemainingSeconds((prev) => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    handleSubmitQuiz(); // Auto submit when time runs out
+                    handleSubmitQuiz(true); // Auto submit when time runs out
                     return 0;
                 }
                 return prev - 1;
@@ -109,24 +110,42 @@ export default function QuizPlayerModal({ open, onClose, quizId, onAttemptComple
         }));
     };
 
-    const handleSubmitQuiz = async () => {
+    const handleSubmitQuiz = async (autoSubmit = false) => {
         if (submitting || !quiz) return;
-        try {
-            setSubmitting(true);
-            const question_ids = quiz.questions?.map((q) => q.id) || [];
-            const response = await api.post(`/learning/quizzes/${quiz.id}/submit/`, {
-                answers: answers,
-                question_ids: question_ids,
-            });
-            setResults(response.data);
-            successToast("Practice test completed!");
-            if (onAttemptComplete) {
-                onAttemptComplete(response.data);
+        
+        const answeredCount = Object.keys(answers).length;
+        const totalCount = quiz.questions?.length || 0;
+        
+        const executeSubmit = async () => {
+            try {
+                setSubmitting(true);
+                const question_ids = quiz.questions?.map((q) => q.id) || [];
+                const response = await api.post(`/learning/quizzes/${quiz.id}/submit/`, {
+                    answers: answers,
+                    question_ids: question_ids,
+                });
+                setResults(response.data);
+                successToast("Practice test completed!");
+                if (onAttemptComplete) {
+                    onAttemptComplete(response.data);
+                }
+            } catch (error) {
+                errorToast(error, "Failed to submit practice test.");
+            } finally {
+                setSubmitting(false);
             }
-        } catch (error) {
-            errorToast(error, "Failed to submit practice test.");
-        } finally {
-            setSubmitting(false);
+        };
+
+        if (autoSubmit) {
+            executeSubmit();
+        } else {
+            confirmAction(
+                `You have answered ${answeredCount}/${totalCount} questions. Are you sure you want to submit?`,
+                executeSubmit,
+                null,
+                "Submit Quiz",
+                "Review Answers"
+            );
         }
     };
 
@@ -449,7 +468,8 @@ export default function QuizPlayerModal({ open, onClose, quizId, onAttemptComple
                             ) : (
                                 <Button
                                     variant="contained"
-                                    onClick={handleSubmitQuiz}
+                                    endIcon={submitting ? <CircularProgress size={20} color="inherit" /> : <CheckCircle />}
+                                    onClick={() => handleSubmitQuiz(false)}
                                     disabled={submitting}
                                     sx={{ borderRadius: 2.5, px: 4, textTransform: "none", fontWeight: 700, bgcolor: "#d97706", "&:hover": { bgcolor: "#b45309" } }}
                                 >

@@ -247,7 +247,7 @@ export default function StudentIDCardModal({ open, onClose, student }) {
 
                                     {/* Student ID Badge */}
                                     <div style={{ fontSize: "7px", fontWeight: "800", background: "rgba(168, 85, 247, 0.25)", color: "#f3e8ff", padding: "3px 8px", borderRadius: "10px", border: "1px solid rgba(168, 85, 247, 0.4)", textTransform: "uppercase", letterSpacing: "0.5px", flexShrink: 0 }}>
-                                        STUDENT ID
+                                        {student.is_industrial_training ? "IT STUDENT" : "STUDENT ID"}
                                     </div>
                                 </div>
 

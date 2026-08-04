@@ -43,6 +43,7 @@ export function NotificationsProvider({ children }) {
         <NotificationsContext.Provider
             value={{
                 unreadCount,
+                setUnreadCount,
                 refreshUnreadCount,
                 decrementUnreadCount,
             }}

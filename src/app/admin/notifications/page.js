@@ -32,7 +32,9 @@ import {
 import { useForm, Controller } from "react-hook-form";
 import { successToast, errorToast } from "@/lib/toast";
 import api from "@/lib/axios";
-import { Send, Visibility, CheckCircle, EventAvailable, Inbox, SendOutlined } from "@mui/icons-material";
+import { confirmAction } from "@/utils/confirmAction";
+import { Send, Visibility, CheckCircle, Inbox, SendOutlined, Delete, DeleteSweep } from "@mui/icons-material";
+import { IconButton as MuiIconButton, Tooltip as MuiTooltip } from "@mui/material";
 
 export default function AdminNotificationsPage() {
     const [tab, setTab] = useState(0);
@@ -52,6 +54,8 @@ export default function AdminNotificationsPage() {
     const [alerts, setAlerts] = useState([]);
     const [alertsLoading, setAlertsLoading] = useState(true);
     const [markingAllRead, setMarkingAllRead] = useState(false);
+    const [deletingAlertId, setDeletingAlertId] = useState(null);
+    const [deletingNotifId, setDeletingNotifId] = useState(null);
 
     const [incomingSearch, setIncomingSearch] = useState("");
     const [incomingFilterStatus, setIncomingFilterStatus] = useState("ALL");
@@ -149,6 +153,60 @@ export default function AdminNotificationsPage() {
         } finally {
             setMarkingAllRead(false);
         }
+    }
+
+    function handleDeleteAlert(id) {
+        confirmAction(
+            "Delete this alert?",
+            async () => {
+                setDeletingAlertId(id);
+                try {
+                    await api.delete(`/notifications/admin-alerts/${id}/delete/`);
+                    setAlerts((prev) => prev.filter((a) => a.id !== id));
+                    successToast("Alert deleted");
+                } catch (error) {
+                    errorToast(error, "Failed to delete alert");
+                } finally {
+                    setDeletingAlertId(null);
+                }
+            },
+            null, "Delete", "Cancel", true
+        );
+    }
+
+    function handleClearAllAlerts() {
+        confirmAction(
+            "Clear all incoming alerts? This cannot be undone.",
+            async () => {
+                try {
+                    await api.delete("/notifications/admin-alerts/clear_all/");
+                    setAlerts([]);
+                    successToast("All alerts cleared");
+                } catch (error) {
+                    errorToast(error, "Failed to clear alerts");
+                }
+            },
+            null, "Clear All", "Cancel", true
+        );
+    }
+
+    function handleDeleteNotification(id) {
+        confirmAction(
+            "Delete this sent notification?",
+            async () => {
+                setDeletingNotifId(id);
+                try {
+                    await api.delete(`/notifications/${id}/`);
+                    setNotifications((prev) => prev.filter((n) => n.id !== id));
+                    successToast("Notification deleted");
+                } catch (error) {
+                    errorToast(error, "Failed to delete notification");
+                } finally {
+                    setDeletingNotifId(null);
+                }
+            },
+            null, "Delete", "Cancel", true
+        );
     }
 
     async function loadNotifications() {
@@ -263,7 +321,7 @@ export default function AdminNotificationsPage() {
                         <Box>
                             {/* Header row */}
                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                                     <Inbox sx={{ color: "#7c3aed" }} />
                                     <Box>
                                         <Typography fontWeight={700}>Incoming Student Requests & Alerts</Typography>
@@ -272,11 +330,18 @@ export default function AdminNotificationsPage() {
                                         </Typography>
                                     </Box>
                                 </Box>
-                                {unreadCount > 0 && (
-                                    <Button size="small" variant="outlined" onClick={handleMarkAllAlertsRead} disabled={markingAllRead}>
-                                        {markingAllRead ? "Marking..." : "Mark all read"}
-                                    </Button>
-                                )}
+                                <Stack direction="row" spacing={1}>
+                                    {unreadCount > 0 && (
+                                        <Button size="small" variant="outlined" onClick={handleMarkAllAlertsRead} disabled={markingAllRead}>
+                                            {markingAllRead ? "Marking..." : "Mark all read"}
+                                        </Button>
+                                    )}
+                                    {alerts.length > 0 && (
+                                        <Button size="small" variant="outlined" color="error" startIcon={<DeleteSweep />} onClick={handleClearAllAlerts} sx={{ textTransform: "none" }}>
+                                            Clear All
+                                        </Button>
+                                    )}
+                                </Stack>
                             </Box>
 
                              {/* Search and Filters */}
@@ -351,6 +416,9 @@ export default function AdminNotificationsPage() {
                                                     Mark read
                                                 </Button>
                                             )}
+                                            <MuiIconButton size="small" color="error" onClick={() => handleDeleteAlert(alert.id)} disabled={deletingAlertId === alert.id} sx={{ flexShrink: 0 }}>
+                                                {deletingAlertId === alert.id ? <CircularProgress size={16} /> : <Delete fontSize="small" />}
+                                            </MuiIconButton>
                                         </Box>
                                     ))}
                                 </Stack>
@@ -509,16 +577,21 @@ export default function AdminNotificationsPage() {
                                                      <TableCell>{n.recipient_count}</TableCell>
                                                      <TableCell sx={{ whiteSpace: "nowrap" }}>{new Date(n.created_at).toLocaleDateString()}</TableCell>
                                                      <TableCell>
-                                                         <Button
-                                                             size="small"
-                                                             variant="outlined"
-                                                             startIcon={loadingNotificationId === n.id ? <CircularProgress size={14} /> : <Visibility />}
-                                                             onClick={() => viewNotificationHistory(n)}
-                                                             disabled={loadingNotificationId === n.id}
-                                                         >
-                                                             {loadingNotificationId === n.id ? "Loading..." : "View"}
-                                                         </Button>
-                                                     </TableCell>
+                                                          <Stack direction="row" spacing={0.5} alignItems="center">
+                                                              <Button
+                                                                  size="small"
+                                                                  variant="outlined"
+                                                                  startIcon={loadingNotificationId === n.id ? <CircularProgress size={14} /> : <Visibility />}
+                                                                  onClick={() => viewNotificationHistory(n)}
+                                                                  disabled={loadingNotificationId === n.id}
+                                                              >
+                                                                  {loadingNotificationId === n.id ? "Loading..." : "View"}
+                                                              </Button>
+                                                              <MuiIconButton size="small" color="error" onClick={() => handleDeleteNotification(n.id)} disabled={deletingNotifId === n.id}>
+                                                                  {deletingNotifId === n.id ? <CircularProgress size={16} /> : <Delete fontSize="small" />}
+                                                              </MuiIconButton>
+                                                          </Stack>
+                                                      </TableCell>
                                                  </TableRow>
                                              )) : (
                                                 <TableRow>
