@@ -336,20 +336,34 @@ const DEFAULT_SETTINGS = {
 };
 
 export default function SettingsPage() {
-    const [settings, setSettings] = useState(() => {
-        if (typeof window !== "undefined") {
-            const savedSettings = localStorage.getItem("system_settings");
-            if (savedSettings) {
-                try {
-                    return { ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) };
-                } catch (e) {
-                    console.error("Failed to load settings", e);
+    const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const { data } = await api.get("/admin/settings/");
+                console.log("Settings page: loaded settings from API =", data);
+                setTimeout(() => {
+                    setSettings({ ...DEFAULT_SETTINGS, ...data });
+                }, 0);
+            } catch (e) {
+                console.error("Failed to load settings from API", e);
+                const savedSettings = localStorage.getItem("system_settings");
+                if (savedSettings) {
+                    try {
+                        const parsed = JSON.parse(savedSettings);
+                        setTimeout(() => {
+                            setSettings({ ...DEFAULT_SETTINGS, ...parsed });
+                        }, 0);
+                    } catch (err) {
+                        console.error("Failed to load settings from localStorage", err);
+                    }
                 }
             }
-        }
-        return DEFAULT_SETTINGS;
-    });
-    const [saving, setSaving] = useState(false);
+        };
+        fetchSettings();
+    }, []);
 
     const handleToggle = (key) => {
         setSettings((prev) => ({
@@ -361,8 +375,12 @@ export default function SettingsPage() {
     const handleSave = async () => {
         try {
             setSaving(true);
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            localStorage.setItem("system_settings", JSON.stringify(settings));
+            console.log("Settings page: saving settings to API =", settings);
+            const { data } = await api.put("/admin/settings/", settings);
+            localStorage.setItem("system_settings", JSON.stringify(data));
+            setTimeout(() => {
+                setSettings({ ...DEFAULT_SETTINGS, ...data });
+            }, 0);
             successToast("Settings saved successfully.");
         } catch (error) {
             errorToast(error, "Failed to save settings.");

@@ -60,22 +60,55 @@ export default function ProfilePage() {
     const [profilePictureFile, setProfilePictureFile] = useState(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState(null);
     const [showPictureDialog, setShowPictureDialog] = useState(false);
-    const [allowIdCardDownload, setAllowIdCardDownload] = useState(() => {
-        if (typeof window !== "undefined") {
-            const savedSettings = localStorage.getItem("system_settings");
+    const [allowIdCardDownload, setAllowIdCardDownload] = useState(true);
+ 
+    useEffect(() => {
+        const updateSettingVal = (val) => {
+            if (val !== undefined) {
+                setTimeout(() => {
+                    console.log("Profile page: setting allowIdCardDownload to =", val);
+                    setAllowIdCardDownload(val);
+                }, 0);
+            }
+        };
+
+        const loadSettingsFromStorage = (savedSettings) => {
             if (savedSettings) {
                 try {
                     const parsed = JSON.parse(savedSettings);
-                    if (parsed.allowIdCardDownload !== undefined) {
-                        return parsed.allowIdCardDownload;
-                    }
+                    updateSettingVal(parsed.allowIdCardDownload);
                 } catch (e) {
                     console.error("Failed to parse settings", e);
                 }
             }
-        }
-        return true;
-    });
+        };
+
+        const fetchSettings = async () => {
+            try {
+                const { data } = await api.get("/admin/settings/");
+                console.log("Profile page: loaded settings from API =", data);
+                updateSettingVal(data.allowIdCardDownload);
+            } catch (e) {
+                console.error("Failed to load settings from API, falling back to storage", e);
+                const initialSettings = localStorage.getItem("system_settings");
+                loadSettingsFromStorage(initialSettings);
+            }
+        };
+
+        fetchSettings();
+
+        const handleStorageChange = (e) => {
+            if (e.key === "system_settings") {
+                console.log("Profile page: received storage change event for system_settings =", e.newValue);
+                loadSettingsFromStorage(e.newValue);
+            }
+        };
+
+        window.addEventListener("storage", handleStorageChange);
+        return () => {
+            window.removeEventListener("storage", handleStorageChange);
+        };
+    }, []);
 
     const [editFormData, setEditFormData] = useState({
         address: "",
