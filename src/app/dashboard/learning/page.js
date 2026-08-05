@@ -719,7 +719,7 @@ export default function LearningPage() {
                             </Typography>
 
                             <Grid container spacing={2}>
-                                <Grid item xs={6}>
+                                <Grid xs={6}>
                                     <Typography variant="caption" sx={{ color: "#94a3b8", display: "block" }}>
                                         Course Program
                                     </Typography>
@@ -727,7 +727,7 @@ export default function LearningPage() {
                                         {requestingHandout?.course_name || "Study Material"}
                                     </Typography>
                                 </Grid>
-                                <Grid item xs={6}>
+                                <Grid xs={6}>
                                     <Typography variant="caption" sx={{ color: "#94a3b8", display: "block" }}>
                                         Amount Due
                                     </Typography>

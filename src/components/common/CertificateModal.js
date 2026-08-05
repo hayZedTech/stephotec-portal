@@ -363,14 +363,14 @@ export default function CertificateModal({ open, onClose, certificate }) {
                         {/* --- 12. RECIPIENT & COURSE BODY SECTION --- */}
                         <text x="500" y="285" textAnchor="middle" fontFamily="sans-serif" fontSize="12" fontWeight="bold" fill="#334155" letterSpacing="2.5">THIS IS TO CERTIFY THAT</text>
 
-                        {/* [ Name ] */}
-                        <text x="500" y="342" textAnchor="middle" fontFamily="Georgia, serif" fontStyle="italic" fontSize="38" fontWeight="bold" fill="#B89947">[ {studentName} ]</text>
+                        {/* Name */}
+                        <text x="500" y="342" textAnchor="middle" fontFamily="Georgia, serif" fontStyle="italic" fontSize="38" fontWeight="bold" fill="#B89947">{studentName}</text>
                         <line x1="280" y1="352" x2="720" y2="352" stroke="#B89947" strokeWidth="1.5" />
 
                         <text x="500" y="392" textAnchor="middle" fontFamily="sans-serif" fontSize="12" fontWeight="bold" fill="#334155" letterSpacing="2.5">HAS SUCCESSFULLY COMPLETED THE</text>
 
-                        {/* [ Course Name ] */}
-                        <text x="500" y="438" textAnchor="middle" fontFamily="Georgia, serif" fontSize="28" fontWeight="bold" fill="#c00000">[ {courseName} ]</text>
+                        {/* Course Name */}
+                        <text x="500" y="438" textAnchor="middle" fontFamily="Georgia, serif" fontSize="28" fontWeight="bold" fill="#c00000">{courseName}</text>
 
                         <text x="500" y="478" textAnchor="middle" fontFamily="sans-serif" fontSize="12" fontWeight="bold" fill="#334155" letterSpacing="3.5">TRAINING PROGRAM</text>
 
