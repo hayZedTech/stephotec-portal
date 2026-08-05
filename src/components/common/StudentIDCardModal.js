@@ -43,8 +43,9 @@ export default function StudentIDCardModal({ open, onClose, student }) {
         student.primary_course ||
         "Computer Studies";
 
-    const admissionYear = student.admission_year || new Date().getFullYear();
+    const admissionYear = student.admission_year || student.admissionYear || new Date().getFullYear();
     const profilePic = student.profile_picture_url || student.profilePictureUrl;
+    const isIndustrialTraining = student.is_industrial_training ?? student.isIndustrialTraining ?? false;
     const origin = typeof window !== "undefined" ? window.location.origin : "https://stephotec.com";
     const qrData = encodeURIComponent(`${origin}/verify?student=${username}`);
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}&color=0f172a`;
@@ -373,7 +374,7 @@ export default function StudentIDCardModal({ open, onClose, student }) {
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontSize: "9px", fontWeight: 800, color: "#111", marginBottom: "1px" }}>DEPARTMENT / ROLE</div>
                                             <div style={{ borderBottom: "1px dashed #cbd5e1", fontSize: "11.5px", fontWeight: 700, color: "#c00000", paddingBottom: "3px", lineHeight: 1.3, fontFamily: '"Ancizar Sans", "Inter", sans-serif', whiteSpace: "nowrap", overflow: "visible" }}>
-                                                {student.is_industrial_training ? "IT STUDENT - " + primaryCourse : primaryCourse}
+                                                {isIndustrialTraining ? "IT STUDENT - " + primaryCourse : primaryCourse}
                                             </div>
                                         </div>
                                     </div>

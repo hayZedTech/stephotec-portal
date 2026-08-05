@@ -17,6 +17,8 @@ import {
     Divider,
     Alert,
     MenuItem,
+    FormControlLabel,
+    Switch,
 } from "@mui/material";
 import { Visibility, VisibilityOff, CloudUpload } from "@mui/icons-material";
 
@@ -28,9 +30,12 @@ const NIGERIAN_STATES = [
     "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT"
 ];
 
+const currentYear = new Date().getFullYear();
+const ADMISSION_YEARS = Array.from({ length: currentYear - 2009 }, (_, i) => 2010 + i).reverse();
+
 export default function ActivateProfilePage() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
 
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -46,6 +51,8 @@ export default function ActivateProfilePage() {
         state_of_origin: "",
         new_password: "",
         confirm_password: "",
+        is_industrial_training: false,
+        admission_year: "",
     });
     const [errors, setErrors] = useState({});
 
@@ -119,7 +126,8 @@ export default function ActivateProfilePage() {
             formData.date_of_birth &&
             formData.gender &&
             formData.address &&
-            formData.state_of_origin
+            formData.state_of_origin &&
+            formData.admission_year
         );
     };
 
@@ -157,6 +165,10 @@ export default function ActivateProfilePage() {
         if (!formData.state_of_origin) {
             newErrors.state_of_origin = "State of origin is required";
         }
+
+        if (!formData.admission_year) {
+            newErrors.admission_year = "Admission year is required";
+        }
         
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -174,9 +186,11 @@ export default function ActivateProfilePage() {
             const dataToSubmit = {
                 ...submitData,
                 profile_picture_url: profilePictureUrl,
+                admission_year_write: formData.admission_year,
             };
             
             await api.put("/student/activate-profile/", dataToSubmit);
+            await refreshUser();
             successToast("Profile activated successfully!");
             router.push("/dashboard");
         } catch (error) {
@@ -441,6 +455,43 @@ export default function ActivateProfilePage() {
                                 </MenuItem>
                             ))}
                         </TextField>
+
+                        <TextField
+                            fullWidth
+                            select
+                            label="Admission Year"
+                            name="admission_year"
+                            value={formData.admission_year}
+                            onChange={handleChange}
+                            required
+                            error={!!errors.admission_year}
+                            helperText={errors.admission_year}
+                            sx={{ mt: 2 }}
+                        >
+                            {ADMISSION_YEARS.map((year) => (
+                                <MenuItem key={year} value={year}>
+                                    {year}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    name="is_industrial_training"
+                                    checked={formData.is_industrial_training}
+                                    onChange={(e) =>
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            is_industrial_training: e.target.checked,
+                                        }))
+                                    }
+                                    color="primary"
+                                />
+                            }
+                            label="Industrial Training / SIWES"
+                            sx={{ mt: 2, display: "flex" }}
+                        />
                     </Box>
 
                     <Divider sx={{ my: 3 }} />

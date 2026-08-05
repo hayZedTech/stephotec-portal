@@ -327,14 +327,28 @@ function BankAccountsManager() {
     );
 }
 
-export default function SettingsPage() {
-    const [settings, setSettings] = useState({
-        emailNotifications: true,
-        autoApproveStudents: false,
-        maintenanceMode: false,
-        allowNewRegistrations: true,
-    });
+const DEFAULT_SETTINGS = {
+    emailNotifications: true,
+    autoApproveStudents: false,
+    maintenanceMode: false,
+    allowNewRegistrations: true,
+    allowIdCardDownload: true,
+};
 
+export default function SettingsPage() {
+    const [settings, setSettings] = useState(() => {
+        if (typeof window !== "undefined") {
+            const savedSettings = localStorage.getItem("system_settings");
+            if (savedSettings) {
+                try {
+                    return { ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) };
+                } catch (e) {
+                    console.error("Failed to load settings", e);
+                }
+            }
+        }
+        return DEFAULT_SETTINGS;
+    });
     const [saving, setSaving] = useState(false);
 
     const handleToggle = (key) => {
@@ -348,6 +362,7 @@ export default function SettingsPage() {
         try {
             setSaving(true);
             await new Promise((resolve) => setTimeout(resolve, 500));
+            localStorage.setItem("system_settings", JSON.stringify(settings));
             successToast("Settings saved successfully.");
         } catch (error) {
             errorToast(error, "Failed to save settings.");
@@ -433,6 +448,27 @@ export default function SettingsPage() {
                         >
                             Automatically approve new student registrations.
                         </Typography>
+
+                        <Box mt={3}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={settings.allowIdCardDownload}
+                                        onChange={() => handleToggle("allowIdCardDownload")}
+                                    />
+                                }
+                                label="Allow Student ID Card Downloads"
+                            />
+
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                display="block"
+                                mt={1}
+                            >
+                                Enable or disable digital ID card viewing and downloads for students.
+                            </Typography>
+                        </Box>
                     </div>
 
                     <Divider />
@@ -494,6 +530,7 @@ export default function SettingsPage() {
                                     autoApproveStudents: false,
                                     maintenanceMode: false,
                                     allowNewRegistrations: true,
+                                    allowIdCardDownload: true,
                                 })
                             }
                         >

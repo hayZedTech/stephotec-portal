@@ -225,7 +225,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
     }
 
     const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: currentYear - 2019 }, (_, i) => 2020 + i).reverse();
+    const years = Array.from({ length: currentYear - 2009 }, (_, i) => 2010 + i).reverse();
 
     return (
         <form onSubmit={handleSubmit(onSubmit)}>

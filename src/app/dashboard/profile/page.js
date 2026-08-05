@@ -25,6 +25,7 @@ import {
     Alert,
     MenuItem,
     Stack,
+    Tooltip,
 } from "@mui/material";
 import { School, DateRange, Edit, CloudUpload, Close, Badge as BadgeIcon, BadgeOutlined } from "@mui/icons-material";
 import ImageZoom from "@/components/ui/ImageZoom";
@@ -59,6 +60,23 @@ export default function ProfilePage() {
     const [profilePictureFile, setProfilePictureFile] = useState(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState(null);
     const [showPictureDialog, setShowPictureDialog] = useState(false);
+    const [allowIdCardDownload, setAllowIdCardDownload] = useState(() => {
+        if (typeof window !== "undefined") {
+            const savedSettings = localStorage.getItem("system_settings");
+            if (savedSettings) {
+                try {
+                    const parsed = JSON.parse(savedSettings);
+                    if (parsed.allowIdCardDownload !== undefined) {
+                        return parsed.allowIdCardDownload;
+                    }
+                } catch (e) {
+                    console.error("Failed to parse settings", e);
+                }
+            }
+        }
+        return true;
+    });
+
     const [editFormData, setEditFormData] = useState({
         address: "",
         additional_phone: "",
@@ -76,6 +94,7 @@ export default function ProfilePage() {
         state_of_origin: "",
         bio: "",
         username: "",
+        is_industrial_training: false,
     });
 
     useEffect(() => {
@@ -96,6 +115,7 @@ export default function ProfilePage() {
                     state_of_origin: data.state_of_origin || "",
                     bio: data.bio || "",
                     username: data.username || "",
+                    is_industrial_training: data.is_industrial_training !== undefined ? data.is_industrial_training : (user?.isIndustrialTraining || false),
                 });
                 setEditFormData({
                     address: data.address || "",
@@ -276,23 +296,28 @@ export default function ProfilePage() {
                     </Typography>
                 </div>
 
-                <Button
-                    variant="contained"
-                    startIcon={<BadgeIcon />}
-                    onClick={() => setShowIDCard(true)}
-                    sx={{
-                        borderRadius: 2.5,
-                        bgcolor: "#0f172a",
-                        "&:hover": { bgcolor: "#1e1b4b" },
-                        textTransform: "none",
-                        fontWeight: 600,
-                        px: { xs: 2, sm: 3 },
-                        py: 1,
-                        boxShadow: "0 4px 14px rgba(15,23,42,0.2)",
-                    }}
-                >
-                    Digital ID Card
-                </Button>
+                <Tooltip title={!allowIdCardDownload ? "Not available yet" : ""}>
+                    <span>
+                        <Button
+                            variant="contained"
+                            startIcon={<BadgeIcon />}
+                            onClick={() => setShowIDCard(true)}
+                            disabled={!allowIdCardDownload}
+                            sx={{
+                                borderRadius: 2.5,
+                                bgcolor: allowIdCardDownload ? "#0f172a" : undefined,
+                                "&:hover": { bgcolor: allowIdCardDownload ? "#1e1b4b" : undefined },
+                                textTransform: "none",
+                                fontWeight: 600,
+                                px: { xs: 2, sm: 3 },
+                                py: 1,
+                                boxShadow: allowIdCardDownload ? "0 4px 14px rgba(15,23,42,0.2)" : undefined,
+                            }}
+                        >
+                            Digital ID Card
+                        </Button>
+                    </span>
+                </Tooltip>
             </Box>
 
             <Paper
@@ -383,6 +408,9 @@ export default function ProfilePage() {
                         </Grid>
                         <Grid xs={12} sm={6} md={4}>
                             <InfoCard label="Gender" value={formData.gender} />
+                        </Grid>
+                        <Grid xs={12} sm={6} md={4}>
+                            <InfoCard label="Industrial Training / SIWES" value={formData.is_industrial_training ? "Yes" : "No"} />
                         </Grid>
                     </Grid>
                 </Box>
