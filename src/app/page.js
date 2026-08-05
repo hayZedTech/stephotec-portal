@@ -7,7 +7,7 @@ import { Box, CircularProgress, Typography } from "@mui/material";
 
 export default function HomePage() {
     const router = useRouter();
-    const { user, loading } = useAuth();
+    const { user, loading } = useAuth();   
 
     useEffect(() => {
         if (!loading) {
