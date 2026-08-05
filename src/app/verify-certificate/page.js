@@ -42,7 +42,7 @@ function VerifyCertificateContent() {
             setErrorMsg("");
             setResult(null);
 
-            const response = await api.get(`/certificates/verify/?cert=${encodeURIComponent(queryToVerify.trim())}`);
+            const response = await api.get(`/learning/certificates/verify/?cert=${encodeURIComponent(queryToVerify.trim())}`);
             setResult(response.data);
         } catch (err) {
             console.error("Certificate verification failed:", err);
@@ -71,10 +71,10 @@ function VerifyCertificateContent() {
                 <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1.5, mb: 1, bgcolor: "white", p: 1.5, px: 3, borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
                     <img src="/logos/slogo.png" alt="Stephotec Logo" style={{ width: 36, height: 36, objectFit: "contain" }} />
                     <Box sx={{ textAlign: "left" }}>
-                        <Typography fontWeight={800} fontSize="1.1rem" lineHeight={1.2} color="slate.900">
+                        <Typography sx={{ fontWeight: 800, fontSize: "1.1rem", lineHeight: 1.2, color: "slate.900" }}>
                             STEPHOTEC
                         </Typography>
-                        <Typography fontWeight={700} fontSize="0.65rem" color="#d97706" letterSpacing={0.8}>
+                        <Typography sx={{ fontWeight: 700, fontSize: "0.65rem", color: "#d97706", letterSpacing: 0.8 }}>
                             COMPUTER TECHNOLOGIES LTD
                         </Typography>
                     </Box>

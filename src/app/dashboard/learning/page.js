@@ -44,6 +44,7 @@ import {
     PlayArrow,
     WorkspacePremium,
     Print,
+    ContentCopy,
 } from "@mui/icons-material";
 import CertificateModal from "@/components/common/CertificateModal";
 import QuizPlayerModal from "@/components/quizzes/QuizPlayerModal";
@@ -506,9 +507,24 @@ export default function LearningPage() {
                                                                 Download Handout
                                                             </Button>
                                                         ) : pStatus === "PENDING" ? (
-                                                            <Button fullWidth variant="outlined" color="warning" startIcon={<HourglassEmpty />} disabled>
+                                                            <Box
+                                                                sx={{
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    justifyContent: "center",
+                                                                    gap: 1,
+                                                                    p: 1.2,
+                                                                    borderRadius: 2,
+                                                                    bgcolor: "#fffbeb",
+                                                                    color: "#d97706",
+                                                                    border: "1px solid #fef3c7",
+                                                                    fontWeight: 700,
+                                                                    fontSize: "0.875rem",
+                                                                }}
+                                                            >
+                                                                <HourglassEmpty sx={{ fontSize: 18 }} />
                                                                 Payment Pending Confirmation
-                                                            </Button>
+                                                            </Box>
                                                         ) : (
                                                             <Button fullWidth variant="contained" color="primary" startIcon={<ShoppingCart />} onClick={() => handleOpenRequestModal(handout)}>
                                                                 Request / Purchase Handout
@@ -642,6 +658,239 @@ export default function LearningPage() {
                 quizId={selectedQuizId}
                 onAttemptComplete={loadAllData}
             />
+
+            {/* HANDOUT PURCHASE / PAYMENT DIALOG */}
+            <Dialog
+                open={paymentModalOpen}
+                onClose={() => setPaymentModalOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                slotProps={{
+                    paper: {
+                        sx: {
+                            borderRadius: 4,
+                            bgcolor: "#0f172a",
+                            color: "#ffffff",
+                            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
+                            backgroundImage: "none",
+                        },
+                    },
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        p: 3,
+                        pb: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1.5,
+                        borderBottom: "1px solid rgba(255,255,255,0.1)",
+                    }}
+                >
+                    <ShoppingCart sx={{ color: "#d97706", fontSize: 28 }} />
+                    <Box>
+                        <Typography variant="h6" fontWeight={800} color="#ffffff">
+                            Request Handout Purchase
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+                            Complete payment transfer to activate access
+                        </Typography>
+                    </Box>
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 3, bgcolor: "#1e293b", color: "#ffffff" }}>
+                    <Stack spacing={3}>
+                        {/* Handout Item Details */}
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                p: 2.5,
+                                bgcolor: "rgba(15,23,42,0.6)",
+                                border: "1px solid rgba(255,255,255,0.08)",
+                                borderRadius: 3,
+                                color: "#ffffff",
+                            }}
+                        >
+                            <Typography variant="caption" sx={{ color: "#f59e0b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.5 }}>
+                                Handout Title
+                            </Typography>
+                            <Typography variant="subtitle1" fontWeight={800} color="#ffffff" sx={{ mb: 1.5 }}>
+                                {requestingHandout?.title}
+                            </Typography>
+
+                            <Grid container spacing={2}>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" sx={{ color: "#94a3b8", display: "block" }}>
+                                        Course Program
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={700} color="#ffffff">
+                                        {requestingHandout?.course_name || "Study Material"}
+                                    </Typography>
+                                </Grid>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" sx={{ color: "#94a3b8", display: "block" }}>
+                                        Amount Due
+                                    </Typography>
+                                    <Typography variant="h6" fontWeight={800} sx={{ color: "#10b981" }}>
+                                        ₦{parseFloat(requestingHandout?.price || 0).toLocaleString()}
+                                    </Typography>
+                                </Grid>
+                            </Grid>
+                        </Paper>
+
+                        {/* Payment Instructions */}
+                        <Box sx={{ display: "flex", gap: 1.5, p: 2, bgcolor: "rgba(217,119,6,0.15)", borderRadius: 3, border: "1px solid rgba(217,119,6,0.3)" }}>
+                            <Info sx={{ color: "#f59e0b", flexShrink: 0, mt: 0.2 }} />
+                            <Typography variant="body2" sx={{ color: "#ffedd5", lineHeight: 1.5 }}>
+                                Please make a direct bank transfer of the amount above to any of our official bank accounts listed below. Once transferred, click <strong style={{ color: "#ffffff" }}>Submit Purchase Request</strong>. We will verify and activate your handout access immediately.
+                            </Typography>
+                        </Box>
+
+                        {/* Bank Accounts Section */}
+                        <Box>
+                            <Typography variant="subtitle2" fontWeight={800} sx={{ color: "#ffffff", mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
+                                <AccountBalance sx={{ fontSize: 18, color: "#d97706" }} />
+                                Official Bank Accounts
+                            </Typography>
+
+                            <Stack spacing={1.5}>
+                                {bankAccounts && bankAccounts.length > 0 ? (
+                                    bankAccounts.map((account) => (
+                                        <Paper
+                                            key={account.id}
+                                            elevation={0}
+                                            sx={{
+                                                p: 2,
+                                                bgcolor: "rgba(15,23,42,0.4)",
+                                                border: "1px solid rgba(255,255,255,0.06)",
+                                                borderRadius: 2.5,
+                                                display: "flex",
+                                                justifyContent: "space-between",
+                                                alignItems: "center",
+                                                color: "#ffffff",
+                                            }}
+                                        >
+                                            <Box>
+                                                <Typography variant="body2" fontWeight={800} color="#ffffff">
+                                                    {account.bank_name}
+                                                </Typography>
+                                                <Typography variant="body1" fontWeight={800} color="#fcd34d" sx={{ fontFamily: "monospace", my: 0.5 }}>
+                                                    {account.account_number}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: "#cbd5e1" }}>
+                                                    Name: {account.account_name}
+                                                </Typography>
+                                            </Box>
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                startIcon={<ContentCopy sx={{ fontSize: 14 }} />}
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(account.account_number);
+                                                    successToast("Account number copied to clipboard!");
+                                                }}
+                                                sx={{
+                                                    textTransform: "none",
+                                                    borderColor: "rgba(255,255,255,0.15)",
+                                                    color: "#f1f5f9",
+                                                    "&:hover": { borderColor: "#ffffff", color: "#ffffff" }
+                                                }}
+                                            >
+                                                Copy
+                                            </Button>
+                                        </Paper>
+                                    ))
+                                ) : (
+                                    <Paper
+                                        elevation={0}
+                                        sx={{
+                                            p: 2,
+                                            bgcolor: "rgba(15,23,42,0.4)",
+                                            border: "1px solid rgba(255,255,255,0.06)",
+                                            borderRadius: 2.5,
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            color: "#ffffff",
+                                        }}
+                                    >
+                                        <Box>
+                                            <Typography variant="body2" fontWeight={800} color="#ffffff">
+                                                Stephotec Central Bank
+                                            </Typography>
+                                            <Typography variant="body1" fontWeight={800} color="#fcd34d" sx={{ fontFamily: "monospace", my: 0.5 }}>
+                                                1022384950
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: "#cbd5e1" }}>
+                                                Name: Stephotec Computer Technologies Ltd
+                                            </Typography>
+                                        </Box>
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            startIcon={<ContentCopy sx={{ fontSize: 14 }} />}
+                                            onClick={() => {
+                                                navigator.clipboard.writeText("1022384950");
+                                                successToast("Account number copied to clipboard!");
+                                            }}
+                                            sx={{
+                                                textTransform: "none",
+                                                borderColor: "rgba(255,255,255,0.15)",
+                                                color: "#f1f5f9",
+                                                "&:hover": { borderColor: "#ffffff", color: "#ffffff" }
+                                            }}
+                                        >
+                                            Copy
+                                        </Button>
+                                    </Paper>
+                                )}
+                            </Stack>
+                        </Box>
+                    </Stack>
+                </DialogContent>
+
+                <DialogActions
+                    sx={{
+                        p: 3,
+                        bgcolor: "#0f172a",
+                        borderTop: "1px solid rgba(255,255,255,0.1)",
+                        justify: "space-between",
+                    }}
+                >
+                    <Button
+                        onClick={() => setPaymentModalOpen(false)}
+                        variant="outlined"
+                        sx={{
+                            borderRadius: 2,
+                            textTransform: "none",
+                            borderColor: "rgba(255,255,255,0.15)",
+                            color: "#f1f5f9",
+                            "&:hover": { borderColor: "#ffffff", color: "#ffffff" },
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleConfirmHandoutRequest}
+                        disabled={purchasingId !== null}
+                        variant="contained"
+                        sx={{
+                            borderRadius: 2,
+                            textTransform: "none",
+                            fontWeight: 700,
+                            bgcolor: "#d97706",
+                            color: "white",
+                            "&:hover": { bgcolor: "#b45309" },
+                            "&.Mui-disabled": {
+                                bgcolor: "rgba(217, 119, 6, 0.4)",
+                                color: "rgba(255, 255, 255, 0.6) !important",
+                            }
+                        }}
+                    >
+                        {purchasingId !== null ? "Submitting..." : "Submit Purchase Request"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
             {/* CONTENT VIEWER MODAL */}
             <Dialog
                 open={viewContentOpen}

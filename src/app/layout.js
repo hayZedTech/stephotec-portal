@@ -17,6 +17,9 @@ export default function RootLayout({ children }) {
             <head>
                 <link rel="icon" href="/logos/favco.png" type="image/png" />
                 <link rel="apple-touch-icon" href="/logos/favco.png" />
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+                <link href="https://fonts.googleapis.com/css2?family=Germania+One&display=swap" rel="stylesheet" />
             </head>
             <body>
                 <AppProviders>
