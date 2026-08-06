@@ -44,6 +44,17 @@ export default function StudentIDCardModal({ open, onClose, student }) {
         "Computer Studies";
 
     const admissionYear = student.admission_year || student.admissionYear || new Date().getFullYear();
+    const createdDateRaw = student.created_at || student.createdAt || student.date_joined;
+    let issueDateStr = `01 / 01 / ${admissionYear}`;
+    if (createdDateRaw) {
+        const d = new Date(createdDateRaw);
+        if (!isNaN(d.getTime())) {
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            issueDateStr = `${dd} / ${mm} / ${yyyy}`;
+        }
+    }
     const profilePic = student.profile_picture_url || student.profilePictureUrl;
     const isIndustrialTraining = student.is_industrial_training ?? student.isIndustrialTraining ?? false;
     const origin = typeof window !== "undefined" ? window.location.origin : "https://stephotec.com";
@@ -417,7 +428,7 @@ export default function StudentIDCardModal({ open, onClose, student }) {
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: "8px", fontWeight: 800, color: "#111", lineHeight: 1.1 }}>ISSUE DATE</div>
-                                                <div style={{ fontSize: "11px", fontWeight: 700, color: "#c00000", lineHeight: 1.2, fontFamily: '"Ancizar Sans", "Inter", sans-serif' }}>01 / 01 / {admissionYear}</div>
+                                                <div style={{ fontSize: "11px", fontWeight: 700, color: "#c00000", lineHeight: 1.2, fontFamily: '"Ancizar Sans", "Inter", sans-serif' }}>{issueDateStr}</div>
                                             </div>
                                         </div>
 

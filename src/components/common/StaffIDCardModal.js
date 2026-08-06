@@ -36,6 +36,17 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
     const roleTitle = staff.role_title || staff.job_title || staff.jobTitle || "System Administrator";
     const profilePic = staff.profile_picture_url || staff.profilePictureUrl;
     const issueYear = staff.date_joined ? new Date(staff.date_joined).getFullYear() : (staff.issue_year || new Date().getFullYear());
+    const createdDateRaw = staff.created_at || staff.createdAt || staff.date_joined;
+    let issueDateStr = `01 / 01 / ${issueYear}`;
+    if (createdDateRaw) {
+        const d = new Date(createdDateRaw);
+        if (!isNaN(d.getTime())) {
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            issueDateStr = `${dd} / ${mm} / ${yyyy}`;
+        }
+    }
 
     const origin = typeof window !== "undefined" ? window.location.origin : "https://stephotec.com";
     const qrData = encodeURIComponent(`${origin}/verify-staff?staff=${username}`);
@@ -381,7 +392,7 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: "8px", fontWeight: 800, color: "#111", lineHeight: 1.1 }}>ISSUE DATE</div>
-                                                <div style={{ fontSize: "11px", fontWeight: 700, color: "#c00000", lineHeight: 1.2, fontFamily: '"Ancizar Sans", "Inter", sans-serif' }}>01 / 01 / {issueYear}</div>
+                                                <div style={{ fontSize: "11px", fontWeight: 700, color: "#c00000", lineHeight: 1.2, fontFamily: '"Ancizar Sans", "Inter", sans-serif' }}>{issueDateStr}</div>
                                             </div>
                                         </div>
 
