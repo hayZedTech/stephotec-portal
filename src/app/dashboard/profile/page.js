@@ -682,7 +682,7 @@ export default function ProfilePage() {
                                 Click to upload or drag and drop
                             </Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
-                                PNG, JPG, WebP up to 5MB
+                                PNG, JPG, WebP up to 2MB
                             </Typography>
                         </Box>
                     </Box>

@@ -994,7 +994,7 @@ export default function AdminQuizManager() {
                             <Alert severity="info" sx={{ borderRadius: 2.5, display: 'flex', alignItems: 'center' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, width: '100%' }}>
                                     <Box>
-                                        <strong>Upload or Paste Questions:</strong> Upload a <code>.xlsx</code>, <code>.csv</code>, or <code>.txt</code> file, or paste your questions directly below.
+                                        <strong>Upload or Paste Questions:</strong> Upload a <code>.xlsx</code>, <code>.csv</code>, or <code>.txt</code> file (Max 10MB), or paste your questions directly below.
                                         <br/>
                                         <em>Excel Columns: Question | Option A | Option B | Option C | Option D | Correct (A-D) | Explanation</em>
                                     </Box>

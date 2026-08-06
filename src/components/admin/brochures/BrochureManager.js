@@ -445,7 +445,7 @@ export default function BrochureManager() {
 
                             <Box>
                                 <Typography variant="caption" color="text.secondary" display="block" mb={1}>
-                                    Upload Brochure / Outline File (PDF, DOCX, ZIP, etc.)
+                                    Upload Brochure / Outline File (PDF, DOCX, ZIP, etc.) — Max 10MB
                                 </Typography>
                                 <Button
                                     variant="outlined"

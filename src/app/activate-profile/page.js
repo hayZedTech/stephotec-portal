@@ -344,7 +344,7 @@ export default function ActivateProfilePage() {
                                     Click to upload or drag and drop
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                    PNG, JPG, WebP up to 5MB
+                                    PNG, JPG, WebP up to 2MB
                                 </Typography>
                             </Box>
                         )}

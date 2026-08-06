@@ -325,7 +325,7 @@ export default function AdminProfilePage() {
                             <input type="file" hidden accept="image/jpeg,image/png,image/webp" onChange={handleProfilePictureChange} disabled={uploading} />
                             <CloudUpload sx={{ fontSize: 40, color: "#7c3aed", mb: 1 }} />
                             <Typography variant="body2" fontWeight={500}>Click to upload or drag and drop</Typography>
-                            <Typography variant="caption" color="text.secondary">PNG, JPG, WebP up to 5MB</Typography>
+                            <Typography variant="caption" color="text.secondary">PNG, JPG, WebP up to 2MB</Typography>
                         </Box>
                     </Box>
                 </DialogContent>
