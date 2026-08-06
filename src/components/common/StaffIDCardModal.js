@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
     Dialog,
     DialogTitle,
@@ -26,6 +26,18 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
 
     if (!staff) return null;
 
+    const profilePic =
+        staff?.profile_picture_url ||
+        staff?.profilePictureUrl ||
+        staff?.user?.profile_picture_url ||
+        staff?.user?.profilePictureUrl ||
+        staff?.profile_picture ||
+        staff?.profilePicture ||
+        staff?.user?.profile_picture ||
+        staff?.user?.profilePicture ||
+        staff?.avatar ||
+        staff?.user?.avatar;
+
     const fullName =
         [staff.first_name || staff.firstName, staff.last_name || staff.lastName]
             .filter(Boolean)
@@ -34,7 +46,6 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
 
     const username = staff.username || "STAFF0001";
     const roleTitle = staff.role_title || staff.job_title || staff.jobTitle || "System Administrator";
-    const profilePic = staff.profile_picture_url || staff.profilePictureUrl;
     const issueYear = staff.date_joined ? new Date(staff.date_joined).getFullYear() : (staff.issue_year || new Date().getFullYear());
     const createdDateRaw = staff.created_at || staff.createdAt || staff.date_joined;
     let issueDateStr = `01 / 01 / ${issueYear}`;

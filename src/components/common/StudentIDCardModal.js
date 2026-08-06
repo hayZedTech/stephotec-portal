@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
     Dialog,
     DialogTitle,
@@ -24,6 +24,18 @@ export default function StudentIDCardModal({ open, onClose, student }) {
     const cardRef = useRef(null);
 
     if (!student) return null;
+
+    const profilePic =
+        student?.profile_picture_url ||
+        student?.profilePictureUrl ||
+        student?.user?.profile_picture_url ||
+        student?.user?.profilePictureUrl ||
+        student?.profile_picture ||
+        student?.profilePicture ||
+        student?.user?.profile_picture ||
+        student?.user?.profilePicture ||
+        student?.avatar ||
+        student?.user?.avatar;
 
     const fullName = [student.first_name || student.firstName, student.last_name || student.lastName]
         .filter(Boolean)
@@ -55,7 +67,7 @@ export default function StudentIDCardModal({ open, onClose, student }) {
             issueDateStr = `${dd} / ${mm} / ${yyyy}`;
         }
     }
-    const profilePic = student.profile_picture_url || student.profilePictureUrl;
+
     const isIndustrialTraining = student.is_industrial_training ?? student.isIndustrialTraining ?? false;
     const origin = typeof window !== "undefined" ? window.location.origin : "https://stephotec.com";
     const qrData = encodeURIComponent(`${origin}/verify?student=${username}`);

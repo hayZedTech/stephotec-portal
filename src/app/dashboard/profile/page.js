@@ -765,25 +765,32 @@ export default function ProfilePage() {
             </Dialog>
 
             {/* DIGITAL ID CARD MODAL */}
-            {user?.role === "ADMIN" ? (
+            {user?.role === "ADMIN" || user?.role === "STAFF" || user?.is_staff ? (
                 <StaffIDCardModal
                     open={showIDCard}
                     onClose={() => setShowIDCard(false)}
                     staff={{
-                        username: user?.username,
-                        first_name: user?.firstName || user?.first_name,
-                        last_name: user?.lastName || user?.last_name,
-                        email: user?.email,
-                        phone: user?.phone,
+                        ...user,
+                        username: user?.username || formData?.username,
+                        first_name: user?.firstName || user?.first_name || formData?.first_name,
+                        last_name: user?.lastName || user?.last_name || formData?.last_name,
+                        email: user?.email || formData?.email,
+                        phone: user?.phone || formData?.phone,
                         role_title: user?.job_title || user?.jobTitle || "System Administrator",
-                        profile_picture_url: user?.profilePictureUrl || user?.profile_picture_url,
+                        profile_picture_url: user?.profilePictureUrl || user?.profile_picture_url || formData?.profile_picture_url,
+                        profilePictureUrl: user?.profilePictureUrl || user?.profile_picture_url || formData?.profile_picture_url,
                     }}
                 />
             ) : (
                 <StudentIDCardModal
                     open={showIDCard}
                     onClose={() => setShowIDCard(false)}
-                    student={user}
+                    student={{
+                        ...user,
+                        ...formData,
+                        profile_picture_url: user?.profilePictureUrl || user?.profile_picture_url || formData?.profile_picture_url,
+                        profilePictureUrl: user?.profilePictureUrl || user?.profile_picture_url || formData?.profile_picture_url,
+                    }}
                 />
             )}
 
