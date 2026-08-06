@@ -81,56 +81,99 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
         }
     };
 
-    const handlePrint = () => {
-        const element = cardRef.current;
-        if (!element) return;
+    const handlePrint = async () => {
+        try {
+            const html2canvas = (await import("html2canvas")).default;
+            const element = cardRef.current;
+            if (!element) return;
 
-        const printWindow = window.open("", "_blank");
-        printWindow.document.write(`
-            <html>
-                <head>
-                    <title>Staff ID Card - ${fullName}</title>
-                    <style>
-                        * {
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
-                            color-adjust: exact !important;
-                        }
-                        body {
-                            margin: 0;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            min-height: 100vh;
-                            background: #ffffff;
-                            font-family: sans-serif;
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
-                            color-adjust: exact !important;
-                        }
-                        @media print {
+            const originalShadow = element.style.boxShadow;
+            element.style.boxShadow = "none";
+
+            const canvas = await html2canvas(element, {
+                scale: 4,
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                logging: false,
+                onclone: (clonedDoc) => {
+                    const container = clonedDoc.getElementById("id-card-container-staff");
+                    if (container) {
+                        container.style.transform = "none";
+                    }
+                }
+            });
+
+            element.style.boxShadow = originalShadow;
+
+            const imgData = canvas.toDataURL("image/png");
+            const iframe = document.createElement("iframe");
+            iframe.style.position = "fixed";
+            iframe.style.right = "0";
+            iframe.style.bottom = "0";
+            iframe.style.width = "0";
+            iframe.style.height = "0";
+            iframe.style.border = "none";
+            document.body.appendChild(iframe);
+
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(`
+                <html>
+                    <head>
+                        <title>Staff ID Card - ${fullName}</title>
+                        <style>
+                            @page {
+                                size: 85.6mm 53.98mm;
+                                margin: 0;
+                            }
                             * {
+                                margin: 0;
+                                padding: 0;
+                                box-sizing: border-box;
                                 -webkit-print-color-adjust: exact !important;
                                 print-color-adjust: exact !important;
-                                color-adjust: exact !important;
                             }
-                            body { background: none; }
-                            .no-print { display: none; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${element.outerHTML}
-                    <script>
-                        setTimeout(() => {
-                            window.print();
-                            window.close();
-                        }, 500);
-                    </script>
-                </body>
-            </html>
-        `);
-        printWindow.document.close();
+                            html, body {
+                                width: 100%;
+                                height: 100%;
+                                margin: 0;
+                                padding: 0;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                background: transparent !important;
+                                overflow: hidden;
+                            }
+                            img {
+                                width: 85.6mm;
+                                height: 53.98mm;
+                                object-fit: contain;
+                                display: block;
+                                margin: auto;
+                            }
+                            @media print {
+                                body { background: transparent !important; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <img src="${imgData}" alt="ID Card" />
+                    </body>
+                </html>
+            `);
+            doc.close();
+
+            iframe.contentWindow.focus();
+            setTimeout(() => {
+                iframe.contentWindow.print();
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 1000);
+            }, 300);
+        } catch (err) {
+            console.error("Print preparation failed:", err);
+            errorToast("Failed to prepare print document. Try PDF download instead.");
+        }
     };
 
     return (
@@ -173,7 +216,7 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
 
             <DialogContent sx={{ py: 4, px: { xs: 1, sm: 3 }, bgcolor: "#f8fafc", textAlign: "center" }}>
                 {/* Side Selector Tabs */}
-                <Box sx={{ display: "flex", justifyContent: "center", gap: 1, mb: 3 }}>
+                <Box sx={{ display: "flex", justifyContent: "center", gap: 1, mt: { xs: 3, sm: 3 }, mb: { xs: 5, sm: 4 } }}>
                     <Button
                         size="small"
                         variant={activeSide === "front" ? "contained" : "outlined"}
@@ -195,12 +238,16 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
 
                 {/* ID Card Display Area (CR80 ratio: 480x303) */}
                 <Box
+                    id="id-card-container-staff"
                     sx={{
                         display: "flex",
                         justifyContent: "center",
                         alignItems: "center",
-                        overflowX: "auto",
-                        py: 1,
+                        py: { xs: 0, sm: 1 },
+                        mb: { xs: 4, sm: 4 },
+                        transform: { xs: "scale(0.7)", sm: "scale(0.85)", md: "scale(1)" },
+                        transformOrigin: "center top",
+                        height: { xs: "220px", sm: "270px", md: "320px" },
                     }}
                 >
                     <div
@@ -266,7 +313,7 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                 </svg>
 
                                 {/* Header text */}
-                                <div style={{ position: "absolute", top: 6, left: 0, right: 0, textAlign: "center", zIndex: 10 }}>
+                                <div style={{ position: "absolute", top: 2, left: 0, right: 0, textAlign: "center", zIndex: 10 }}>
                                     <div style={{ lineHeight: 1, fontFamily: "'Germania One', cursive, sans-serif" }}>
                                         <span style={{ color: "#c00000", fontSize: "36px", fontWeight: 400 }}>S</span>
                                         <span style={{ color: "#111111", fontSize: "27px", fontWeight: 400, letterSpacing: "0px" }}>tephotec</span>
@@ -277,7 +324,7 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                 </div>
 
                                 {/* Profile Photo */}
-                                <div style={{ position: "absolute", top: 70, left: 20, width: "125px", height: "125px", border: "2.5px solid #B89947", borderRadius: "12px", overflow: "hidden", backgroundColor: "#e2e8f0", zIndex: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.12)" }}>
+                                <div style={{ position: "absolute", top: 74, left: 20, width: "125px", height: "125px", border: "2.5px solid #B89947", borderRadius: "12px", overflow: "hidden", backgroundColor: "#e2e8f0", zIndex: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.12)" }}>
                                     {profilePic ? (
                                         <img src={profilePic} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                                     ) : (
@@ -288,7 +335,7 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                 </div>
 
                                 {/* Info Fields */}
-                                <div style={{ position: "absolute", top: 66, left: 160, right: 20, zIndex: 10, display: "flex", flexDirection: "column", gap: "9px" }}>
+                                <div style={{ position: "absolute", top: 70, left: 160, right: 20, zIndex: 10, display: "flex", flexDirection: "column", gap: "9px" }}>
                                     
                                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                                         <div style={{ width: 24, height: 24, borderRadius: "50%", backgroundColor: "#c00000", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
@@ -356,9 +403,13 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                 </div>
 
                                 {/* Footer Website Link */}
-                                <div style={{ position: "absolute", bottom: 6, left: 90, right: 0, textAlign: "center", zIndex: 10, color: "white", fontSize: "10px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-                                    <Language sx={{ fontSize: 13, color: "#B89947" }} />
-                                    www.stephotec.com
+                                <div style={{ position: "absolute", bottom: 12, left: 90, right: 0, textAlign: "center", zIndex: 10, color: "white", fontSize: "10px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                                    <div style={{ display: "flex", alignItems: "center", height: "13px" }}>
+                                        <Language sx={{ fontSize: 13, color: "#B89947" }} />
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", height: "13px", lineHeight: "13px" }}>
+                                        www.stephotec.com
+                                    </div>
                                 </div>
                             </>
                         ) : (
@@ -388,10 +439,10 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                     </div>
 
                                     {/* Row 2: Contact Info & QR Code */}
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", zIndex: 1 }}>
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "5px", flex: 1 }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                                <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "#c00000", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 1 }}>
+                                        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                                            <div style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
+                                                <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "#c00000", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0, marginRight: "8px" }}>
                                                     <LocationOn sx={{ fontSize: 11 }} />
                                                 </div>
                                                 <div style={{ fontSize: "9px", fontWeight: 700, color: "#111", lineHeight: 1.2, fontFamily: '"Ancizar Sans", "Inter", sans-serif' }}>
@@ -399,8 +450,8 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                                 </div>
                                             </div>
 
-                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                                <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "#c00000", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
+                                            <div style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
+                                                <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "#c00000", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0, marginRight: "8px" }}>
                                                     <Phone sx={{ fontSize: 11 }} />
                                                 </div>
                                                 <div style={{ fontSize: "9.5px", fontWeight: 700, color: "#111", fontFamily: '"Ancizar Sans", "Inter", sans-serif' }}>
@@ -408,8 +459,8 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                                 </div>
                                             </div>
 
-                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                                <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "#c00000", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
+                                            <div style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
+                                                <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "#c00000", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0, marginRight: "8px" }}>
                                                     <Email sx={{ fontSize: 11 }} />
                                                 </div>
                                                 <div style={{ fontSize: "9.5px", fontWeight: 700, color: "#111", fontFamily: '"Ancizar Sans", "Inter", sans-serif' }}>
@@ -417,8 +468,8 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                                 </div>
                                             </div>
 
-                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                                <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "#c00000", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0 }}>
+                                            <div style={{ display: "flex", alignItems: "center" }}>
+                                                <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "#c00000", display: "flex", alignItems: "center", justifyContent: "center", color: "white", flexShrink: 0, marginRight: "8px" }}>
                                                     <Language sx={{ fontSize: 11 }} />
                                                 </div>
                                                 <div style={{ fontSize: "9.5px", fontWeight: 700, color: "#111", fontFamily: '"Ancizar Sans", "Inter", sans-serif' }}>
@@ -428,8 +479,8 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                         </div>
 
                                         {/* QR Code & authentic seal */}
-                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                                            <div style={{ width: "68px", height: "68px", background: "white", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "3px", boxShadow: "0 2px 6px rgba(0,0,0,0.08)" }}>
+                                        <div style={{ display: "flex", alignItems: "center", flexShrink: 0, marginLeft: "12px" }}>
+                                            <div style={{ width: "68px", height: "68px", background: "white", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "3px", boxShadow: "0 2px 6px rgba(0,0,0,0.08)", marginRight: "8px" }}>
                                                 <img src={qrCodeUrl} alt="QR Code" style={{ width: "100%", height: "100%" }} />
                                             </div>
 
@@ -442,8 +493,8 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                     </div>
 
                                     {/* Row 3: Our Mission Box */}
-                                    <div style={{ border: "1.5px solid #B89947", borderRadius: "8px", padding: "6px 10px", display: "flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.95)", zIndex: 1 }}>
-                                        <TrackChanges sx={{ fontSize: 24, color: "#B89947", flexShrink: 0 }} />
+                                    <div style={{ border: "1.5px solid #B89947", borderRadius: "8px", padding: "6px 10px", display: "flex", alignItems: "center", background: "rgba(255,255,255,0.95)", zIndex: 1 }}>
+                                        <TrackChanges sx={{ fontSize: 24, color: "#B89947", flexShrink: 0, marginRight: "8px" }} />
                                         <div>
                                             <div style={{ color: "#c00000", fontSize: "9.5px", fontWeight: 800, marginBottom: "1px" }}>OUR MISSION</div>
                                             <div style={{ fontSize: "7.8px", color: "#333", fontWeight: 600, lineHeight: 1.3, fontFamily: '"Ancizar Sans", "Inter", sans-serif' }}>
@@ -454,20 +505,20 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                     </div>
 
                                     {/* Row 4: Emergency Contact Box */}
-                                    <div style={{ background: "#c00000", borderRadius: "8px", padding: "6px 10px", display: "flex", gap: "10px", alignItems: "center", color: "white", zIndex: 1 }}>
-                                        <div style={{ width: 24, height: 24, background: "white", borderRadius: "5px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                    <div style={{ background: "#c00000", borderRadius: "8px", padding: "6px 10px", display: "flex", alignItems: "center", color: "white", zIndex: 1 }}>
+                                        <div style={{ width: 24, height: 24, background: "white", borderRadius: "5px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: "10px" }}>
                                             <Add sx={{ color: "#c00000", fontSize: 20, fontWeight: "bold" }} />
                                         </div>
-                                        <div style={{ flexShrink: 0 }}>
+                                        <div style={{ flexShrink: 0, marginRight: "10px" }}>
                                             <div style={{ fontSize: "9px", fontWeight: 800, lineHeight: 1.15 }}>EMERGENCY<br/>CONTACT</div>
                                         </div>
-                                        <div style={{ width: "1.5px", background: "rgba(255,255,255,0.4)", height: "22px", flexShrink: 0 }} />
-                                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
-                                            <div style={{ display: "flex", fontSize: "8.5px", fontWeight: 600, alignItems: "flex-end" }}>
+                                        <div style={{ width: "1.5px", background: "rgba(255,255,255,0.4)", height: "22px", flexShrink: 0, marginRight: "10px" }} />
+                                        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                                            <div style={{ display: "flex", fontSize: "8.5px", fontWeight: 600, alignItems: "flex-end", marginBottom: "4px" }}>
                                                 <span style={{ width: "68px" }}>Name :</span>
                                                 <span style={{ flex: 1, borderBottom: "1px solid rgba(255,255,255,0.6)", height: "8px" }}></span>
                                             </div>
-                                            <div style={{ display: "flex", fontSize: "8.5px", fontWeight: 600, alignItems: "flex-end" }}>
+                                            <div style={{ display: "flex", fontSize: "8.5px", fontWeight: 600, alignItems: "flex-end", marginBottom: "4px" }}>
                                                 <span style={{ width: "68px" }}>Relationship :</span>
                                                 <span style={{ flex: 1, borderBottom: "1px solid rgba(255,255,255,0.6)", height: "8px" }}></span>
                                             </div>
@@ -481,8 +532,8 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                                 </div>
 
                                 {/* Row 5: Bottom Footer Disclaimer */}
-                                <div style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: "24px", backgroundColor: "#111111", zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                                    <Lock sx={{ color: "#B89947", fontSize: 13 }} />
+                                <div style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: "24px", backgroundColor: "#111111", zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <Lock sx={{ color: "#B89947", fontSize: 13, marginRight: "8px" }} />
                                     <div style={{ color: "#94a3b8", fontSize: "7.5px", fontWeight: 500, lineHeight: 1.2 }}>
                                         This card is the property of Stephotec Computer Technologies Limited. It must be returned upon request or termination of employment.
                                     </div>
@@ -493,15 +544,15 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                 </Box>
             </DialogContent>
 
-            <DialogActions sx={{ p: 2.5, px: 3, bgcolor: "#ffffff", borderTop: "1px solid #e2e8f0", gap: 1 }}>
-                <Button onClick={onClose} color="inherit">
+            <DialogActions sx={{ p: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 3 }, bgcolor: "#ffffff", borderTop: "1px solid #e2e8f0", display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: { xs: 1.5, sm: 1 }, "& > button": { m: "0 !important", width: { xs: "100%", sm: "auto" } } }}>
+                <Button onClick={onClose} color="inherit" sx={{ width: { xs: "100%", sm: "auto" } }}>
                     Close
                 </Button>
                 <Button
                     onClick={handlePrint}
                     variant="outlined"
                     startIcon={<Print />}
-                    sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 600 }}
+                    sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 600, width: { xs: "100%", sm: "auto" } }}
                 >
                     Print Card
                 </Button>
@@ -510,7 +561,7 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
                     variant="contained"
                     disabled={downloading}
                     startIcon={downloading ? <CircularProgress size={18} color="inherit" /> : <Download />}
-                    sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 700, bgcolor: "#c00000", "&:hover": { bgcolor: "#900000" } }}
+                    sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 700, bgcolor: "#c00000", "&:hover": { bgcolor: "#900000" }, width: { xs: "100%", sm: "auto" } }}
                 >
                     {downloading ? "Generating PDF..." : "Download PDF ID Card"}
                 </Button>

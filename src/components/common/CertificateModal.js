@@ -152,10 +152,18 @@ export default function CertificateModal({ open, onClose, certificate }) {
             element.style.boxShadow = originalShadow;
 
             const imgData = canvas.toDataURL("image/png");
-            const printWindow = window.open("", "_blank");
-            if (!printWindow) return;
+            const iframe = document.createElement("iframe");
+            iframe.style.position = "fixed";
+            iframe.style.right = "0";
+            iframe.style.bottom = "0";
+            iframe.style.width = "0";
+            iframe.style.height = "0";
+            iframe.style.border = "none";
+            document.body.appendChild(iframe);
 
-            printWindow.document.write(`
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(`
                 <html>
                     <head>
                         <title>Stephotec Certificate - ${studentName}</title>
@@ -193,16 +201,18 @@ export default function CertificateModal({ open, onClose, certificate }) {
                     </head>
                     <body>
                         <img src="${imgData}" alt="Certificate" />
-                        <script>
-                            setTimeout(() => {
-                                window.print();
-                                window.close();
-                            }, 300);
-                        </script>
                     </body>
                 </html>
             `);
-            printWindow.document.close();
+            doc.close();
+
+            iframe.contentWindow.focus();
+            setTimeout(() => {
+                iframe.contentWindow.print();
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 1000);
+            }, 300);
         } catch (err) {
             console.error("Print preparation failed:", err);
             errorToast("Failed to prepare print document.");
@@ -462,27 +472,27 @@ export default function CertificateModal({ open, onClose, certificate }) {
             </DialogContent>
 
             {/* MODAL ACTIONS */}
-            <DialogActions sx={{ p: { xs: 2, sm: 2.5 }, px: 3, bgcolor: "#0f172a", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-                <Button onClick={onClose} variant="outlined" sx={{ borderRadius: 2.5, textTransform: "none", color: "grey.300", borderColor: "grey.700", "&:hover": { borderColor: "white", color: "white" } }}>
+            <DialogActions sx={{ p: { xs: 2, sm: 2.5 }, px: { xs: 1.5, sm: 3 }, bgcolor: "#0f172a", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                <Button onClick={onClose} variant="outlined" sx={{ borderRadius: 2.5, textTransform: "none", color: "grey.300", borderColor: "grey.700", "&:hover": { borderColor: "white", color: "white" }, fontSize: { xs: "0.75rem", sm: "0.875rem" }, px: { xs: 1, sm: 2 } }}>
                     Close
                 </Button>
-                <Stack direction="row" spacing={1.5}>
+                <Stack direction="row" spacing={{ xs: 1, sm: 1.5 }}>
                     <Button
-                        startIcon={<Print />}
+                        startIcon={<Print sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />}
                         onClick={handlePrint}
                         variant="outlined"
-                        sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 700, borderColor: "#B89947", color: "#B89947", "&:hover": { borderColor: "#F7E2A9", color: "#F7E2A9" } }}
+                        sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 700, borderColor: "#B89947", color: "#B89947", "&:hover": { borderColor: "#F7E2A9", color: "#F7E2A9" }, fontSize: { xs: "0.7rem", sm: "0.875rem" }, px: { xs: 1, sm: 2 } }}
                     >
-                        Print Certificate
+                        Print
                     </Button>
                     <Button
-                        startIcon={downloading ? null : <Download />}
+                        startIcon={downloading ? null : <Download sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />}
                         onClick={handleDownloadPDF}
                         disabled={downloading}
                         variant="contained"
-                        sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 700, bgcolor: "#c00000", color: "white", "&:hover": { bgcolor: "#900000" } }}
+                        sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 700, bgcolor: "#c00000", color: "white", "&:hover": { bgcolor: "#900000" }, fontSize: { xs: "0.7rem", sm: "0.875rem" }, px: { xs: 1.5, sm: 2 } }}
                     >
-                        {downloading ? "Generating PDF..." : "Download PDF Certificate"}
+                        {downloading ? <CircularProgress size={20} sx={{ color: "white" }} /> : "Download PDF"}
                     </Button>
                 </Stack>
             </DialogActions>
