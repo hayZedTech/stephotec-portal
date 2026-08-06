@@ -40,6 +40,8 @@ export default function StudentViewModal({
     const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
 
     const [copied, setCopied] = useState(false);
+    const [copiedUsername, setCopiedUsername] = useState(false);
+    const [copiedEmail, setCopiedEmail] = useState(false);
     const [showIDCardModal, setShowIDCardModal] = useState(false);
 
     if (!student) return null;
@@ -55,6 +57,22 @@ export default function StudentViewModal({
         setCopied(true);
         successToast("Temporary password copied to clipboard!");
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleCopyUsername = () => {
+        if (!student.username) return;
+        navigator.clipboard.writeText(student.username);
+        setCopiedUsername(true);
+        successToast("Username copied to clipboard!");
+        setTimeout(() => setCopiedUsername(false), 2000);
+    };
+
+    const handleCopyEmail = () => {
+        if (!student.email) return;
+        navigator.clipboard.writeText(student.email);
+        setCopiedEmail(true);
+        successToast("Email copied to clipboard!");
+        setTimeout(() => setCopiedEmail(false), 2000);
     };
 
     const handleCoursesUpdated = () => {
@@ -180,18 +198,44 @@ export default function StudentViewModal({
                                     <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1, fontSize: { xs: "0.65rem", sm: "0.75rem" } }}>
                                         Username
                                     </Typography>
-                                    <Typography variant="body2" fontWeight={600} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-                                        {student.username || "—"}
-                                    </Typography>
+                                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                                        <Typography variant="body2" fontWeight={600} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                                            {student.username || "—"}
+                                        </Typography>
+                                        {student.username && (
+                                            <Tooltip title={copiedUsername ? "Copied!" : "Copy Username"}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={handleCopyUsername}
+                                                    sx={{ color: copiedUsername ? "#16a34a" : "text.secondary", bgcolor: copiedUsername ? "#dcfce7" : "grey.200", "&:hover": { bgcolor: copiedUsername ? "#bbf7d0" : "grey.300" }, p: 0.5 }}
+                                                >
+                                                    {copiedUsername ? <Check fontSize="small" /> : <ContentCopy fontSize="small" />}
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
+                                    </Box>
                                 </Box>
 
                                 <Box sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
                                     <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1, fontSize: { xs: "0.65rem", sm: "0.75rem" } }}>
                                         Email
                                     </Typography>
-                                    <Typography variant="body2" fontWeight={600} sx={{ wordBreak: "break-word", fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-                                        {student.email || "—"}
-                                    </Typography>
+                                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                                        <Typography variant="body2" fontWeight={600} sx={{ wordBreak: "break-word", fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                                            {student.email || "—"}
+                                        </Typography>
+                                        {student.email && (
+                                            <Tooltip title={copiedEmail ? "Copied!" : "Copy Email"}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={handleCopyEmail}
+                                                    sx={{ color: copiedEmail ? "#16a34a" : "text.secondary", bgcolor: copiedEmail ? "#dcfce7" : "grey.200", "&:hover": { bgcolor: copiedEmail ? "#bbf7d0" : "grey.300" }, p: 0.5 }}
+                                                >
+                                                    {copiedEmail ? <Check fontSize="small" /> : <ContentCopy fontSize="small" />}
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
+                                    </Box>
                                 </Box>
 
                                 <Box sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>

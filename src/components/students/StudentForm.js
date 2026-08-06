@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import {
-    Grid, TextField, MenuItem, FormControlLabel, Switch, CircularProgress, Button, Stack, Divider, Box, Collapse, Typography, Alert,
+    Grid, TextField, MenuItem, FormControlLabel, Switch, CircularProgress, Button, Stack, Divider, Box, Collapse, Typography, Alert, Tooltip, IconButton,
 } from "@mui/material";
-import { ExpandMore as ExpandMoreIcon, CloudUpload } from "@mui/icons-material";
+import { ExpandMore as ExpandMoreIcon, CloudUpload, ContentCopy, Check, PersonAddCheck } from "@mui/icons-material";
 import { useForm, Controller } from "react-hook-form";
-import { successToast, errorToast, infoToast, } from "@/lib/toast";
+import { successToast, errorToast, infoToast } from "@/lib/toast";
 import { getCourses } from "@/services/courses";
 import { createStudent, updateStudent } from "@/services/students";
 import StudentCoursesManager from "./StudentCoursesManager";
@@ -52,6 +52,20 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
     const [uploading, setUploading] = useState(false);
     const [profilePictureUrl, setProfilePictureUrl] = useState(defaultValues?.profile_picture_url || null);
     const [profilePicturePreview, setProfilePicturePreview] = useState(defaultValues?.profile_picture_url || null);
+    
+    // Creation summary modal state with copy functionality
+    const [createdStudent, setCreatedStudent] = useState(null);
+    const [copiedMap, setCopiedMap] = useState({});
+
+    const handleCopyText = (text, fieldName) => {
+        if (!text) return;
+        navigator.clipboard.writeText(text);
+        setCopiedMap((prev) => ({ ...prev, [fieldName]: true }));
+        successToast(`${fieldName} copied to clipboard!`);
+        setTimeout(() => {
+            setCopiedMap((prev) => ({ ...prev, [fieldName]: false }));
+        }, 2000);
+    };
 
     useEffect(() => {
         if (!defaultValues) {
@@ -183,17 +197,14 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                 payload.profile_picture_url = profilePictureUrl;
                 await updateStudent(defaultValues.id, payload);
                 successToast("Student updated successfully.");
+                onSuccess?.();
             } else {
                 payload.course_id = values.course_id;
                 payload.admission_year_write = values.admission_year_write;
                 const data = await createStudent(payload);
                 successToast("Student created successfully.");
-                if (data?.temporary_password) {
-                    infoToast(`Temporary Password: ${data.temporary_password}`);
-                }
+                setCreatedStudent(data);
             }
-
-            onSuccess?.();
         } catch (error) {
             let errorMessage = "Unable to save student.";
             
@@ -221,6 +232,116 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
             <div className="flex justify-center py-10">
                 <CircularProgress />
             </div>
+        );
+    }
+
+    if (createdStudent) {
+        const studentName = `${createdStudent.first_name || ""} ${createdStudent.last_name || ""}`.trim();
+        const usernameVal = createdStudent.username || "";
+        const emailVal = createdStudent.email || "";
+        const tempPasswordVal = createdStudent.temporary_password || "";
+
+        const handleCopyAll = () => {
+            const allText = `Name: ${studentName}\nUsername: ${usernameVal}\nEmail: ${emailVal}\nTemporary Password: ${tempPasswordVal}`;
+            navigator.clipboard.writeText(allText);
+            successToast("All credentials copied to clipboard!");
+        };
+
+        return (
+            <Box sx={{ py: 2, px: 1 }}>
+                <Alert icon={<PersonAddCheck fontSize="inherit" />} severity="success" sx={{ mb: 3, borderRadius: 2 }}>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                        Student Account Created Successfully!
+                    </Typography>
+                    <Typography variant="body2">
+                        Below are the newly generated account credentials for <strong>{studentName}</strong>. Please copy and share them with the student.
+                    </Typography>
+                </Alert>
+
+                <Stack spacing={2} sx={{ mb: 3 }}>
+                    {/* USERNAME */}
+                    <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.300", bgcolor: "grey.50" }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.5 }}>
+                            Username
+                        </Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                            <Typography variant="body1" fontWeight={700} sx={{ fontFamily: "monospace", color: "primary.main" }}>
+                                {usernameVal}
+                            </Typography>
+                            <Tooltip title={copiedMap["Username"] ? "Copied!" : "Copy Username"}>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => handleCopyText(usernameVal, "Username")}
+                                    sx={{ color: copiedMap["Username"] ? "#16a34a" : "text.secondary", bgcolor: copiedMap["Username"] ? "#dcfce7" : "grey.200" }}
+                                >
+                                    {copiedMap["Username"] ? <Check fontSize="small" /> : <ContentCopy fontSize="small" />}
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
+                    </Box>
+
+                    {/* EMAIL */}
+                    <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "grey.300", bgcolor: "grey.50" }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.5 }}>
+                            Email Address
+                        </Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                            <Typography variant="body1" fontWeight={600} sx={{ wordBreak: "break-all" }}>
+                                {emailVal}
+                            </Typography>
+                            <Tooltip title={copiedMap["Email"] ? "Copied!" : "Copy Email"}>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => handleCopyText(emailVal, "Email")}
+                                    sx={{ color: copiedMap["Email"] ? "#16a34a" : "text.secondary", bgcolor: copiedMap["Email"] ? "#dcfce7" : "grey.200" }}
+                                >
+                                    {copiedMap["Email"] ? <Check fontSize="small" /> : <ContentCopy fontSize="small" />}
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
+                    </Box>
+
+                    {/* TEMPORARY PASSWORD */}
+                    <Box sx={{ p: 2, borderRadius: 2, border: "1px solid", borderColor: "#f59e0b", bgcolor: "#fff7ed" }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.5 }}>
+                            Temporary Password
+                        </Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                            <Typography variant="body1" fontWeight={700} sx={{ fontFamily: "monospace", color: "#b45309" }}>
+                                {tempPasswordVal || "N/A"}
+                            </Typography>
+                            <Tooltip title={copiedMap["Password"] ? "Copied!" : "Copy Password"}>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => handleCopyText(tempPasswordVal, "Password")}
+                                    sx={{ color: copiedMap["Password"] ? "#16a34a" : "#b45309", bgcolor: copiedMap["Password"] ? "#dcfce7" : "#ffedd5" }}
+                                >
+                                    {copiedMap["Password"] ? <Check fontSize="small" /> : <ContentCopy fontSize="small" />}
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
+                    </Box>
+                </Stack>
+
+                <Stack direction="row" spacing={2} justifyContent="flex-end">
+                    <Button
+                        variant="outlined"
+                        startIcon={<ContentCopy />}
+                        onClick={handleCopyAll}
+                    >
+                        Copy All
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            setCreatedStudent(null);
+                            onSuccess?.();
+                        }}
+                    >
+                        Done
+                    </Button>
+                </Stack>
+            </Box>
         );
     }
 
