@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import {
     Grid, TextField, MenuItem, FormControlLabel, Switch, CircularProgress, Button, Stack, Divider, Box, Collapse, Typography, Alert, Tooltip, IconButton,
 } from "@mui/material";
-import { ExpandMore as ExpandMoreIcon, CloudUpload, ContentCopy, Check, PersonAddCheck } from "@mui/icons-material";
+import { ExpandMore as ExpandMoreIcon, CloudUpload, ContentCopy, Check, CheckCircle } from "@mui/icons-material";
 import { useForm, Controller } from "react-hook-form";
 import { successToast, errorToast, infoToast } from "@/lib/toast";
 import { getCourses } from "@/services/courses";
@@ -249,7 +249,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
 
         return (
             <Box sx={{ py: 2, px: 1 }}>
-                <Alert icon={<PersonAddCheck fontSize="inherit" />} severity="success" sx={{ mb: 3, borderRadius: 2 }}>
+                <Alert icon={<CheckCircle fontSize="inherit" />} severity="success" sx={{ mb: 3, borderRadius: 2 }}>
                     <Typography variant="subtitle1" fontWeight={700}>
                         Student Account Created Successfully!
                     </Typography>
