@@ -249,6 +249,10 @@ export default function AssignmentManager() {
     };
 
     const handleSubmit = async () => {
+        if (!formData.course) {
+            errorToast(null, "Please select a valid course. If no courses exist, please create a course first under Courses.");
+            return;
+        }
         try {
             const data = new FormData();
             data.append("course", formData.course);

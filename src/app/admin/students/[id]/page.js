@@ -170,12 +170,24 @@ export default function StudentDetailPage() {
 
     if (!student) {
         return (
-            <div className="space-y-6">
-                <Button startIcon={<ArrowBack />} onClick={() => router.back()}>
-                    Back
-                </Button>
-                <Typography>Student not found.</Typography>
-            </div>
+            <Box sx={{ p: 4, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 400, gap: 2 }}>
+                <Paper elevation={0} sx={{ border: "1px solid", borderColor: "grey.200", p: 5, borderRadius: 3, textAlign: "center", maxWidth: 480 }}>
+                    <Typography variant="h5" fontWeight={700} color="error" gutterBottom>
+                        Student Not Found
+                    </Typography>
+                    <Typography color="text.secondary" paragraph>
+                        The requested student profile could not be found. The record may have been deleted or the database was reset.
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        startIcon={<ArrowBack />}
+                        onClick={() => router.push("/admin/students")}
+                        sx={{ mt: 1, borderRadius: 2 }}
+                    >
+                        Back to Students List
+                    </Button>
+                </Paper>
+            </Box>
         );
     }
 

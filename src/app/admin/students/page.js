@@ -7,6 +7,7 @@ import StudentsTable from "@/components/students/StudentsTable";
 import StudentDialog from "@/components/students/StudentDialog";
 import StudentFilters from "@/components/students/StudentFilters";
 import StudentViewModal from "@/components/students/StudentViewModal";
+import StudentCreatedModal from "@/components/students/StudentCreatedModal";
 
 import {Paper, Typography, TextField, InputAdornment, Button, Box, CircularProgress, Menu, MenuItem, Chip,
 } from "@mui/material";
@@ -34,6 +35,7 @@ export default function StudentsPage() {
 
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
+    const [createdStudentModal, setCreatedStudentModal] = useState(null);
     const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
     const [statusMenuStudent, setStatusMenuStudent] = useState(null);
 
@@ -136,9 +138,12 @@ export default function StudentsPage() {
         setSelectedStudent(null);
     }
 
-    async function handleFormSuccess() {
+    async function handleFormSuccess(createdData) {
         closeStudentDialog();
         await loadStudents();
+        if (createdData) {
+            setCreatedStudentModal(createdData);
+        }
     }
 
     function handleStatusClick(student, event) {
@@ -427,6 +432,13 @@ export default function StudentsPage() {
                     />
                 </StudentDialog>
             )}
+
+            {/* CREATED CREDENTIALS MODAL */}
+            <StudentCreatedModal
+                open={Boolean(createdStudentModal)}
+                student={createdStudentModal}
+                onClose={() => setCreatedStudentModal(null)}
+            />
 
         </>
     );

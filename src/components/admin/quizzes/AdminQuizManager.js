@@ -37,6 +37,7 @@ import {
     InputAdornment,
     useMediaQuery,
     useTheme,
+    Pagination,
 } from "@mui/material";
 import {
     Quiz as QuizIcon,
@@ -113,6 +114,8 @@ export default function AdminQuizManager() {
     // View Questions Dialog
     const [openViewQuestionsDialog, setOpenViewQuestionsDialog] = useState(false);
     const [quizQuestions, setQuizQuestions] = useState([]);
+    const [viewQuestionsPage, setViewQuestionsPage] = useState(1);
+    const QUESTIONS_PER_PAGE = 20;
     const [loadingQuestions, setLoadingQuestions] = useState(false);
     const [editingQuestionId, setEditingQuestionId] = useState(null);
     const [editingOptionIds, setEditingOptionIds] = useState([]); // Array to map frontend options to backend IDs
@@ -326,6 +329,7 @@ export default function AdminQuizManager() {
     const handleOpenViewQuestions = async (quiz) => {
         setSelectedQuizForQuestion(quiz);
         setQuestionSearch("");
+        setViewQuestionsPage(1);
         setOpenViewQuestionsDialog(true);
         fetchQuestionsForQuiz(quiz.id);
     };
@@ -580,11 +584,18 @@ export default function AdminQuizManager() {
                 return;
             }
 
-            const res = await api.post(`/learning/quizzes/${selectedQuizForQuestion.id}/bulk-questions/`, {
-                questions: parsedQuestions,
-            });
+            const chunkSize = 50;
+            let totalImported = 0;
+            
+            for (let i = 0; i < parsedQuestions.length; i += chunkSize) {
+                const chunk = parsedQuestions.slice(i, i + chunkSize);
+                await api.post(`/learning/quizzes/${selectedQuizForQuestion.id}/bulk-questions/`, {
+                    questions: chunk,
+                });
+                totalImported += chunk.length;
+            }
 
-            successToast(res.data.message || `Successfully imported ${parsedQuestions.length} questions!`);
+            successToast(`Successfully imported ${totalImported} questions!`);
             setOpenQuestionDialog(false);
             loadInitialData();
         } catch (error) {
@@ -1083,7 +1094,10 @@ EXPLANATION: The background-color CSS property sets the background color of an e
                             size="small"
                             placeholder="Search questions..."
                             value={questionSearch}
-                            onChange={(e) => setQuestionSearch(e.target.value)}
+                            onChange={(e) => {
+                                setQuestionSearch(e.target.value);
+                                setViewQuestionsPage(1);
+                            }}
                             sx={{ mb: 2, bgcolor: "white", borderRadius: 1 }}
                             slotProps={{
                                 input: {
@@ -1110,47 +1124,67 @@ EXPLANATION: The background-color CSS property sets the background color of an e
                     ) : quizQuestions.length === 0 ? (
                         <Alert severity="info">No questions found for this quiz.</Alert>
                     ) : (
-                        <Stack spacing={2}>
-                            {quizQuestions
-                                .filter(q => q.question_text.toLowerCase().includes(questionSearch.toLowerCase()))
-                                .map((q, idx) => (
-                                <Card key={q.id} elevation={0} sx={{ border: "1px solid #cbd5e1", borderRadius: 2 }}>
-                                    <CardContent>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                            <Typography variant="subtitle1" fontWeight={700}>
-                                                {idx + 1}. {q.question_text}
-                                            </Typography>
-                                            <Box>
-                                                <IconButton size="small" onClick={() => handleEditQuestion(q)} color="primary">
-                                                    <EditOutlined fontSize="small" />
-                                                </IconButton>
-                                                <IconButton size="small" onClick={() => handleDeleteQuestion(q.id)} color="error">
-                                                    <DeleteOutlineOutlined fontSize="small" />
-                                                </IconButton>
-                                            </Box>
-                                        </Box>
-                                        
-                                        <Stack spacing={1} sx={{ mt: 2, pl: 2 }}>
-                                            {q.options.map(opt => (
-                                                <Typography 
-                                                    key={opt.id} 
-                                                    variant="body2" 
-                                                    color={opt.is_correct ? "success.main" : "text.secondary"}
-                                                >
-                                                    • {opt.option_text} {opt.is_correct && <strong>(Correct Answer)</strong>}
-                                                </Typography>
+                        <Box>
+                            {(() => {
+                                const filteredQuestions = quizQuestions.filter(q => q.question_text.toLowerCase().includes(questionSearch.toLowerCase()));
+                                const pageCount = Math.ceil(filteredQuestions.length / QUESTIONS_PER_PAGE);
+                                const paginatedQuestions = filteredQuestions.slice((viewQuestionsPage - 1) * QUESTIONS_PER_PAGE, viewQuestionsPage * QUESTIONS_PER_PAGE);
+                                
+                                return (
+                                    <>
+                                        <Stack spacing={2}>
+                                            {paginatedQuestions.map((q, idx) => (
+                                                <Card key={q.id} elevation={0} sx={{ border: "1px solid #cbd5e1", borderRadius: 2 }}>
+                                                    <CardContent>
+                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                            <Typography variant="subtitle1" fontWeight={700}>
+                                                                {((viewQuestionsPage - 1) * QUESTIONS_PER_PAGE) + idx + 1}. {q.question_text}
+                                                            </Typography>
+                                                            <Box>
+                                                                <IconButton size="small" onClick={() => handleEditQuestion(q)} color="primary">
+                                                                    <EditOutlined fontSize="small" />
+                                                                </IconButton>
+                                                                <IconButton size="small" onClick={() => handleDeleteQuestion(q.id)} color="error">
+                                                                    <DeleteOutlineOutlined fontSize="small" />
+                                                                </IconButton>
+                                                            </Box>
+                                                        </Box>
+                                                        
+                                                        <Stack spacing={1} sx={{ mt: 2, pl: 2 }}>
+                                                            {q.options.map(opt => (
+                                                                <Typography 
+                                                                    key={opt.id} 
+                                                                    variant="body2" 
+                                                                    color={opt.is_correct ? "success.main" : "text.secondary"}
+                                                                >
+                                                                    • {opt.option_text} {opt.is_correct && <strong>(Correct Answer)</strong>}
+                                                                </Typography>
+                                                            ))}
+                                                        </Stack>
+                                                        
+                                                        {q.explanation && (
+                                                            <Alert severity="info" sx={{ mt: 2, py: 0, px: 2, '& .MuiAlert-message': { py: 1 } }}>
+                                                                <strong>Explanation:</strong> {q.explanation}
+                                                            </Alert>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
                                             ))}
                                         </Stack>
-                                        
-                                        {q.explanation && (
-                                            <Alert severity="info" sx={{ mt: 2, py: 0, px: 2, '& .MuiAlert-message': { py: 1 } }}>
-                                                <strong>Explanation:</strong> {q.explanation}
-                                            </Alert>
+                                        {pageCount > 1 && (
+                                            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, pt: 2 }}>
+                                                <Pagination 
+                                                    count={pageCount} 
+                                                    page={viewQuestionsPage} 
+                                                    onChange={(e, val) => setViewQuestionsPage(val)} 
+                                                    color="primary" 
+                                                />
+                                            </Box>
                                         )}
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </Stack>
+                                    </>
+                                );
+                            })()}
+                        </Box>
                     )}
                 </DialogContent>
                 <DialogActions sx={{ p: 2, borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between" }}>
