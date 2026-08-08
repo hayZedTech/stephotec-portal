@@ -24,7 +24,7 @@ export default function ConfirmDialog({
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={(e, reason) => { if (reason === 'backdropClick') return; onClose(e, reason); }}
             fullWidth
             maxWidth="xs"
             slotProps={{

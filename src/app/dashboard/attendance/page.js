@@ -681,7 +681,7 @@ export default function StudentAttendancePage() {
             )}
 
             {/* Mark Attendance Confirm Dialog */}
-            <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} maxWidth="xs" fullWidth>
+            <Dialog open={confirmOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; setConfirmOpen(false); }} maxWidth="xs" fullWidth>
                 <DialogTitle sx={{ pb: 1 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                         <Box

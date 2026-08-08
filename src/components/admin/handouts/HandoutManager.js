@@ -831,7 +831,7 @@ export default function HandoutManager() {
             </TabPanel>
 
             {/* Create/Edit Handout Dialog */}
-            <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+            <Dialog open={openDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setOpenDialog(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     {editingId ? "Edit Handout" : "Create Handout"}
                 </DialogTitle>
@@ -928,7 +928,7 @@ export default function HandoutManager() {
             </Dialog>
 
             {/* View Details Dialog */}
-            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth>
+            <Dialog open={viewOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; setViewOpen(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     {viewingItem?.type === "handout" ? "Handout Details" : "Purchase Details"}
                 </DialogTitle>

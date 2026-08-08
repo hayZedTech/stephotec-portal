@@ -771,7 +771,7 @@ export default function AssignmentManager() {
                 )}
             </TabPanel>
 
-            <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+            <Dialog open={openDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setOpenDialog(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     {editingId ? "Edit Assignment" : "Create Assignment"}
                 </DialogTitle>
@@ -880,7 +880,7 @@ export default function AssignmentManager() {
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={openGradeDialog} onClose={() => setOpenGradeDialog(false)} maxWidth="sm" fullWidth>
+            <Dialog open={openGradeDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setOpenGradeDialog(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle>Grade Submission</DialogTitle>
                 <DialogContent sx={{ pt: 3 }}>
                     <TextField
@@ -908,7 +908,7 @@ export default function AssignmentManager() {
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth>
+            <Dialog open={viewOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; setViewOpen(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     {viewingItem?.type === "assignment" ? "Assignment Details" : "Submission Details"}
                 </DialogTitle>
@@ -1124,7 +1124,7 @@ export default function AssignmentManager() {
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={assignOpen} onClose={() => setAssignOpen(false)} maxWidth="sm" fullWidth>
+            <Dialog open={assignOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; setAssignOpen(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ pb: 0 }}>
                     <Box>
                         <Typography variant="h6" fontWeight={700}>

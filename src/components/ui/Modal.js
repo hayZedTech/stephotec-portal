@@ -9,7 +9,7 @@ export default function Modal({ open, onClose, children }) {
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={(e, reason) => { if (reason === 'backdropClick') return; onClose(e, reason); }}
             fullWidth
             maxWidth="sm"
             slotProps={{

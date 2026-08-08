@@ -267,7 +267,7 @@ export default function StudentCoursesManager({ studentId, admissionYear, onCour
             )}
 
             {/* Add/Edit Course Dialog */}
-            <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+            <Dialog open={dialogOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; handleCloseDialog(e, reason); }} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     {editingCourse ? "Edit Course" : "Add Course"}
                 </DialogTitle>

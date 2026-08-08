@@ -662,7 +662,7 @@ export default function LearningPage() {
             {/* HANDOUT PURCHASE / PAYMENT DIALOG */}
             <Dialog
                 open={paymentModalOpen}
-                onClose={() => setPaymentModalOpen(false)}
+                onClose={(e, reason) => { if (reason === 'backdropClick') return; setPaymentModalOpen(false); }}
                 maxWidth="sm"
                 fullWidth
                 slotProps={{
@@ -894,7 +894,7 @@ export default function LearningPage() {
             {/* CONTENT VIEWER MODAL */}
             <Dialog
                 open={viewContentOpen}
-                onClose={() => setViewContentOpen(false)}
+                onClose={(e, reason) => { if (reason === 'backdropClick') return; setViewContentOpen(false); }}
                 maxWidth="lg"
                 fullWidth
                 slotProps={{ paper: { sx: { height: "85vh", borderRadius: { xs: 2, sm: 4 }, bgcolor: "#f8fafc" } } }}

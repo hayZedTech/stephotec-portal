@@ -836,7 +836,7 @@ export default function AdminQuizManager() {
             </Paper>
 
             {/* CREATE / EDIT QUIZ DIALOG */}
-            <Dialog open={openQuizDialog} onClose={() => setOpenQuizDialog(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 4 } } }}>
+            <Dialog open={openQuizDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setOpenQuizDialog(false); }} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 4 } } }}>
                 <form onSubmit={handleSaveQuiz} noValidate>
                     <DialogTitle sx={{ fontWeight: 800, bgcolor: "#0f172a", color: "white" }}>
                         {editingQuizId ? "Edit Practice Test" : "Create New Practice Test"}
@@ -931,7 +931,7 @@ export default function AdminQuizManager() {
             </Dialog>
 
             {/* ADD QUESTIONS & BULK IMPORT DIALOG */}
-            <Dialog open={openQuestionDialog} onClose={() => setOpenQuestionDialog(false)} maxWidth="md" fullWidth slotProps={{ paper: { sx: { borderRadius: 4 } } }}>
+            <Dialog open={openQuestionDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setOpenQuestionDialog(false); }} maxWidth="md" fullWidth slotProps={{ paper: { sx: { borderRadius: 4 } } }}>
                 <DialogTitle sx={{ fontWeight: 800, bgcolor: "#0f172a", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <Typography variant="h6" component="span" fontWeight={800}>
                         Add Questions to "{selectedQuizForQuestion?.title}"
@@ -1082,7 +1082,7 @@ EXPLANATION: The background-color CSS property sets the background color of an e
                 </DialogActions>
             </Dialog>
             {/* VIEW QUESTIONS DIALOG */}
-            <Dialog open={openViewQuestionsDialog} onClose={() => setOpenViewQuestionsDialog(false)} maxWidth="md" fullWidth>
+            <Dialog open={openViewQuestionsDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setOpenViewQuestionsDialog(false); }} maxWidth="md" fullWidth>
                 <DialogTitle sx={{ fontWeight: 800, bgcolor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
                     Questions for {selectedQuizForQuestion?.title}
                 </DialogTitle>

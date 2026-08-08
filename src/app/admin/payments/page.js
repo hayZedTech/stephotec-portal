@@ -550,7 +550,7 @@ export default function AdminPaymentsPage() {
             </Paper>
 
             {/* VIEW MODAL */}
-            <Dialog open={!!viewStudent} onClose={() => setViewStudent(null)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
+            <Dialog open={!!viewStudent} onClose={(e, reason) => { if (reason === 'backdropClick') return; setViewStudent(null); }} maxWidth="sm" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
                 {viewStudent && (
                     <>
                         <DialogTitle sx={{ py: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 3 }, pr: 6 }}>
@@ -582,7 +582,7 @@ export default function AdminPaymentsPage() {
             </Dialog>
 
             {/* EDIT MODAL */}
-            <Dialog open={!!editStudent} onClose={() => setEditStudent(null)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
+            <Dialog open={!!editStudent} onClose={(e, reason) => { if (reason === 'backdropClick') return; setEditStudent(null); }} maxWidth="sm" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
                 {editStudent && (
                     <>
                         <DialogTitle sx={{ py: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 3 }, pr: 6 }}>
@@ -622,7 +622,7 @@ export default function AdminPaymentsPage() {
             </Dialog>
 
             {/* HISTORY MODAL */}
-            <Dialog open={!!historyPayment} onClose={() => setHistoryPayment(null)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
+            <Dialog open={!!historyPayment} onClose={(e, reason) => { if (reason === 'backdropClick') return; setHistoryPayment(null); }} maxWidth="sm" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
                 {historyPayment && (
                     <>
                         <DialogTitle sx={{ py: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 3 }, pr: 6 }}>

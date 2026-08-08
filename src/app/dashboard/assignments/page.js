@@ -576,7 +576,7 @@ export default function AssignmentsPage() {
             )}
 
             {/* Assignment Details Dialog */}
-            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: { xs: 2, sm: 3 }, m: { xs: 1, sm: 2 } } } }}>
+            <Dialog open={viewOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; setViewOpen(false); }} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: { xs: 2, sm: 3 }, m: { xs: 1, sm: 2 } } } }}>
                 <DialogTitle sx={{ py: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 3 }, fontSize: { xs: "1.125rem", sm: "1.25rem" } }}>
                     Assignment Details
                 </DialogTitle>

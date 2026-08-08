@@ -165,9 +165,9 @@ export default function QuizPlayerModal({ open, onClose, quizId, onAttemptComple
     return (
         <Dialog
             open={open}
-            onClose={() => {
+            onClose={(e, reason) => { if (reason === 'backdropClick') return; {
                 if (!submitting) onClose();
-            }}
+            ; }}}
             maxWidth="md"
             fullWidth
             slotProps={{

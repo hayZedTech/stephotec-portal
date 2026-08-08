@@ -654,7 +654,7 @@ export default function CertificateManager() {
             )}
 
             {/* Create/Edit Dialog */}
-            <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+            <Dialog open={openDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setOpenDialog(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     {editingId ? "Edit Certificate" : "Create Certificate"}
                 </DialogTitle>
@@ -779,7 +779,7 @@ export default function CertificateManager() {
             </Dialog>
 
             {/* View Details Dialog */}
-            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth>
+            <Dialog open={viewOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; setViewOpen(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle>Certificate Details</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     {viewingCert && (

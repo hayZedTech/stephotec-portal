@@ -246,7 +246,7 @@ function Header() {
             {profilePic && (
                 <Dialog
                     open={zoomOpen}
-                    onClose={() => setZoomOpen(false)}
+                    onClose={(e, reason) => { if (reason === 'backdropClick') return; setZoomOpen(false); }}
                     maxWidth={false}
                     slotProps={{
                         paper: { sx: { bgcolor: "transparent", boxShadow: "none", borderRadius: 3, overflow: "visible", m: 2 } },

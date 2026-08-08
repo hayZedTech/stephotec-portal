@@ -67,7 +67,7 @@ export default function StudentCreatedModal({ open, onClose, student }) {
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={(e, reason) => { if (reason === 'backdropClick') return; onClose(e, reason); }}
             fullWidth
             maxWidth="sm"
             slotProps={{

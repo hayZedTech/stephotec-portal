@@ -270,7 +270,7 @@ export default function AdminProfilePage() {
             </Paper>
 
             {/* Edit Profile Dialog */}
-            <Dialog open={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: { xs: 2, sm: 3 }, m: { xs: 1, sm: 2 } } } }}>
+            <Dialog open={showEditModal} onClose={(e, reason) => { if (reason === 'backdropClick') return; setShowEditModal(false); }} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: { xs: 2, sm: 3 }, m: { xs: 1, sm: 2 } } } }}>
                 <DialogTitle sx={{ py: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 3 } }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         Edit Profile
@@ -306,7 +306,7 @@ export default function AdminProfilePage() {
             </Dialog>
 
             {/* Profile Picture Upload Dialog */}
-            <Dialog open={showPictureDialog} onClose={handleCloseProfilePictureDialog} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: { xs: 2, sm: 3 }, m: { xs: 1, sm: 2 } } } }}>
+            <Dialog open={showPictureDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; handleCloseProfilePictureDialog(e, reason); }} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: { xs: 2, sm: 3 }, m: { xs: 1, sm: 2 } } } }}>
                 <DialogTitle sx={{ py: { xs: 2, sm: 2.5 }, px: { xs: 2, sm: 3 } }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         Change Profile Picture

@@ -30,7 +30,7 @@ export default function CourseViewModal({
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={(e, reason) => { if (reason === 'backdropClick') return; onClose(e, reason); }}
             fullWidth
             maxWidth="sm"
             slotProps={{

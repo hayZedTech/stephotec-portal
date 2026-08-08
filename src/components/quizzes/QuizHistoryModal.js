@@ -29,7 +29,7 @@ export default function QuizHistoryModal({ open, onClose, attempt }) {
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={(e, reason) => { if (reason === 'backdropClick') return; onClose(e, reason); }}
             maxWidth="md"
             fullWidth
             slotProps={{

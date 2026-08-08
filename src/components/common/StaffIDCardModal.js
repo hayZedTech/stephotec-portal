@@ -201,7 +201,7 @@ export default function StaffIDCardModal({ open, onClose, staff }) {
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={(e, reason) => { if (reason === 'backdropClick') return; onClose(e, reason); }}
             maxWidth="sm"
             fullWidth
             slotProps={{

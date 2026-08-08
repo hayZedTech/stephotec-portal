@@ -690,7 +690,7 @@ export default function AttendanceManager() {
             )}
 
             {/* Add/Edit Dialog */}
-            <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+            <Dialog open={openDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setOpenDialog(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle>{editingId ? "Edit Attendance" : "Record Attendance"}</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     <Stack spacing={2.5}>
@@ -771,7 +771,7 @@ export default function AttendanceManager() {
             </Dialog>
 
             {/* Reject Dialog */}
-            <Dialog open={!!rejectDialogId} onClose={() => setRejectDialogId(null)} maxWidth="xs" fullWidth>
+            <Dialog open={!!rejectDialogId} onClose={(e, reason) => { if (reason === 'backdropClick') return; setRejectDialogId(null); }} maxWidth="xs" fullWidth>
                 <DialogTitle>Reject Attendance</DialogTitle>
                 <DialogContent>
                     <TextField

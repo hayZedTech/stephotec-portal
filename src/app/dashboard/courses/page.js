@@ -341,7 +341,7 @@ export default function CoursesPage() {
             )}
 
             {/* Course Details Dialog */}
-            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth>
+            <Dialog open={viewOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; setViewOpen(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle>Course Details</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     {selectedCourse && (

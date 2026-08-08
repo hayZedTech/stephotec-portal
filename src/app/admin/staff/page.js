@@ -388,7 +388,7 @@ export default function AdminStaffPage() {
 
             {/* ADD STAFF DIALOG (Superuser Only) */}
             {isSuperuser && (
-                <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} maxWidth="xs" fullWidth>
+                <Dialog open={openAddDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setOpenAddDialog(false); }} maxWidth="xs" fullWidth>
                     <form onSubmit={handleAddSubmit}>
                         <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             Add Administrator / Staff
@@ -457,7 +457,7 @@ export default function AdminStaffPage() {
             )}
 
             {/* VIEW STAFF DIALOG */}
-            <Dialog open={openViewDialog} onClose={() => setOpenViewDialog(false)} maxWidth="xs" fullWidth>
+            <Dialog open={openViewDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setOpenViewDialog(false); }} maxWidth="xs" fullWidth>
                 {selectedStaff && (
                     <>
                         <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -530,7 +530,7 @@ export default function AdminStaffPage() {
             </Dialog>
 
             {/* EDIT STAFF DIALOG */}
-            <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="xs" fullWidth>
+            <Dialog open={openEditDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setOpenEditDialog(false); }} maxWidth="xs" fullWidth>
                 <form onSubmit={handleEditSubmit}>
                     <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         Edit Profile Details

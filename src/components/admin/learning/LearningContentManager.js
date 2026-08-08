@@ -769,7 +769,7 @@ export default function LearningContentManager() {
                     )}
                 </Box>
             )}
-            <Dialog open={dialogOpen} onClose={handleClose} maxWidth="sm" fullWidth>
+            <Dialog open={dialogOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; handleClose(e, reason); }} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     {editingId ? "Edit Learning Content" : "Add Learning Content"}
                 </DialogTitle>
@@ -854,7 +854,7 @@ export default function LearningContentManager() {
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth>
+            <Dialog open={viewOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; setViewOpen(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle>Content Details</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     {viewingContent && (
@@ -976,7 +976,7 @@ export default function LearningContentManager() {
                 </DialogActions>
             </Dialog>
 
-            <Dialog open={assignOpen} onClose={() => setAssignOpen(false)} maxWidth="sm" fullWidth>
+            <Dialog open={assignOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; setAssignOpen(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ pb: 0 }}>
                     <Box>
                         <Typography variant="h6" fontWeight={700}>

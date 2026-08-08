@@ -610,7 +610,7 @@ export default function AdminNotificationsPage() {
             </Paper>
 
             {/* STUDENT SELECTION DIALOG */}
-            <Dialog open={showStudentDialog} onClose={() => setShowStudentDialog(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, m: 2, maxHeight: "85vh" } } }}>
+            <Dialog open={showStudentDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setShowStudentDialog(false); }} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, m: 2, maxHeight: "85vh" } } }}>
                 <DialogTitle>Select Students</DialogTitle>
                 <DialogContent sx={{ maxHeight: 400, overflow: "auto" }}>
                     <TextField
@@ -635,7 +635,7 @@ export default function AdminNotificationsPage() {
             </Dialog>
 
             {/* COURSE SELECTION DIALOG */}
-            <Dialog open={showCourseDialog} onClose={() => setShowCourseDialog(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, m: 2, maxHeight: "85vh" } } }}>
+            <Dialog open={showCourseDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setShowCourseDialog(false); }} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, m: 2, maxHeight: "85vh" } } }}>
                 <DialogTitle>Select Courses</DialogTitle>
                 <DialogContent sx={{ maxHeight: 400, overflow: "auto" }}>
                     <TextField
@@ -660,7 +660,7 @@ export default function AdminNotificationsPage() {
             </Dialog>
 
             {/* HISTORY DIALOG */}
-            <Dialog open={showHistoryDialog} onClose={() => setShowHistoryDialog(false)} maxWidth="md" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, m: 2, maxHeight: "85vh" } } }}>
+            <Dialog open={showHistoryDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setShowHistoryDialog(false); }} maxWidth="md" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, m: 2, maxHeight: "85vh" } } }}>
                 <DialogTitle>Notification Details</DialogTitle>
                 <DialogContent sx={{ overflowY: "auto" }}>
                     {selectedNotification && (

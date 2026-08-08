@@ -252,7 +252,7 @@ function BankAccountsManager() {
             )}
 
             {/* Add / Edit Dialog */}
-            <Dialog open={dialogOpen} onClose={handleClose} maxWidth="sm" fullWidth>
+            <Dialog open={dialogOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; handleClose(e, reason); }} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     {editingId ? "Edit Bank Account" : "Add Bank Account"}
                 </DialogTitle>

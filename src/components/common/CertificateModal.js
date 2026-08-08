@@ -222,7 +222,7 @@ export default function CertificateModal({ open, onClose, certificate }) {
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={(e, reason) => { if (reason === 'backdropClick') return; onClose(e, reason); }}
             maxWidth="md"
             fullWidth
             slotProps={{

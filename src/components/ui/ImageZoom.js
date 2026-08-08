@@ -28,7 +28,7 @@ export default function ImageZoom({ src, alt = "Image", avatarProps = {}, childr
 
             <Dialog
                 open={open}
-                onClose={() => setOpen(false)}
+                onClose={(e, reason) => { if (reason === 'backdropClick') return; setOpen(false); }}
                 maxWidth={false}
                 slotProps={{
                     paper: {

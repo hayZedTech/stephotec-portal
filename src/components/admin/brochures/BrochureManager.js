@@ -399,7 +399,7 @@ export default function BrochureManager() {
             )}
 
             {/* Create/Edit Dialog */}
-            <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+            <Dialog open={dialogOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; handleCloseDialog(e, reason); }} maxWidth="sm" fullWidth>
                 <DialogTitle>{editingId ? "Edit Brochure" : "Upload Course Brochure / Outline"}</DialogTitle>
                 <form onSubmit={handleSubmit}>
                     <DialogContent sx={{ pt: 2 }}>
@@ -482,7 +482,7 @@ export default function BrochureManager() {
             </Dialog>
 
             {/* View Details Dialog */}
-            <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="sm" fullWidth>
+            <Dialog open={viewOpen} onClose={(e, reason) => { if (reason === 'backdropClick') return; setViewOpen(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle>Brochure Details</DialogTitle>
                 <DialogContent sx={{ pt: 2 }}>
                     {viewingBrochure && (
