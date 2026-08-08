@@ -837,7 +837,7 @@ export default function AdminQuizManager() {
 
             {/* CREATE / EDIT QUIZ DIALOG */}
             <Dialog open={openQuizDialog} onClose={() => setOpenQuizDialog(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 4 } } }}>
-                <form onSubmit={handleSaveQuiz}>
+                <form onSubmit={handleSaveQuiz} noValidate>
                     <DialogTitle sx={{ fontWeight: 800, bgcolor: "#0f172a", color: "white" }}>
                         {editingQuizId ? "Edit Practice Test" : "Create New Practice Test"}
                     </DialogTitle>
