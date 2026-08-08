@@ -324,11 +324,8 @@ export default function AdminStaffPage() {
                                         <Typography fontWeight={700} variant="body1" color="slate.900">
                                             {staff.first_name} {staff.last_name}
                                         </Typography>
-                                        <Typography variant="caption" color="warning.main" fontWeight={700} display="block">
-                                            {staff.job_title || "System Administrator"}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {staff.email}
+                                        <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ mb: 0.5 }}>
+                                            {staff.job_title || "System Administrator"} - {staff.email}
                                         </Typography>
                                     </Box>
                                 </Box>
