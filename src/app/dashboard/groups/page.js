@@ -9,6 +9,7 @@ import {
 import { ExpandMore, People, School } from "@mui/icons-material";
 import api from "@/lib/axios";
 import { errorToast } from "@/lib/toast";
+import GroupMembersTable from "@/components/dashboard/groups/GroupMembersTable";
 
 export default function MyGroupsPage() {
     const [groups, setGroups] = useState([]);
@@ -51,17 +52,17 @@ export default function MyGroupsPage() {
                     {groups.map(group => (
                         <Paper key={group.id} sx={{ borderRadius: 3, overflow: "hidden" }}>
                             <Accordion disableGutters elevation={0}>
-                                <AccordionSummary expandIcon={<ExpandMore />} sx={{ px: 3, py: 1.5, bgcolor: "#0f172a", color: "white", "& .MuiAccordionSummary-expandIconWrapper": { color: "white" } }}>
-                                    <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}>
-                                        <Avatar sx={{ bgcolor: "#1e40af", width: 40, height: 40 }}>
+                                <AccordionSummary expandIcon={<ExpandMore />} sx={{ px: { xs: 2, sm: 3 }, py: 1.5, bgcolor: "#0f172a", color: "white", "& .MuiAccordionSummary-expandIconWrapper": { color: "white" } }}>
+                                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: { xs: 1.5, sm: 2 }, flex: 1, minWidth: 0 }}>
+                                        <Avatar sx={{ bgcolor: "#1e40af", width: { xs: 36, sm: 40 }, height: { xs: 36, sm: 40 }, mt: 0.5, flexShrink: 0 }}>
                                             <People fontSize="small" />
                                         </Avatar>
-                                        <Box>
-                                            <Typography fontWeight={800} variant="body1">{group.name}</Typography>
-                                            <Stack direction="row" spacing={1} mt={0.3}>
-                                                <Chip icon={<School fontSize="small" />} label={group.course_name} size="small" sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", fontWeight: 700, "& .MuiChip-icon": { color: "white" } }} />
-                                                <Chip icon={<People fontSize="small" />} label={`${group.member_count} member(s)`} size="small" sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", fontWeight: 700, "& .MuiChip-icon": { color: "white" } }} />
-                                            </Stack>
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                            <Typography fontWeight={800} variant="body1" sx={{ wordBreak: "break-word", lineHeight: 1.3, mb: 0.5 }}>{group.name}</Typography>
+                                            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                                                <Chip icon={<School sx={{ fontSize: "1rem !important" }} />} label={group.course_name} size="small" sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", fontWeight: 700, "& .MuiChip-icon": { color: "white" } }} />
+                                                <Chip icon={<People sx={{ fontSize: "1rem !important" }} />} label={`${group.member_count} member(s)`} size="small" sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", fontWeight: 700, "& .MuiChip-icon": { color: "white" } }} />
+                                            </Box>
                                         </Box>
                                     </Box>
                                 </AccordionSummary>
@@ -71,37 +72,9 @@ export default function MyGroupsPage() {
                                             <Typography variant="body2" color="text.secondary">{group.description}</Typography>
                                         </Box>
                                     )}
-                                    <TableContainer>
-                                        <Table size="small">
-                                            <TableHead sx={{ bgcolor: "#f1f5f9" }}>
-                                                <TableRow>
-                                                    <TableCell sx={{ fontWeight: 700 }}>Student ID</TableCell>
-                                                    <TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
-                                                    <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-                                                </TableRow>
-                                            </TableHead>
-                                            <TableBody>
-                                                {(group.members_detail || []).map(member => (
-                                                    <TableRow key={member.id} hover>
-                                                        <TableCell>
-                                                            <Chip label={member.username} size="small" sx={{ fontFamily: "monospace", fontWeight: 700, bgcolor: "#e0f2fe" }} />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Typography variant="body2" fontWeight={600}>{member.first_name} {member.last_name}</Typography>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Typography variant="body2" color="text.secondary">{member.email}</Typography>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                                {(group.members_detail || []).length === 0 && (
-                                                    <TableRow>
-                                                        <TableCell colSpan={3} align="center" sx={{ py: 3, color: "text.disabled" }}>No members in this group.</TableCell>
-                                                    </TableRow>
-                                                )}
-                                            </TableBody>
-                                        </Table>
-                                    </TableContainer>
+                                    <Box sx={{ p: { xs: 0, md: 2 } }}>
+                                        <GroupMembersTable members={group.members_detail || []} />
+                                    </Box>
                                 </AccordionDetails>
                             </Accordion>
                         </Paper>

@@ -15,6 +15,9 @@ import api from "@/lib/axios";
 import { getCourses } from "@/services/courses";
 import { successToast, errorToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
+import GroupsTable from "@/components/admin/groups/GroupsTable";
+import GroupMembersTable from "@/components/dashboard/groups/GroupMembersTable";
+import ManageMembersTable from "@/components/admin/groups/ManageMembersTable";
 
 export default function AdminGroupsPage() {
     const [groups, setGroups] = useState([]);
@@ -107,7 +110,7 @@ export default function AdminGroupsPage() {
     };
 
     const handleBulkDelete = () => {
-        if (selectedIds.size === 0) return;
+        if (!selectedIds || selectedIds.size === 0) return;
         confirmAction(`Delete ${selectedIds.size} group(s)?`, async () => {
             try {
                 await api.post("/admin/groups/bulk-delete/", { ids: Array.from(selectedIds) });
@@ -164,7 +167,7 @@ export default function AdminGroupsPage() {
                         <MenuItem value="">All Courses</MenuItem>
                         {courses.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
                     </TextField>
-                    {selectedIds.size > 0 && (
+                    {(selectedIds?.size || 0) > 0 && (
                         <Button variant="outlined" color="error" startIcon={<DeleteSweep />} onClick={handleBulkDelete}>Delete ({selectedIds.size})</Button>
                     )}
                 </Stack>
@@ -178,46 +181,17 @@ export default function AdminGroupsPage() {
                         <Typography color="text.secondary">No groups found. Create one to get started.</Typography>
                     </Box>
                 ) : (
-                    <TableContainer>
-                        <Table>
-                            <TableHead sx={{ bgcolor: "#0f172a" }}>
-                                <TableRow>
-                                    <TableCell padding="checkbox" sx={{ color: "white" }}>
-                                        <Checkbox size="small" sx={{ color: "white" }} checked={selectedIds.size === filtered.length && filtered.length > 0} indeterminate={selectedIds.size > 0 && selectedIds.size < filtered.length} onChange={toggleSelectAll} />
-                                    </TableCell>
-                                    <TableCell sx={{ color: "white", fontWeight: 700 }}>Group Name</TableCell>
-                                    <TableCell sx={{ color: "white", fontWeight: 700 }}>Course</TableCell>
-                                    <TableCell sx={{ color: "white", fontWeight: 700, textAlign: "center" }}>Members</TableCell>
-                                    <TableCell sx={{ color: "white", fontWeight: 700 }}>Created</TableCell>
-                                    <TableCell sx={{ color: "white", fontWeight: 700, textAlign: "right" }}>Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filtered.map(group => (
-                                    <TableRow key={group.id} hover selected={selectedIds.has(group.id)}>
-                                        <TableCell padding="checkbox"><Checkbox size="small" checked={selectedIds.has(group.id)} onChange={() => toggleSelect(group.id)} /></TableCell>
-                                        <TableCell>
-                                            <Typography fontWeight={700}>{group.name}</Typography>
-                                            {group.description && <Typography variant="caption" color="text.secondary">{group.description}</Typography>}
-                                        </TableCell>
-                                        <TableCell><Chip label={getCourseName(group.course)} size="small" sx={{ fontWeight: 700, bgcolor: "#f1f5f9" }} /></TableCell>
-                                        <TableCell align="center">
-                                            <Chip icon={<People fontSize="small" />} label={group.member_count ?? 0} size="small" color="primary" variant="outlined" onClick={() => openViewMembers(group)} sx={{ fontWeight: 700, cursor: "pointer" }} />
-                                        </TableCell>
-                                        <TableCell><Typography variant="caption" color="text.secondary">{new Date(group.created_at).toLocaleDateString()}</Typography></TableCell>
-                                        <TableCell align="right">
-                                            <Stack direction="row" spacing={0.5} sx={{ justifyContent: "flex-end" }}>
-                                                <Tooltip title="View Members"><IconButton size="small" onClick={() => openViewMembers(group)}><People fontSize="small" /></IconButton></Tooltip>
-                                                <Tooltip title="Manage Members"><IconButton size="small" color="primary" onClick={() => openManageMembers(group)}><PersonAdd fontSize="small" /></IconButton></Tooltip>
-                                                <Tooltip title="Edit"><IconButton size="small" onClick={() => openEdit(group)}><Edit fontSize="small" /></IconButton></Tooltip>
-                                                <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => handleDelete(group)}><Delete fontSize="small" /></IconButton></Tooltip>
-                                            </Stack>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                    <GroupsTable
+                        rows={filtered}
+                        loading={loading}
+                        courses={courses}
+                        onViewMembers={openViewMembers}
+                        onManageMembers={openManageMembers}
+                        onEdit={openEdit}
+                        onDelete={handleDelete}
+                        selectedIds={selectedIds || new Set()}
+                        onRowSelectionChange={(newSelection) => setSelectedIds(new Set(newSelection || []))}
+                    />
                 )}
             </Paper>
 
@@ -276,24 +250,9 @@ export default function AdminGroupsPage() {
                     {(viewingGroup?.members_detail || []).length === 0 ? (
                         <Typography color="text.secondary" textAlign="center" py={3}>No members in this group.</Typography>
                     ) : (
-                        <Table size="small">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell sx={{ fontWeight: 700 }}>Student ID</TableCell>
-                                    <TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
-                                    <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {viewingGroup.members_detail.map(m => (
-                                    <TableRow key={m.id} hover>
-                                        <TableCell><Chip label={m.username} size="small" sx={{ fontFamily: "monospace", fontWeight: 700 }} /></TableCell>
-                                        <TableCell>{m.first_name} {m.last_name}</TableCell>
-                                        <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem" }}>{m.email}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                        <Box sx={{ p: { xs: 0, sm: 2 } }}>
+                            <GroupMembersTable members={viewingGroup.members_detail} />
+                        </Box>
                     )}
                 </DialogContent>
                 <DialogActions><Button onClick={() => setViewOpen(false)}>Close</Button></DialogActions>
@@ -310,21 +269,15 @@ export default function AdminGroupsPage() {
                         slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }} />
                     {loadingStudents ? (
                         <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}><CircularProgress /></Box>
-                    ) : allStudents.filter(s => !memberSearchTerm || `${s.first_name} ${s.last_name} ${s.email}`.toLowerCase().includes(memberSearchTerm.toLowerCase())).map((student, idx, arr) => {
-                        const isMember = membersInGroup.has(student.id);
-                        return (
-                            <Box key={student.id} sx={{ display: "flex", alignItems: "center", gap: 2, p: 1.5, borderBottom: idx < arr.length - 1 ? "1px solid" : "none", borderColor: "grey.200" }}>
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography variant="body2" fontWeight={600} noWrap>{student.first_name} {student.last_name}</Typography>
-                                    <Typography variant="caption" color="text.secondary" noWrap>{student.email}</Typography>
-                                </Box>
-                                <Chip label={isMember ? "Remove" : "Add"} color={isMember ? "error" : "primary"} size="small"
-                                    icon={isMember ? <PersonRemove fontSize="small" /> : <PersonAdd fontSize="small" />}
-                                    onClick={() => handleToggleMember(student.id, isMember)} sx={{ fontWeight: 700, cursor: "pointer" }} />
-                            </Box>
-                        );
-                    })}
-                    {allStudents.length === 0 && <Typography textAlign="center" color="text.secondary" py={3}>No students found for this course.</Typography>}
+                    ) : (
+                        <Box sx={{ p: { xs: 0, sm: 2 } }}>
+                            <ManageMembersTable 
+                                students={allStudents.filter(s => !memberSearchTerm || `${s.first_name} ${s.last_name} ${s.email}`.toLowerCase().includes(memberSearchTerm.toLowerCase()))} 
+                                membersInGroup={membersInGroup} 
+                                onToggleMember={handleToggleMember} 
+                            />
+                        </Box>
+                    )}
                 </DialogContent>
                 <DialogActions><Button onClick={() => setMembersDialogOpen(false)}>Done</Button></DialogActions>
             </Dialog>

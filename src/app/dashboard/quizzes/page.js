@@ -196,105 +196,104 @@ export default function StudentQuizzesPage() {
                         </Typography>
                     </Paper>
                 ) : (
-                    <Grid container spacing={3}>
+                    <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: 3 }}>
                         {filteredQuizzes.map((quiz) => {
                             const pastAttempt = attempts.find((a) => a.quiz === quiz.id);
                             return (
-                                <Grid key={quiz.id} xs={12} sm={6} md={4}>
-                                    <Card
-                                        elevation={0}
-                                        sx={{
-                                            height: "100%",
-                                            display: "flex",
-                                            flexDirection: "column",
-                                            borderRadius: 4,
-                                            border: "1px solid #e2e8f0",
-                                            transition: "all 0.2s ease",
-                                            "&:hover": { boxShadow: "0 12px 30px rgba(0,0,0,0.06)", borderColor: "#fbbf24" },
-                                        }}
-                                    >
-                                        <CardContent sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
-                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-                                                <Chip
-                                                    label={quiz.course_name || "General"}
-                                                    size="small"
-                                                    icon={<School style={{ fontSize: 14 }} />}
-                                                    sx={{ bgcolor: "#eff6ff", color: "#1d4ed8", fontWeight: 700, fontSize: "0.7rem" }}
-                                                />
+                                <Card
+                                    key={quiz.id}
+                                    elevation={0}
+                                    sx={{
+                                        height: "100%",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        borderRadius: 4,
+                                        border: "1px solid #e2e8f0",
+                                        transition: "all 0.2s ease",
+                                        "&:hover": { boxShadow: "0 12px 30px rgba(0,0,0,0.06)", borderColor: "#fbbf24" },
+                                    }}
+                                >
+                                    <CardContent sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+                                            <Chip
+                                                label={quiz.course_name || "General"}
+                                                size="small"
+                                                icon={<School style={{ fontSize: 14 }} />}
+                                                sx={{ bgcolor: "#eff6ff", color: "#1d4ed8", fontWeight: 700, fontSize: "0.7rem" }}
+                                            />
 
+                                        </Box>
+
+                                        <Typography variant="h6" fontWeight={700} color="slate.900" mb={1} sx={{ fontSize: "1.1rem" }}>
+                                            {quiz.title}
+                                        </Typography>
+
+                                        <Typography variant="body2" color="text.secondary" mb={3} sx={{ flex: 1, minHeight: 40 }}>
+                                            {quiz.description || "Interactive practice test with instant scoring and explanation review."}
+                                        </Typography>
+
+                                        <Stack spacing={1.5} sx={{ p: 2, bgcolor: "#f8fafc", borderRadius: 2.5, mb: 3 }}>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                    <Timer fontSize="inherit" /> Test Duration:
+                                                </Typography>
+                                                <Typography variant="caption" fontWeight={700} color="slate.900">
+                                                    {quiz.duration_minutes} Minutes
+                                                </Typography>
                                             </Box>
 
-                                            <Typography variant="h6" fontWeight={700} color="slate.900" mb={1} sx={{ fontSize: "1.1rem" }}>
-                                                {quiz.title}
-                                            </Typography>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    Total Questions:
+                                                </Typography>
+                                                <Typography variant="caption" fontWeight={700} color="slate.900">
+                                                    {quiz.display_questions_count || quiz.questions_count || 0} Questions
+                                                </Typography>
+                                            </Box>
 
-                                            <Typography variant="body2" color="text.secondary" mb={3} sx={{ flex: 1, minHeight: 40 }}>
-                                                {quiz.description || "Interactive practice test with instant scoring and explanation review."}
-                                            </Typography>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    Pass Mark:
+                                                </Typography>
+                                                <Typography variant="caption" fontWeight={700} color="warning.main">
+                                                    {quiz.passing_score_percentage}% Score
+                                                </Typography>
+                                            </Box>
+                                        </Stack>
 
-                                            <Stack spacing={1.5} sx={{ p: 2, bgcolor: "#f8fafc", borderRadius: 2.5, mb: 3 }}>
-                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                    <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                                        <Timer fontSize="inherit" /> Test Duration:
-                                                    </Typography>
-                                                    <Typography variant="caption" fontWeight={700} color="slate.900">
-                                                        {quiz.duration_minutes} Minutes
-                                                    </Typography>
-                                                </Box>
+                                        {pastAttempt && (
+                                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2, px: 1 }}>
+                                                <Typography variant="caption" color="text.secondary">Last Score:</Typography>
+                                                <Chip
+                                                    label={`${pastAttempt.score_percentage}% (${pastAttempt.passed ? "Passed" : "Failed"})`}
+                                                    color={pastAttempt.passed ? "success" : "warning"}
+                                                    size="small"
+                                                    sx={{ fontWeight: 700, fontSize: "0.65rem" }}
+                                                />
+                                            </Box>
+                                        )}
 
-                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        Total Questions:
-                                                    </Typography>
-                                                    <Typography variant="caption" fontWeight={700} color="slate.900">
-                                                        {quiz.display_questions_count || quiz.questions_count || 0} Questions
-                                                    </Typography>
-                                                </Box>
-
-                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        Pass Mark:
-                                                    </Typography>
-                                                    <Typography variant="caption" fontWeight={700} color="warning.main">
-                                                        {quiz.passing_score_percentage}% Score
-                                                    </Typography>
-                                                </Box>
-                                            </Stack>
-
-                                            {pastAttempt && (
-                                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2, px: 1 }}>
-                                                    <Typography variant="caption" color="text.secondary">Last Score:</Typography>
-                                                    <Chip
-                                                        label={`${pastAttempt.score_percentage}% (${pastAttempt.passed ? "Passed" : "Failed"})`}
-                                                        color={pastAttempt.passed ? "success" : "warning"}
-                                                        size="small"
-                                                        sx={{ fontWeight: 700, fontSize: "0.65rem" }}
-                                                    />
-                                                </Box>
-                                            )}
-
-                                            <Button
-                                                variant="contained"
-                                                fullWidth
-                                                startIcon={<PlayArrow />}
-                                                onClick={() => handleStartQuiz(quiz.id)}
-                                                sx={{
-                                                    borderRadius: 2.5,
-                                                    py: 1.2,
-                                                    fontWeight: 700,
-                                                    textTransform: "none",
-                                                    bgcolor: "#0f172a",
-                                                    "&:hover": { bgcolor: "#1e1b4b" },
-                                                }}
-                                            >
-                                                {pastAttempt ? "Retake Practice Test" : "Start Free Test"}
-                                            </Button>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
+                                        <Button
+                                            variant="contained"
+                                            fullWidth
+                                            startIcon={<PlayArrow />}
+                                            onClick={() => handleStartQuiz(quiz.id)}
+                                            sx={{
+                                                borderRadius: 2.5,
+                                                py: 1.2,
+                                                fontWeight: 700,
+                                                textTransform: "none",
+                                                bgcolor: "#0f172a",
+                                                "&:hover": { bgcolor: "#1e1b4b" },
+                                            }}
+                                        >
+                                            {pastAttempt ? "Retake Practice Test" : "Start Free Test"}
+                                        </Button>
+                                    </CardContent>
+                                </Card>
                             );
                         })}
-                    </Grid>
+                    </Box>
                 )}
             </TabPanel>
 

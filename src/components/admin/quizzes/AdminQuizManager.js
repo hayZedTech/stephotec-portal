@@ -689,73 +689,72 @@ export default function AdminQuizManager() {
                                 </Button>
                             </Paper>
                         ) : (
-                            <Grid container spacing={3}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: 3 }}>
                                 {filteredQuizzes.map((quiz) => (
-                                    <Grid key={quiz.id} xs={12} sm={6} md={4}>
-                                        <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0", height: "100%", display: "flex", flexDirection: "column" }}>
-                                            <CardContent sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
-                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-                                                    <Chip label={quiz.course_name || "General"} size="small" color="primary" sx={{ fontWeight: 700 }} />
-                                                    <Chip label={quiz.level || "BEGINNER"} size="small" variant="outlined" color="warning" sx={{ fontWeight: 700 }} />
-                                                </Box>
-
-                                                <Typography variant="h6" fontWeight={700} color="slate.900" mb={1}>
-                                                    {quiz.title}
+                                    <Card key={quiz.id} elevation={0} sx={{ borderRadius: 4, border: "1px solid #e2e8f0", height: "100%", display: "flex", flexDirection: "column" }}>
+                                        <CardContent sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
+                                            <Stack spacing={1} sx={{ mb: 1.5, alignItems: "flex-start" }}>
+                                                <Chip
+                                                    label={quiz.level || "BEGINNER"}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="warning"
+                                                    sx={{ fontWeight: 700, fontSize: "0.65rem", height: 22 }}
+                                                />
+                                                <Typography
+                                                    variant="caption"
+                                                    fontWeight={700}
+                                                    sx={{
+                                                        bgcolor: "#eff6ff",
+                                                        color: "#1d4ed8",
+                                                        px: 1.2,
+                                                        py: 0.4,
+                                                        borderRadius: 1.5,
+                                                        fontSize: "0.7rem",
+                                                        lineHeight: 1.3,
+                                                        wordBreak: "break-word",
+                                                        display: "inline-block",
+                                                    }}
+                                                >
+                                                    {quiz.course_name || "General Course"}
                                                 </Typography>
+                                            </Stack>
 
-                                                <Typography variant="body2" color="text.secondary" mb={2} sx={{ flex: 1 }}>
-                                                    {quiz.description || "No description provided."}
-                                                </Typography>
+                                            <Typography variant="h6" fontWeight={700} color="slate.900" mb={1}>
+                                                {quiz.title}
+                                            </Typography>
 
-                                                <Stack spacing={1} sx={{ p: 2, bgcolor: "#f8fafc", borderRadius: 2.5, mb: 2 }}>
-                                                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                                        <Typography variant="caption" color="text.secondary">Duration:</Typography>
-                                                        <Typography variant="caption" fontWeight={700}>{quiz.duration_minutes} Mins</Typography>
-                                                    </Box>
-                                                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                                        <Typography variant="caption" color="text.secondary">Questions:</Typography>
-                                                        <Typography variant="caption" fontWeight={700}>{quiz.questions_count || 0} Questions</Typography>
-                                                    </Box>
-                                                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                                        <Typography variant="caption" color="text.secondary">Pass Score:</Typography>
-                                                        <Typography variant="caption" fontWeight={700} color="warning.main">{quiz.passing_score_percentage}%</Typography>
-                                                    </Box>
-                                                </Stack>
+                                            <Typography variant="body2" color="text.secondary" mb={2} sx={{ flex: 1 }}>
+                                                {quiz.description || "No description provided."}
+                                            </Typography>
 
-                                                <Stack spacing={1} mb={1}>
-                                                    <Button
-                                                        variant="outlined"
-                                                        startIcon={<ContentPaste />}
-                                                        onClick={() => handleOpenViewQuestions(quiz)}
-                                                        fullWidth
-                                                        sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 700, color: "#0369a1", borderColor: "#7dd3fc" }}
-                                                    >
-                                                        View / Edit Questions
-                                                    </Button>
-                                                    <Button
-                                                        variant="outlined"
-                                                        startIcon={<AddCircle />}
-                                                        onClick={() => handleOpenAddQuestion(quiz)}
-                                                        fullWidth
-                                                        sx={{ borderRadius: 2.5, textTransform: "none", fontWeight: 700, color: "#d97706", borderColor: "#fcd34d" }}
-                                                    >
-                                                        Add Questions / Bulk Import
-                                                    </Button>
-                                                </Stack>
-
-                                                <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-                                                    <IconButton onClick={() => handleOpenEditQuiz(quiz)} size="small" sx={{ color: "primary.main" }}>
-                                                        <EditOutlined fontSize="small" />
-                                                    </IconButton>
-                                                    <IconButton onClick={() => handleDeleteQuiz(quiz.id)} size="small" sx={{ color: "error.main" }}>
-                                                        <DeleteOutlineOutlined fontSize="small" />
-                                                    </IconButton>
+                                            <Stack spacing={1} sx={{ p: 2, bgcolor: "#f8fafc", borderRadius: 2.5, mb: 2 }}>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                                    <Typography variant="caption" color="text.secondary">Duration:</Typography>
+                                                    <Typography variant="caption" fontWeight={700}>{quiz.duration_minutes} Mins</Typography>
                                                 </Box>
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                                    <Typography variant="caption" color="text.secondary">Questions:</Typography>
+                                                    <Typography variant="caption" fontWeight={700}>{quiz.questions_count || 0} Questions</Typography>
+                                                </Box>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                                    <Typography variant="caption" color="text.secondary">Pass Score:</Typography>
+                                                    <Typography variant="caption" fontWeight={700} color="warning.main">{quiz.passing_score_percentage}%</Typography>
+                                                </Box>
+                                            </Stack>
+
+                                            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+                                                <IconButton onClick={() => handleOpenEditQuiz(quiz)} size="small" sx={{ color: "primary.main" }}>
+                                                    <EditOutlined fontSize="small" />
+                                                </IconButton>
+                                                <IconButton onClick={() => handleDeleteQuiz(quiz.id)} size="small" sx={{ color: "error.main" }}>
+                                                    <DeleteOutlineOutlined fontSize="small" />
+                                                </IconButton>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
                                 ))}
-                            </Grid>
+                            </Box>
                         )}
                     </Box>
                 )}
