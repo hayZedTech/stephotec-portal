@@ -77,6 +77,13 @@ export default function LearningContentManager() {
     const [assigningStudents, setAssigningStudents] = useState(false);
     const [assignmentTabValue, setAssignmentTabValue] = useState(0);
     const [assignedStudents, setAssignedStudents] = useState(new Set());
+    // Group assignment state
+    const [assignModalTab, setAssignModalTab] = useState(0); // 0=Individual, 1=Group
+    const [groups, setGroups] = useState([]);
+    const [loadingGroups, setLoadingGroups] = useState(false);
+    const [selectedGroupId, setSelectedGroupId] = useState("");
+    const [groupSearchTerm, setGroupSearchTerm] = useState("");
+    const [assigningGroup, setAssigningGroup] = useState(false);
     const [formData, setFormData] = useState({
         course: "",
         title: "",
@@ -98,6 +105,10 @@ export default function LearningContentManager() {
     useEffect(() => {
         if (assignOpen && viewingContent?.id) {
             loadStudents();
+            loadGroups(viewingContent.course);
+            setAssignModalTab(0);
+            setSelectedGroupId("");
+            setGroupSearchTerm("");
         }
     }, [assignOpen, viewingContent?.id]);
 
@@ -119,9 +130,9 @@ export default function LearningContentManager() {
         }
     };
 
-    const loadStudents = async () => {
+    const loadStudents = async (background = false) => {
         try {
-            setLoadingStudents(true);
+            if (!background) setLoadingStudents(true);
             const courseId = viewingContent?.course;
             if (!courseId) {
                 setStudents([]);
@@ -153,7 +164,68 @@ export default function LearningContentManager() {
             errorToast(error, "Failed to load students");
             setStudents([]);
         } finally {
-            setLoadingStudents(false);
+            if (!background) setLoadingStudents(false);
+        }
+    };
+
+    const loadGroups = async (courseId) => {
+        if (!courseId) { setGroups([]); return; }
+        try {
+            setLoadingGroups(true);
+            const res = await api.get(`/admin/groups/?course=${courseId}`);
+            setGroups(res.data.results || res.data || []);
+        } catch {
+            setGroups([]);
+        } finally {
+            setLoadingGroups(false);
+        }
+    };
+
+    const handleAssignToGroup = async () => {
+        if (!selectedGroupId) { errorToast(null, "Please select a group."); return; }
+        try {
+            setAssigningGroup(true);
+            await api.post("/learning/student-learning-content/assign_to_students/", {
+                content_id: viewingContent.id,
+                group_id: selectedGroupId,
+            });
+            successToast("Content assigned to group members!");
+            const group = groups.find(g => g.id === selectedGroupId);
+            if (group && group.members_detail) {
+                const newAssigned = new Set(assignedStudents);
+                group.members_detail.forEach(m => newAssigned.add(m.id));
+                setAssignedStudents(newAssigned);
+            }
+            setSelectedGroupId("");
+            loadStudents(true);
+        } catch (err) {
+            errorToast(err, "Failed to assign to group");
+        } finally {
+            setAssigningGroup(false);
+        }
+    };
+
+    const handleUnassignFromGroup = async () => {
+        if (!selectedGroupId) { errorToast(null, "Please select a group."); return; }
+        try {
+            setAssigningGroup(true);
+            await api.post("/learning/student-learning-content/unassign_from_students/", {
+                content_id: viewingContent.id,
+                group_id: selectedGroupId,
+            });
+            successToast("Content removed from group members!");
+            const group = groups.find(g => g.id === selectedGroupId);
+            if (group && group.members_detail) {
+                const newAssigned = new Set(assignedStudents);
+                group.members_detail.forEach(m => newAssigned.delete(m.id));
+                setAssignedStudents(newAssigned);
+            }
+            setSelectedGroupId("");
+            loadStudents(true);
+        } catch (err) {
+            errorToast(err, "Failed to remove from group");
+        } finally {
+            setAssigningGroup(false);
         }
     };
 
@@ -459,8 +531,11 @@ export default function LearningContentManager() {
             console.log("Assigning with payload:", payload);
             await api.post(`/learning/student-learning-content/assign_to_students/`, payload);
             successToast(`Content assigned to ${selectedAvailableStudents.size} student(s)`);
+            const newAssigned = new Set(assignedStudents);
+            selectedAvailableStudents.forEach(id => newAssigned.add(id));
+            setAssignedStudents(newAssigned);
             setSelectedAvailableStudents(new Set());
-            loadStudents();
+            loadStudents(true);
         } catch (error) {
             console.error("Assignment error:", error);
             errorToast(error, "Failed to assign content");
@@ -988,201 +1063,198 @@ export default function LearningContentManager() {
                     </Box>
                 </DialogTitle>
 
+                {/* Top-level: Individual vs Group */}
                 <Tabs
-                    value={assignmentTabValue}
-                    onChange={(e, val) => setAssignmentTabValue(val)}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                    sx={{ borderBottom: "1px solid", borderColor: "grey.200", px: 2, "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}
+                    value={assignModalTab}
+                    onChange={(e, val) => { setAssignModalTab(val); setStudentSearchTerm(""); setGroupSearchTerm(""); }}
+                    sx={{ px: 2, borderBottom: "2px solid", borderColor: "primary.main", "& .MuiTab-root": { textTransform: "none", fontWeight: 700, minHeight: 44 } }}
                 >
-                    <Tab label={`Available (${students.filter(s => !assignedStudents.has(s.id)).length})`} />
-                    <Tab label={`Assigned (${assignedStudents.size})`} />
+                    <Tab label="Individual" />
+                    <Tab label="Group" />
                 </Tabs>
 
-                <DialogContent sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-                    {loadingStudents ? (
-                        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 300 }}>
-                            <CircularProgress />
-                        </Box>
-                    ) : (
-                        <>
-                            <TextField
-                                fullWidth
-                                placeholder="Search by name or email..."
-                                value={studentSearchTerm}
-                                onChange={(e) => setStudentSearchTerm(e.target.value)}
-                                size="small"
-                            />
+                {assignModalTab === 0 && (
+                    <>
+                        <Tabs
+                            value={assignmentTabValue}
+                            onChange={(e, val) => setAssignmentTabValue(val)}
+                            variant="scrollable"
+                            scrollButtons="auto"
+                            sx={{ borderBottom: "1px solid", borderColor: "grey.200", px: 2, "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}
+                        >
+                            <Tab label={`Available (${students.filter(s => !assignedStudents.has(s.id)).length})`} />
+                            <Tab label={`Assigned (${assignedStudents.size})`} />
+                        </Tabs>
 
-                            <TabPanel value={assignmentTabValue} index={0}>
-                                <Box
-                                    sx={{
-                                        maxHeight: 350,
-                                        overflow: "auto",
-                                        border: "1px solid",
-                                        borderColor: "grey.200",
-                                        borderRadius: 1,
-                                        bgcolor: "grey.50",
-                                    }}
-                                >
-                                    {students
-                                        .filter(s => !assignedStudents.has(s.id))
-                                        .filter(
-                                            (student) =>
-                                                student.first_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                                                student.last_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                                                student.email?.toLowerCase().includes(studentSearchTerm.toLowerCase())
-                                        )
-                                        .length > 0 ? (
-                                        students
-                                            .filter(s => !assignedStudents.has(s.id))
-                                            .filter(
-                                                (student) =>
-                                                    student.first_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                                                    student.last_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                                                    student.email?.toLowerCase().includes(studentSearchTerm.toLowerCase())
-                                            )
-                                            .map((student, index, arr) => (
-                                                <Box
-                                                    key={student.id}
-                                                    onClick={() => handleToggleAvailableStudent(student.id)}
-                                                    sx={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: 1.5,
-                                                        p: 1.5,
-                                                        borderBottom: index < arr.length - 1 ? "1px solid" : "none",
-                                                        borderColor: "grey.200",
-                                                        cursor: "pointer",
-                                                        bgcolor: selectedAvailableStudents.has(student.id) ? "primary.50" : "transparent",
-                                                        "&:hover": { bgcolor: "primary.50" },
-                                                        transition: "background-color 0.2s",
-                                                    }}
-                                                >
-                                                    <Checkbox
-                                                        checked={selectedAvailableStudents.has(student.id)}
-                                                        onChange={() => handleToggleAvailableStudent(student.id)}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        size="small"
-                                                    />
-                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                        <Typography variant="body2" fontWeight={500} noWrap>
-                                                            {student.first_name} {student.last_name}
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary" noWrap>
-                                                            {student.email}
-                                                        </Typography>
-                                                    </Box>
-                                                </Box>
-                                            ))
-                                    ) : (
-                                        <Box sx={{ p: 3, textAlign: "center" }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {studentSearchTerm ? "No match" : "All assigned"}
-                                            </Typography>
-                                        </Box>
-                                    )}
+                        <DialogContent sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+                            {loadingStudents ? (
+                                <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 300 }}>
+                                    <CircularProgress />
                                 </Box>
+                            ) : (
+                                <>
+                                    <TextField
+                                        fullWidth
+                                        placeholder="Search by name or email..."
+                                        value={studentSearchTerm}
+                                        onChange={(e) => setStudentSearchTerm(e.target.value)}
+                                        size="small"
+                                    />
 
-                                <Button
-                                    fullWidth
-                                    variant="contained"
-                                    onClick={handleAssignToStudents}
-                                    disabled={loadingStudents || assigningStudents || selectedAvailableStudents.size === 0}
-                                    sx={{ mt: 2 }}
-                                >
-                                    {assigningStudents ? "Assigning..." : `Assign (${selectedAvailableStudents.size})`}
-                                </Button>
-                            </TabPanel>
-
-                            <TabPanel value={assignmentTabValue} index={1}>
-                                <Box
-                                    sx={{
-                                        maxHeight: 350,
-                                        overflow: "auto",
-                                        border: "1px solid",
-                                        borderColor: "grey.200",
-                                        borderRadius: 1,
-                                        bgcolor: "success.50",
-                                    }}
-                                >
-                                    {students
-                                        .filter(s => assignedStudents.has(s.id))
-                                        .filter(
-                                            (student) =>
-                                                student.first_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                                                student.last_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                                                student.email?.toLowerCase().includes(studentSearchTerm.toLowerCase())
-                                        )
-                                        .length > 0 ? (
-                                        students
-                                            .filter(s => assignedStudents.has(s.id))
-                                            .filter(
-                                                (student) =>
-                                                    student.first_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                                                    student.last_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                                                    student.email?.toLowerCase().includes(studentSearchTerm.toLowerCase())
-                                            )
-                                            .map((student, index, arr) => (
-                                                <Box
-                                                    key={student.id}
-                                                    onClick={() => handleToggleAssignedStudent(student.id)}
-                                                    sx={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: 1.5,
-                                                        p: 1.5,
-                                                        borderBottom: index < arr.length - 1 ? "1px solid" : "none",
-                                                        borderColor: "grey.200",
-                                                        cursor: "pointer",
-                                                        bgcolor: selectedAssignedStudents.has(student.id) ? "error.50" : "transparent",
-                                                        "&:hover": { bgcolor: "error.50" },
-                                                        transition: "background-color 0.2s",
-                                                    }}
-                                                >
-                                                    <Checkbox
-                                                        checked={selectedAssignedStudents.has(student.id)}
-                                                        onChange={() => handleToggleAssignedStudent(student.id)}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        size="small"
-                                                    />
-                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                        <Typography variant="body2" fontWeight={500} noWrap>
-                                                            {student.first_name} {student.last_name}
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary" noWrap>
-                                                            {student.email}
-                                                        </Typography>
+                                    <TabPanel value={assignmentTabValue} index={0}>
+                                        <Box sx={{ maxHeight: 350, overflow: "auto", border: "1px solid", borderColor: "grey.200", borderRadius: 1, bgcolor: "grey.50" }}>
+                                            {students.filter(s => !assignedStudents.has(s.id)).filter(s =>
+                                                s.first_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                                                s.last_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                                                s.email?.toLowerCase().includes(studentSearchTerm.toLowerCase())
+                                            ).length > 0 ? (
+                                                students.filter(s => !assignedStudents.has(s.id)).filter(s =>
+                                                    s.first_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                                                    s.last_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                                                    s.email?.toLowerCase().includes(studentSearchTerm.toLowerCase())
+                                                ).map((student, index, arr) => (
+                                                    <Box key={student.id} onClick={() => handleToggleAvailableStudent(student.id)}
+                                                        sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.5, borderBottom: index < arr.length - 1 ? "1px solid" : "none", borderColor: "grey.200", cursor: "pointer", bgcolor: selectedAvailableStudents.has(student.id) ? "primary.50" : "transparent", "&:hover": { bgcolor: "primary.50" }, transition: "background-color 0.2s" }}>
+                                                        <Checkbox checked={selectedAvailableStudents.has(student.id)} onChange={() => handleToggleAvailableStudent(student.id)} onClick={(e) => e.stopPropagation()} size="small" />
+                                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                            <Typography variant="body2" fontWeight={500} noWrap>{student.first_name} {student.last_name}</Typography>
+                                                            <Typography variant="caption" color="text.secondary" noWrap>{student.email}</Typography>
+                                                        </Box>
                                                     </Box>
+                                                ))
+                                            ) : (
+                                                <Box sx={{ p: 3, textAlign: "center" }}>
+                                                    <Typography variant="body2" color="text.secondary">{studentSearchTerm ? "No match" : "All assigned"}</Typography>
                                                 </Box>
-                                            ))
-                                    ) : (
-                                        <Box sx={{ p: 3, textAlign: "center" }}>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {studentSearchTerm ? "No match" : "None assigned"}
-                                            </Typography>
+                                            )}
                                         </Box>
-                                    )}
+                                        <Button fullWidth variant="contained" onClick={handleAssignToStudents} disabled={loadingStudents || assigningStudents || selectedAvailableStudents.size === 0} sx={{ mt: 2 }}>
+                                            {assigningStudents ? "Assigning..." : `Assign (${selectedAvailableStudents.size})`}
+                                        </Button>
+                                    </TabPanel>
+
+                                    <TabPanel value={assignmentTabValue} index={1}>
+                                        <Box sx={{ maxHeight: 350, overflow: "auto", border: "1px solid", borderColor: "grey.200", borderRadius: 1, bgcolor: "success.50" }}>
+                                            {students.filter(s => assignedStudents.has(s.id)).filter(s =>
+                                                s.first_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                                                s.last_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                                                s.email?.toLowerCase().includes(studentSearchTerm.toLowerCase())
+                                            ).length > 0 ? (
+                                                students.filter(s => assignedStudents.has(s.id)).filter(s =>
+                                                    s.first_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                                                    s.last_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                                                    s.email?.toLowerCase().includes(studentSearchTerm.toLowerCase())
+                                                ).map((student, index, arr) => (
+                                                    <Box key={student.id} onClick={() => handleToggleAssignedStudent(student.id)}
+                                                        sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.5, borderBottom: index < arr.length - 1 ? "1px solid" : "none", borderColor: "grey.200", cursor: "pointer", bgcolor: selectedAssignedStudents.has(student.id) ? "error.50" : "transparent", "&:hover": { bgcolor: "error.50" }, transition: "background-color 0.2s" }}>
+                                                        <Checkbox checked={selectedAssignedStudents.has(student.id)} onChange={() => handleToggleAssignedStudent(student.id)} onClick={(e) => e.stopPropagation()} size="small" />
+                                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                            <Typography variant="body2" fontWeight={500} noWrap>{student.first_name} {student.last_name}</Typography>
+                                                            <Typography variant="caption" color="text.secondary" noWrap>{student.email}</Typography>
+                                                        </Box>
+                                                    </Box>
+                                                ))
+                                            ) : (
+                                                <Box sx={{ p: 3, textAlign: "center" }}>
+                                                    <Typography variant="body2" color="text.secondary">{studentSearchTerm ? "No match" : "None assigned"}</Typography>
+                                                </Box>
+                                            )}
+                                        </Box>
+                                        <Button fullWidth variant="outlined" color="error" onClick={handleUnassignFromStudents} disabled={loadingStudents || assigningStudents || selectedAssignedStudents.size === 0} sx={{ mt: 2 }}>
+                                            {assigningStudents ? "Removing..." : `Remove (${selectedAssignedStudents.size})`}
+                                        </Button>
+                                    </TabPanel>
+                                </>
+                            )}
+                        </DialogContent>
+
+                        <DialogActions sx={{ p: 2, borderTop: "1px solid", borderColor: "grey.200" }}>
+                            <Button onClick={() => setAssignOpen(false)}>Close</Button>
+                        </DialogActions>
+                    </>
+                )}
+
+                {assignModalTab === 1 && (
+                    <>
+                        <Tabs
+                            value={assignmentTabValue}
+                            onChange={(e, val) => setAssignmentTabValue(val)}
+                            variant="scrollable"
+                            scrollButtons="auto"
+                            sx={{ borderBottom: "1px solid", borderColor: "grey.200", px: 2, "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}
+                        >
+                            <Tab label={`Available (${groups.filter(g => !(g.members_detail?.length > 0 && g.members_detail.every(m => assignedStudents.has(m.id)))).length})`} />
+                            <Tab label={`Assigned (${groups.filter(g => g.members_detail?.length > 0 && g.members_detail.every(m => assignedStudents.has(m.id))).length})`} />
+                        </Tabs>
+
+                        <DialogContent sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+                            {loadingGroups ? (
+                                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>
+                            ) : groups.length === 0 ? (
+                                <Box sx={{ textAlign: "center", py: 4 }}>
+                                    <Typography variant="body2" color="text.secondary">No groups found for this course.</Typography>
+                                    <Typography variant="caption" color="text.disabled">Create a group first from the Groups page.</Typography>
                                 </Box>
+                            ) : (
+                                <>
+                                    <TextField fullWidth size="small" placeholder="Search groups by name..." value={groupSearchTerm} onChange={e => setGroupSearchTerm(e.target.value)} />
+                                    
+                                    <TabPanel value={assignmentTabValue} index={0}>
+                                        <Box sx={{ maxHeight: 320, overflow: "auto", border: "1px solid", borderColor: "grey.200", borderRadius: 1, bgcolor: "grey.50" }}>
+                                            {groups.filter(g => !(g.members_detail?.length > 0 && g.members_detail.every(m => assignedStudents.has(m.id)))).filter(g => !groupSearchTerm || g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())).length > 0 ? (
+                                                groups.filter(g => !(g.members_detail?.length > 0 && g.members_detail.every(m => assignedStudents.has(m.id)))).filter(g => !groupSearchTerm || g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())).map((group, idx, arr) => (
+                                                    <Box key={group.id} onClick={() => setSelectedGroupId(group.id === selectedGroupId ? "" : group.id)}
+                                                        sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.5, borderBottom: idx < arr.length - 1 ? "1px solid" : "none", borderColor: "grey.200", cursor: "pointer", bgcolor: selectedGroupId === group.id ? "primary.50" : "transparent", "&:hover": { bgcolor: "primary.50" }, transition: "background-color 0.2s" }}>
+                                                        <Checkbox checked={selectedGroupId === group.id} onChange={() => setSelectedGroupId(group.id === selectedGroupId ? "" : group.id)} onClick={e => e.stopPropagation()} size="small" />
+                                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                            <Typography variant="body2" fontWeight={600} noWrap>{group.name}</Typography>
+                                                            <Typography variant="caption" color="text.secondary" noWrap>{group.member_count} member(s){group.description ? ` — ${group.description}` : ""}</Typography>
+                                                        </Box>
+                                                    </Box>
+                                                ))
+                                            ) : (
+                                                <Box sx={{ p: 3, textAlign: "center" }}>
+                                                    <Typography variant="body2" color="text.secondary">{groupSearchTerm ? "No match" : "All assigned"}</Typography>
+                                                </Box>
+                                            )}
+                                        </Box>
+                                        <Button fullWidth variant="contained" onClick={handleAssignToGroup} disabled={!selectedGroupId || assigningGroup} sx={{ fontWeight: 700, mt: 2 }}>
+                                            {assigningGroup ? "Assigning..." : "Assign to Group"}
+                                        </Button>
+                                    </TabPanel>
 
-                                <Button
-                                    fullWidth
-                                    variant="outlined"
-                                    color="error"
-                                    onClick={handleUnassignFromStudents}
-                                    disabled={loadingStudents || assigningStudents || selectedAssignedStudents.size === 0}
-                                    sx={{ mt: 2 }}
-                                >
-                                    {assigningStudents ? "Removing..." : `Remove (${selectedAssignedStudents.size})`}
-                                </Button>
-                            </TabPanel>
-                        </>
-                    )}
-                </DialogContent>
+                                    <TabPanel value={assignmentTabValue} index={1}>
+                                        <Box sx={{ maxHeight: 320, overflow: "auto", border: "1px solid", borderColor: "grey.200", borderRadius: 1, bgcolor: "success.50" }}>
+                                            {groups.filter(g => g.members_detail?.length > 0 && g.members_detail.every(m => assignedStudents.has(m.id))).filter(g => !groupSearchTerm || g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())).length > 0 ? (
+                                                groups.filter(g => g.members_detail?.length > 0 && g.members_detail.every(m => assignedStudents.has(m.id))).filter(g => !groupSearchTerm || g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())).map((group, idx, arr) => (
+                                                    <Box key={group.id} onClick={() => setSelectedGroupId(group.id === selectedGroupId ? "" : group.id)}
+                                                        sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.5, borderBottom: idx < arr.length - 1 ? "1px solid" : "none", borderColor: "grey.200", cursor: "pointer", bgcolor: selectedGroupId === group.id ? "error.50" : "transparent", "&:hover": { bgcolor: "error.50" }, transition: "background-color 0.2s" }}>
+                                                        <Checkbox checked={selectedGroupId === group.id} onChange={() => setSelectedGroupId(group.id === selectedGroupId ? "" : group.id)} onClick={e => e.stopPropagation()} size="small" />
+                                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                            <Typography variant="body2" fontWeight={600} noWrap>{group.name}</Typography>
+                                                            <Typography variant="caption" color="text.secondary" noWrap>{group.member_count} member(s){group.description ? ` — ${group.description}` : ""}</Typography>
+                                                        </Box>
+                                                    </Box>
+                                                ))
+                                            ) : (
+                                                <Box sx={{ p: 3, textAlign: "center" }}>
+                                                    <Typography variant="body2" color="text.secondary">{groupSearchTerm ? "No match" : "None assigned"}</Typography>
+                                                </Box>
+                                            )}
+                                        </Box>
+                                        <Button fullWidth variant="outlined" color="error" onClick={handleUnassignFromGroup} disabled={!selectedGroupId || assigningGroup} sx={{ fontWeight: 700, mt: 2 }}>
+                                            {assigningGroup ? "Removing..." : "Remove from Group"}
+                                        </Button>
+                                    </TabPanel>
+                                </>
+                            )}
+                        </DialogContent>
 
-                <DialogActions sx={{ p: 2, borderTop: "1px solid", borderColor: "grey.200" }}>
-                    <Button onClick={() => setAssignOpen(false)}>Close</Button>
-                </DialogActions>
+                        <DialogActions sx={{ p: 2, borderTop: "1px solid", borderColor: "grey.200" }}>
+                            <Button onClick={() => setAssignOpen(false)}>Close</Button>
+                        </DialogActions>
+                    </>
+                )}
             </Dialog>
         </Box>
     );

@@ -74,6 +74,11 @@ export default function SidebarNav({ user, collapsed }) {
                     icon: <Assignment fontSize="small" />,
                 },
                 {
+                    label: "Groups",
+                    href: "/admin/groups",
+                    icon: <Workspaces fontSize="small" />,
+                },
+                {
                     label: "Verification Portal",
                     icon: <VerifiedUser fontSize="small" />,
                     children: [
@@ -140,6 +145,11 @@ export default function SidebarNav({ user, collapsed }) {
                     label: "Quizzes & Tests",
                     href: "/dashboard/quizzes",
                     icon: <Quiz fontSize="small" />,
+                },
+                {
+                    label: "My Groups",
+                    href: "/dashboard/groups",
+                    icon: <Workspaces fontSize="small" />,
                 },
                 {
                     label: "Assignments",
