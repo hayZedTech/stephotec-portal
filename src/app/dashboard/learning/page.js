@@ -102,28 +102,6 @@ export default function LearningPage() {
 
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (user?.id) {
-            loadAllData();
-        }
-    }, [user, filterCourse]);
-
-    useEffect(() => {
-        applyContentFilters();
-    }, [contents, searchTermContent, filterType, filterCourse]);
-
-    useEffect(() => {
-        applyHandoutFilters();
-    }, [handouts, purchases, searchTermHandouts]);
-
-    useEffect(() => {
-        applyCertificateFilters();
-    }, [certificates, searchTermCertificates]);
-
-    useEffect(() => {
-        applyBrochureFilters();
-    }, [brochures, searchTermBrochures]);
-
     const loadAllData = async () => {
         if (!user?.id) return;
         try {
@@ -245,6 +223,33 @@ export default function LearningPage() {
         }
         setFilteredBrochures(filtered);
     };
+
+    useEffect(() => {
+        if (user?.id) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            loadAllData();
+        }
+    }, [user, filterCourse]);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        applyContentFilters();
+    }, [contents, searchTermContent, filterType, filterCourse]);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        applyHandoutFilters();
+    }, [handouts, purchases, searchTermHandouts]);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        applyCertificateFilters();
+    }, [certificates, searchTermCertificates]);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        applyBrochureFilters();
+    }, [brochures, searchTermBrochures]);
 
     const handleOpenContent = (content) => {
         setSelectedContent(content);
@@ -405,58 +410,57 @@ export default function LearningPage() {
                             </Paper>
 
                             {filteredContents.length > 0 ? (
-                                <Grid container spacing={3}>
+                                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: 3 }}>
                                     {filteredContents.map((item) => (
-                                        <Grid xs={12} sm={6} md={4} key={item.id}>
-                                            <Card
-                                                sx={{
-                                                    borderRadius: 3,
-                                                    border: "1px solid",
-                                                    borderColor: "grey.200",
-                                                    height: "100%",
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    justifyContent: "space-between",
-                                                    transition: "box-shadow 0.2s",
-                                                    "&:hover": { boxShadow: "0 4px 20px rgba(0,0,0,0.1)" },
-                                                }}
-                                            >
-                                                <CardContent>
-                                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-                                                        <Chip
-                                                            label={item.content_type}
-                                                            size="small"
-                                                            color={
-                                                                item.content_type === "VIDEO"
-                                                                    ? "error"
-                                                                    : item.content_type === "DOCUMENT"
-                                                                    ? "primary"
-                                                                    : "secondary"
-                                                            }
-                                                        />
-                                                        {getContentIcon(item.content_type)}
-                                                    </Box>
-                                                    <Typography variant="h6" fontWeight={700} mb={1}>
-                                                        {item.title}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary" mb={2}>
-                                                        {item.description ? item.description.slice(0, 100) + "..." : "No description provided."}
-                                                    </Typography>
-                                                </CardContent>
-                                                <Box sx={{ p: 2, pt: 0 }}>
-                                                    <Button
-                                                        fullWidth
-                                                        variant="outlined"
-                                                        startIcon={<Visibility />}
-                                                        onClick={() => handleOpenContent(item)}
-                                                    >
-                                                        View Material
-                                                    </Button>
+                                        <Card
+                                            key={item.id}
+                                            sx={{
+                                                borderRadius: 3,
+                                                border: "1px solid",
+                                                borderColor: "grey.200",
+                                                height: "100%",
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                justifyContent: "space-between",
+                                                transition: "box-shadow 0.2s",
+                                                "&:hover": { boxShadow: "0 4px 20px rgba(0,0,0,0.1)" },
+                                            }}
+                                        >
+                                            <CardContent>
+                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+                                                    <Chip
+                                                        label={item.content_type}
+                                                        size="small"
+                                                        color={
+                                                            item.content_type === "VIDEO"
+                                                                ? "error"
+                                                                : item.content_type === "DOCUMENT"
+                                                                ? "primary"
+                                                                : "secondary"
+                                                        }
+                                                    />
+                                                    {getContentIcon(item.content_type)}
                                                 </Box>
-                                            </Card>
-                                        </Grid>
+                                                <Typography variant="h6" fontWeight={700} mb={1}>
+                                                    {item.title}
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary" mb={2}>
+                                                    {item.description ? item.description.slice(0, 100) + "..." : "No description provided."}
+                                                </Typography>
+                                            </CardContent>
+                                            <Box sx={{ p: 2, pt: 0 }}>
+                                                <Button
+                                                    fullWidth
+                                                    variant="outlined"
+                                                    startIcon={<Visibility />}
+                                                    onClick={() => handleOpenContent(item)}
+                                                >
+                                                    View Material
+                                                </Button>
+                                            </Box>
+                                        </Card>
                                     ))}
-                                </Grid>
+                                </Box>
                             ) : (
                                 <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", p: 5, textAlign: "center" }}>
                                     <MenuBook sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
@@ -481,61 +485,59 @@ export default function LearningPage() {
                             </Paper>
 
                             {filteredHandouts.length > 0 ? (
-                                <Grid container spacing={3}>
+                                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: 3 }}>
                                     {filteredHandouts.map((handout) => {
                                         const pStatus = getHandoutPurchaseStatus(handout.id);
                                         return (
-                                            <Grid xs={12} sm={6} md={4} key={handout.id}>
-                                                <Card sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                                                    <CardContent>
-                                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
-                                                            <Chip label={handout.course_name || "Handout"} size="small" color="secondary" />
-                                                            <Typography variant="h6" fontWeight={700} color="primary.main">
-                                                                ₦{parseFloat(handout.price || 0).toLocaleString()}
-                                                            </Typography>
-                                                        </Box>
-                                                        <Typography variant="h6" fontWeight={700} mb={1}>
-                                                            {handout.title}
+                                            <Card key={handout.id} sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                                                <CardContent>
+                                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+                                                        <Chip label={handout.course_name || "Handout"} size="small" color="secondary" />
+                                                        <Typography variant="h6" fontWeight={700} color="primary.main">
+                                                            ₦{parseFloat(handout.price || 0).toLocaleString()}
                                                         </Typography>
-                                                        <Typography variant="body2" color="text.secondary" mb={2}>
-                                                            {handout.description ? handout.description.slice(0, 100) + "..." : "No description provided."}
-                                                        </Typography>
-                                                    </CardContent>
-                                                    <Box sx={{ p: 2, pt: 0 }}>
-                                                        {pStatus === "COMPLETED" ? (
-                                                            <Button fullWidth variant="contained" color="success" startIcon={<Download />} href={handout.file} target="_blank" rel="noopener noreferrer">
-                                                                Download Handout
-                                                            </Button>
-                                                        ) : pStatus === "PENDING" ? (
-                                                            <Box
-                                                                sx={{
-                                                                    display: "flex",
-                                                                    alignItems: "center",
-                                                                    justifyContent: "center",
-                                                                    gap: 1,
-                                                                    p: 1.2,
-                                                                    borderRadius: 2,
-                                                                    bgcolor: "#fffbeb",
-                                                                    color: "#d97706",
-                                                                    border: "1px solid #fef3c7",
-                                                                    fontWeight: 700,
-                                                                    fontSize: "0.875rem",
-                                                                }}
-                                                            >
-                                                                <HourglassEmpty sx={{ fontSize: 18 }} />
-                                                                Payment Pending Confirmation
-                                                            </Box>
-                                                        ) : (
-                                                            <Button fullWidth variant="contained" color="primary" startIcon={<ShoppingCart />} onClick={() => handleOpenRequestModal(handout)}>
-                                                                Request / Purchase Handout
-                                                            </Button>
-                                                        )}
                                                     </Box>
-                                                </Card>
-                                            </Grid>
+                                                    <Typography variant="h6" fontWeight={700} mb={1}>
+                                                        {handout.title}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary" mb={2}>
+                                                        {handout.description ? handout.description.slice(0, 100) + "..." : "No description provided."}
+                                                    </Typography>
+                                                </CardContent>
+                                                <Box sx={{ p: 2, pt: 0 }}>
+                                                    {pStatus === "COMPLETED" ? (
+                                                        <Button fullWidth variant="contained" color="success" startIcon={<Download />} href={handout.file} target="_blank" rel="noopener noreferrer">
+                                                            Download Handout
+                                                        </Button>
+                                                    ) : pStatus === "PENDING" ? (
+                                                        <Box
+                                                            sx={{
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                justifyContent: "center",
+                                                                gap: 1,
+                                                                p: 1.2,
+                                                                borderRadius: 2,
+                                                                bgcolor: "#fffbeb",
+                                                                color: "#d97706",
+                                                                border: "1px solid #fef3c7",
+                                                                fontWeight: 700,
+                                                                fontSize: "0.875rem",
+                                                            }}
+                                                        >
+                                                            <HourglassEmpty sx={{ fontSize: 18 }} />
+                                                            Payment Pending Confirmation
+                                                        </Box>
+                                                    ) : (
+                                                        <Button fullWidth variant="contained" color="primary" startIcon={<ShoppingCart />} onClick={() => handleOpenRequestModal(handout)}>
+                                                            Request / Purchase Handout
+                                                        </Button>
+                                                    )}
+                                                </Box>
+                                            </Card>
                                         );
                                     })}
-                                </Grid>
+                                </Box>
                             ) : (
                                 <Paper elevation={0} sx={{ p: 5, textAlign: "center", borderRadius: 3, border: "1px solid #e2e8f0" }}>
                                     <School sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
@@ -616,23 +618,21 @@ export default function LearningPage() {
                             </Paper>
 
                             {filteredBrochures.length > 0 ? (
-                                <Grid container spacing={3}>
+                                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: 3 }}>
                                     {filteredBrochures.map((b) => (
-                                        <Grid xs={12} sm={6} md={4} key={b.id}>
-                                            <Card sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                                                <CardContent>
-                                                    <Typography variant="h6" fontWeight={700} mb={1}>{b.title}</Typography>
-                                                    <Typography variant="body2" color="text.secondary">{b.description}</Typography>
-                                                </CardContent>
-                                                <Box sx={{ p: 2, pt: 0 }}>
-                                                    <Button fullWidth variant="outlined" startIcon={<Download />} href={b.file} target="_blank" rel="noopener noreferrer">
-                                                        Download Brochure
-                                                    </Button>
-                                                </Box>
-                                            </Card>
-                                        </Grid>
+                                        <Card key={b.id} sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                                            <CardContent>
+                                                <Typography variant="h6" fontWeight={700} mb={1}>{b.title}</Typography>
+                                                <Typography variant="body2" color="text.secondary">{b.description}</Typography>
+                                            </CardContent>
+                                            <Box sx={{ p: 2, pt: 0 }}>
+                                                <Button fullWidth variant="outlined" startIcon={<Download />} href={b.file} target="_blank" rel="noopener noreferrer">
+                                                    Download Brochure
+                                                </Button>
+                                            </Box>
+                                        </Card>
                                     ))}
-                                </Grid>
+                                </Box>
                             ) : (
                                 <Paper elevation={0} sx={{ p: 5, textAlign: "center", borderRadius: 3, border: "1px solid #e2e8f0" }}>
                                     <Description sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
@@ -718,24 +718,24 @@ export default function LearningPage() {
                                 {requestingHandout?.title}
                             </Typography>
 
-                            <Grid container spacing={2}>
-                                <Grid xs={6}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+                                <Box>
                                     <Typography variant="caption" sx={{ color: "#94a3b8", display: "block" }}>
                                         Course Program
                                     </Typography>
                                     <Typography variant="body2" fontWeight={700} color="#ffffff">
                                         {requestingHandout?.course_name || "Study Material"}
                                     </Typography>
-                                </Grid>
-                                <Grid xs={6}>
+                                </Box>
+                                <Box>
                                     <Typography variant="caption" sx={{ color: "#94a3b8", display: "block" }}>
                                         Amount Due
                                     </Typography>
                                     <Typography variant="h6" fontWeight={800} sx={{ color: "#10b981" }}>
                                         ₦{parseFloat(requestingHandout?.price || 0).toLocaleString()}
                                     </Typography>
-                                </Grid>
-                            </Grid>
+                                </Box>
+                            </Box>
                         </Paper>
 
                         {/* Payment Instructions */}
