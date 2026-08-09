@@ -94,6 +94,22 @@ export default function LearningContentManager() {
     });
     const [submitting, setSubmitting] = useState(false);
 
+    const getGroupMemberIds = (g) => {
+        if (!g) return [];
+        return g.members_detail ? g.members_detail.map(m => m.id) : (g.members || []);
+    };
+    
+    const isGroupAssigned = (g) => {
+        if (!g) return false;
+        if (g.members_detail && g.members_detail.length > 0) {
+            return g.members_detail.every(m => assignedStudents.has(m.id));
+        }
+        if (g.members && g.members.length > 0) {
+            return g.members.every(id => assignedStudents.has(id));
+        }
+        return false;
+    };
+
     useEffect(() => {
         loadData();
     }, []);
@@ -191,9 +207,9 @@ export default function LearningContentManager() {
             });
             successToast("Content assigned to group members!");
             const group = groups.find(g => g.id === selectedGroupId);
-            if (group && group.members_detail) {
+            if (group) {
                 const newAssigned = new Set(assignedStudents);
-                group.members_detail.forEach(m => newAssigned.add(m.id));
+                getGroupMemberIds(group).forEach(id => newAssigned.add(id));
                 setAssignedStudents(newAssigned);
             }
             setSelectedGroupId("");
@@ -215,9 +231,9 @@ export default function LearningContentManager() {
             });
             successToast("Content removed from group members!");
             const group = groups.find(g => g.id === selectedGroupId);
-            if (group && group.members_detail) {
+            if (group) {
                 const newAssigned = new Set(assignedStudents);
-                group.members_detail.forEach(m => newAssigned.delete(m.id));
+                getGroupMemberIds(group).forEach(id => newAssigned.delete(id));
                 setAssignedStudents(newAssigned);
             }
             setSelectedGroupId("");
@@ -1082,8 +1098,8 @@ export default function LearningContentManager() {
                             scrollButtons="auto"
                             sx={{ borderBottom: "1px solid", borderColor: "grey.200", px: 2, "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}
                         >
-                            <Tab label={`Available (${students.filter(s => !assignedStudents.has(s.id)).length})`} />
-                            <Tab label={`Assigned (${assignedStudents.size})`} />
+                            <Tab label={loadingStudents ? "Available (...)" : `Available (${students.filter(s => !assignedStudents.has(s.id)).length})`} disabled={loadingStudents} />
+                            <Tab label={loadingStudents ? "Assigned (...)" : `Assigned (${assignedStudents.size})`} disabled={loadingStudents} />
                         </Tabs>
 
                         <DialogContent sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
@@ -1128,7 +1144,8 @@ export default function LearningContentManager() {
                                                 </Box>
                                             )}
                                         </Box>
-                                        <Button fullWidth variant="contained" onClick={handleAssignToStudents} disabled={loadingStudents || assigningStudents || selectedAvailableStudents.size === 0} sx={{ mt: 2 }}>
+                                        <Button fullWidth variant="contained" onClick={handleAssignToStudents} disabled={loadingStudents || assigningStudents || selectedAvailableStudents.size === 0} sx={{ mt: 2, display: "flex", gap: 1 }}>
+                                            {assigningStudents && <CircularProgress size={16} color="inherit" />}
                                             {assigningStudents ? "Assigning..." : `Assign (${selectedAvailableStudents.size})`}
                                         </Button>
                                     </TabPanel>
@@ -1160,7 +1177,8 @@ export default function LearningContentManager() {
                                                 </Box>
                                             )}
                                         </Box>
-                                        <Button fullWidth variant="outlined" color="error" onClick={handleUnassignFromStudents} disabled={loadingStudents || assigningStudents || selectedAssignedStudents.size === 0} sx={{ mt: 2 }}>
+                                        <Button fullWidth variant="outlined" color="error" onClick={handleUnassignFromStudents} disabled={loadingStudents || assigningStudents || selectedAssignedStudents.size === 0} sx={{ mt: 2, display: "flex", gap: 1 }}>
+                                            {assigningStudents && <CircularProgress size={16} color="inherit" />}
                                             {assigningStudents ? "Removing..." : `Remove (${selectedAssignedStudents.size})`}
                                         </Button>
                                     </TabPanel>
@@ -1183,12 +1201,12 @@ export default function LearningContentManager() {
                             scrollButtons="auto"
                             sx={{ borderBottom: "1px solid", borderColor: "grey.200", px: 2, "& .MuiTab-root": { textTransform: "none", fontWeight: 700, fontSize: { xs: "0.75rem", sm: "0.875rem" }, minHeight: { xs: 48, sm: 56 }, px: { xs: 1, sm: 2 } } }}
                         >
-                            <Tab label={`Available (${groups.filter(g => !(g.members_detail?.length > 0 && g.members_detail.every(m => assignedStudents.has(m.id)))).length})`} />
-                            <Tab label={`Assigned (${groups.filter(g => g.members_detail?.length > 0 && g.members_detail.every(m => assignedStudents.has(m.id))).length})`} />
+                            <Tab label={loadingGroups || loadingStudents ? "Available (...)" : `Available (${groups.filter(g => !isGroupAssigned(g)).length})`} disabled={loadingGroups || loadingStudents} />
+                            <Tab label={loadingGroups || loadingStudents ? "Assigned (...)" : `Assigned (${groups.filter(g => isGroupAssigned(g)).length})`} disabled={loadingGroups || loadingStudents} />
                         </Tabs>
 
                         <DialogContent sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-                            {loadingGroups ? (
+                            {(loadingGroups || loadingStudents) ? (
                                 <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>
                             ) : groups.length === 0 ? (
                                 <Box sx={{ textAlign: "center", py: 4 }}>
@@ -1201,8 +1219,8 @@ export default function LearningContentManager() {
                                     
                                     <TabPanel value={assignmentTabValue} index={0}>
                                         <Box sx={{ maxHeight: 320, overflow: "auto", border: "1px solid", borderColor: "grey.200", borderRadius: 1, bgcolor: "grey.50" }}>
-                                            {groups.filter(g => !(g.members_detail?.length > 0 && g.members_detail.every(m => assignedStudents.has(m.id)))).filter(g => !groupSearchTerm || g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())).length > 0 ? (
-                                                groups.filter(g => !(g.members_detail?.length > 0 && g.members_detail.every(m => assignedStudents.has(m.id)))).filter(g => !groupSearchTerm || g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())).map((group, idx, arr) => (
+                                            {groups.filter(g => !isGroupAssigned(g)).filter(g => !groupSearchTerm || g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())).length > 0 ? (
+                                                groups.filter(g => !isGroupAssigned(g)).filter(g => !groupSearchTerm || g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())).map((group, idx, arr) => (
                                                     <Box key={group.id} onClick={() => setSelectedGroupId(group.id === selectedGroupId ? "" : group.id)}
                                                         sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.5, borderBottom: idx < arr.length - 1 ? "1px solid" : "none", borderColor: "grey.200", cursor: "pointer", bgcolor: selectedGroupId === group.id ? "primary.50" : "transparent", "&:hover": { bgcolor: "primary.50" }, transition: "background-color 0.2s" }}>
                                                         <Checkbox checked={selectedGroupId === group.id} onChange={() => setSelectedGroupId(group.id === selectedGroupId ? "" : group.id)} onClick={e => e.stopPropagation()} size="small" />
@@ -1218,15 +1236,16 @@ export default function LearningContentManager() {
                                                 </Box>
                                             )}
                                         </Box>
-                                        <Button fullWidth variant="contained" onClick={handleAssignToGroup} disabled={!selectedGroupId || assigningGroup} sx={{ fontWeight: 700, mt: 2 }}>
+                                        <Button fullWidth variant="contained" onClick={handleAssignToGroup} disabled={!selectedGroupId || assigningGroup} sx={{ fontWeight: 700, mt: 2, display: "flex", gap: 1 }}>
+                                            {assigningGroup && <CircularProgress size={16} color="inherit" />}
                                             {assigningGroup ? "Assigning..." : "Assign to Group"}
                                         </Button>
                                     </TabPanel>
 
                                     <TabPanel value={assignmentTabValue} index={1}>
                                         <Box sx={{ maxHeight: 320, overflow: "auto", border: "1px solid", borderColor: "grey.200", borderRadius: 1, bgcolor: "success.50" }}>
-                                            {groups.filter(g => g.members_detail?.length > 0 && g.members_detail.every(m => assignedStudents.has(m.id))).filter(g => !groupSearchTerm || g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())).length > 0 ? (
-                                                groups.filter(g => g.members_detail?.length > 0 && g.members_detail.every(m => assignedStudents.has(m.id))).filter(g => !groupSearchTerm || g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())).map((group, idx, arr) => (
+                                            {groups.filter(g => isGroupAssigned(g)).filter(g => !groupSearchTerm || g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())).length > 0 ? (
+                                                groups.filter(g => isGroupAssigned(g)).filter(g => !groupSearchTerm || g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())).map((group, idx, arr) => (
                                                     <Box key={group.id} onClick={() => setSelectedGroupId(group.id === selectedGroupId ? "" : group.id)}
                                                         sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.5, borderBottom: idx < arr.length - 1 ? "1px solid" : "none", borderColor: "grey.200", cursor: "pointer", bgcolor: selectedGroupId === group.id ? "error.50" : "transparent", "&:hover": { bgcolor: "error.50" }, transition: "background-color 0.2s" }}>
                                                         <Checkbox checked={selectedGroupId === group.id} onChange={() => setSelectedGroupId(group.id === selectedGroupId ? "" : group.id)} onClick={e => e.stopPropagation()} size="small" />
@@ -1242,7 +1261,8 @@ export default function LearningContentManager() {
                                                 </Box>
                                             )}
                                         </Box>
-                                        <Button fullWidth variant="outlined" color="error" onClick={handleUnassignFromGroup} disabled={!selectedGroupId || assigningGroup} sx={{ fontWeight: 700, mt: 2 }}>
+                                        <Button fullWidth variant="outlined" color="error" onClick={handleUnassignFromGroup} disabled={!selectedGroupId || assigningGroup} sx={{ fontWeight: 700, mt: 2, display: "flex", gap: 1 }}>
+                                            {assigningGroup && <CircularProgress size={16} color="inherit" />}
                                             {assigningGroup ? "Removing..." : "Remove from Group"}
                                         </Button>
                                     </TabPanel>
