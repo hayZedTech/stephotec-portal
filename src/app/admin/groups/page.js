@@ -40,8 +40,6 @@ export default function AdminGroupsPage() {
     const [createSelectOpen, setCreateSelectOpen] = useState(false);
     const [loadingStudents, setLoadingStudents] = useState(false);
 
-    useEffect(() => { loadAll(); }, []);
-
     const loadAll = async () => {
         try {
             setLoading(true);
@@ -57,6 +55,9 @@ export default function AdminGroupsPage() {
             setLoading(false);
         }
     };
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    useEffect(() => { loadAll(); }, []);
 
     const loadStudentsForCourse = async (courseId) => {
         if (!courseId) { setAllStudents([]); return; }
@@ -120,8 +121,35 @@ export default function AdminGroupsPage() {
         }, null, "Delete", "Cancel", true);
     };
 
-    const toggleSelect = (id) => { const s = new Set(selectedIds); s.has(id) ? s.delete(id) : s.add(id); setSelectedIds(s); };
-    const toggleSelectAll = () => { setSelectedIds(selectedIds.size === filtered.length && filtered.length > 0 ? new Set() : new Set(filtered.map(g => g.id))); };
+    const handleSelectionChange = (newSelection) => {
+        if (!newSelection) {
+            setSelectedIds(new Set());
+            return;
+        }
+        if (newSelection instanceof Set) {
+            setSelectedIds(newSelection);
+        } else if (Array.isArray(newSelection)) {
+            setSelectedIds(new Set(newSelection));
+        } else if (typeof newSelection === "object" && newSelection.ids) {
+            const ids = newSelection.ids;
+            if (ids instanceof Set) {
+                if (newSelection.type === "exclude") {
+                    setSelectedIds(new Set(filtered.map(g => g.id).filter(id => !ids.has(id))));
+                } else {
+                    setSelectedIds(ids);
+                }
+            } else if (Array.isArray(ids)) {
+                setSelectedIds(new Set(ids));
+            } else {
+                setSelectedIds(new Set());
+            }
+        } else {
+            setSelectedIds(new Set());
+        }
+    };
+
+    const toggleSelect = (id) => { const s = new Set(selectedIds || []); s.has(id) ? s.delete(id) : s.add(id); setSelectedIds(s); };
+    const toggleSelectAll = () => { setSelectedIds((selectedIds?.size || 0) === filtered.length && filtered.length > 0 ? new Set() : new Set(filtered.map(g => g.id))); };
 
     const openViewMembers = (group) => { setViewingGroup(group); setViewOpen(true); };
 
@@ -190,7 +218,7 @@ export default function AdminGroupsPage() {
                         onEdit={openEdit}
                         onDelete={handleDelete}
                         selectedIds={selectedIds || new Set()}
-                        onRowSelectionChange={(newSelection) => setSelectedIds(new Set(newSelection || []))}
+                        onRowSelectionChange={handleSelectionChange}
                     />
                 )}
             </Paper>

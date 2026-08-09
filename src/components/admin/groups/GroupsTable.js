@@ -162,6 +162,11 @@ export default function GroupsTable({
         );
     }
 
+    const rowSelectionModel = {
+        type: "include",
+        ids: selectedIds instanceof Set ? selectedIds : new Set(Array.isArray(selectedIds) ? selectedIds : [])
+    };
+
     return (
         <Box sx={{ height: 720, width: "100%" }}>
             <DataGrid
@@ -174,7 +179,7 @@ export default function GroupsTable({
                 checkboxSelection
                 disableRowSelectionOnClick
                 onRowSelectionModelChange={onRowSelectionChange}
-                rowSelectionModel={selectedIds ? Array.from(selectedIds) : []}
+                rowSelectionModel={rowSelectionModel}
                 pageSizeOptions={[10, 25, 50]}
                 initialState={{
                     pagination: {

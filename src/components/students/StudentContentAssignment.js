@@ -30,12 +30,6 @@ export default function StudentContentAssignment({
     const [filterCourse, setFilterCourse] = useState("");
     const [courses, setCourses] = useState([]);
 
-    useEffect(() => {
-        if (studentId) {
-            loadItems();
-        }
-    }, [studentId, courseId, contentType]);
-
     const loadItems = async () => {
         if (!studentId) return;
         try {
@@ -64,6 +58,12 @@ export default function StudentContentAssignment({
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (studentId) {
+            loadItems();
+        }
+    }, [studentId, courseId, contentType]);
 
     const getItemTitle = (item) => {
         return (
