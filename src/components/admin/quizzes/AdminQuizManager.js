@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
     Box,
     Button,
@@ -65,6 +66,7 @@ import { confirmAction } from "@/utils/confirmAction";
 export default function AdminQuizManager() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+    const router = useRouter();
 
     const [quizzes, setQuizzes] = useState([]);
     const [filteredQuizzes, setFilteredQuizzes] = useState([]);
@@ -743,13 +745,23 @@ export default function AdminQuizManager() {
                                                 </Box>
                                             </Stack>
 
-                                            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-                                                <IconButton onClick={() => handleOpenEditQuiz(quiz)} size="small" sx={{ color: "primary.main" }}>
-                                                    <EditOutlined fontSize="small" />
-                                                </IconButton>
-                                                <IconButton onClick={() => handleDeleteQuiz(quiz.id)} size="small" sx={{ color: "error.main" }}>
-                                                    <DeleteOutlineOutlined fontSize="small" />
-                                                </IconButton>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", pt: 1.5, mt: 1 }}>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() => router.push(`/admin/assessments/quiz/${quiz.id}/questions`)}
+                                                    sx={{ fontWeight: 700, textTransform: "none", fontSize: "0.75rem" }}
+                                                >
+                                                    View / Edit Questions
+                                                </Button>
+                                                <Box sx={{ display: "flex", gap: 0.5 }}>
+                                                    <IconButton onClick={() => handleOpenEditQuiz(quiz)} size="small" sx={{ color: "primary.main" }}>
+                                                        <EditOutlined fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton onClick={() => handleDeleteQuiz(quiz.id)} size="small" sx={{ color: "error.main" }}>
+                                                        <DeleteOutlineOutlined fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
                                             </Box>
                                         </CardContent>
                                     </Card>

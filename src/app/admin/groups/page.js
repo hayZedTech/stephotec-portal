@@ -39,6 +39,9 @@ export default function AdminGroupsPage() {
     const [createMemberSearchTerm, setCreateMemberSearchTerm] = useState("");
     const [createSelectOpen, setCreateSelectOpen] = useState(false);
     const [loadingStudents, setLoadingStudents] = useState(false);
+    const [addMemberOpen, setAddMemberOpen] = useState(false);
+    const [addMemberSearch, setAddMemberSearch] = useState("");
+    const [addingMember, setAddingMember] = useState(null);
 
     const loadAll = async () => {
         try {
@@ -159,17 +162,30 @@ export default function AdminGroupsPage() {
         loadStudentsForCourse(group.course);
     };
 
-    const handleToggleMember = async (studentId, isMember) => {
+    const handleRemoveMember = async (studentId) => {
         if (!membersGroup) return;
         try {
-            const endpoint = isMember ? "remove-members" : "add-members";
-            await api.post(`/admin/groups/${membersGroup.id}/${endpoint}/`, { member_ids: [studentId] });
-            successToast(isMember ? "Member removed" : "Member added");
+            await api.post(`/admin/groups/${membersGroup.id}/remove-members/`, { member_ids: [studentId] });
+            successToast("Member removed");
             const res = await api.get(`/admin/groups/${membersGroup.id}/`);
             const updated = res.data;
             setMembersGroup(updated);
             setGroups(prev => prev.map(g => g.id === updated.id ? updated : g));
-        } catch (err) { errorToast(err, "Failed to update members"); }
+        } catch (err) { errorToast(err, "Failed to remove member"); }
+    };
+
+    const handleAddMember = async (student) => {
+        if (!membersGroup) return;
+        setAddingMember(student.id);
+        try {
+            await api.post(`/admin/groups/${membersGroup.id}/add-members/`, { member_ids: [student.id] });
+            successToast(`${student.first_name} ${student.last_name} added`);
+            const res = await api.get(`/admin/groups/${membersGroup.id}/`);
+            const updated = res.data;
+            setMembersGroup(updated);
+            setGroups(prev => prev.map(g => g.id === updated.id ? updated : g));
+        } catch (err) { errorToast(err, "Failed to add member"); }
+        finally { setAddingMember(null); }
     };
 
     const getCourseName = (id) => courses.find(c => c.id === id)?.name || "Unknown";
@@ -289,23 +305,117 @@ export default function AdminGroupsPage() {
             {/* MANAGE MEMBERS */}
             <Dialog open={membersDialogOpen} onClose={(e, r) => { if (r === "backdropClick") return; setMembersDialogOpen(false); }} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ fontWeight: 800, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    Manage Members — {membersGroup?.name}
+                    <Box>
+                        <Typography variant="h6" fontWeight={800}>Manage Members</Typography>
+                        <Typography variant="caption" color="text.secondary">{membersGroup?.name}</Typography>
+                    </Box>
                     <IconButton onClick={() => setMembersDialogOpen(false)} size="small"><Close /></IconButton>
                 </DialogTitle>
-                <DialogContent dividers>
-                    <TextField size="small" fullWidth placeholder="Search students..." value={memberSearchTerm} onChange={e => setMemberSearchTerm(e.target.value)} sx={{ mb: 2 }}
-                        slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }} />
-                    {loadingStudents ? (
-                        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}><CircularProgress /></Box>
-                    ) : (
-                        <Box sx={{ p: { xs: 0, sm: 2 } }}>
-                            <ManageMembersTable 
-                                students={allStudents.filter(s => !memberSearchTerm || `${s.first_name} ${s.last_name} ${s.email}`.toLowerCase().includes(memberSearchTerm.toLowerCase()))} 
-                                membersInGroup={membersInGroup} 
-                                onToggleMember={handleToggleMember} 
-                            />
-                        </Box>
-                    )}
+                <DialogContent dividers sx={{ p: 0 }}>
+                    {/* Add Member button row */}
+                    <Box sx={{ px: 2, pt: 2, pb: 1 }}>
+                        {!addMemberOpen ? (
+                            <Button
+                                variant="contained"
+                                startIcon={<PersonAdd />}
+                                onClick={() => { setAddMemberOpen(true); setAddMemberSearch(""); loadStudentsForCourse(membersGroup?.course); }}
+                                sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, fontWeight: 700, borderRadius: 2 }}
+                            >
+                                Add Member
+                            </Button>
+                        ) : (
+                            <Box sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 2, p: 2, bgcolor: "grey.50" }}>
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+                                    <Typography variant="subtitle2" fontWeight={700}>Add a Student</Typography>
+                                    <IconButton size="small" onClick={() => setAddMemberOpen(false)}><Close fontSize="small" /></IconButton>
+                                </Box>
+                                <TextField
+                                    size="small"
+                                    fullWidth
+                                    placeholder="Search by name or email..."
+                                    value={addMemberSearch}
+                                    onChange={e => setAddMemberSearch(e.target.value)}
+                                    autoFocus
+                                    slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
+                                />
+                                <Box sx={{ maxHeight: 200, overflow: "auto", mt: 1 }}>
+                                    {loadingStudents ? (
+                                        <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={24} /></Box>
+                                    ) : (
+                                        allStudents
+                                            .filter(s => !membersInGroup.has(s.id))
+                                            .filter(s => !addMemberSearch || `${s.first_name} ${s.last_name} ${s.email}`.toLowerCase().includes(addMemberSearch.toLowerCase()))
+                                            .length === 0 ? (
+                                            <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>
+                                                {addMemberSearch ? "No matching students" : "All students in this course are already members"}
+                                            </Typography>
+                                        ) : (
+                                            allStudents
+                                                .filter(s => !membersInGroup.has(s.id))
+                                                .filter(s => !addMemberSearch || `${s.first_name} ${s.last_name} ${s.email}`.toLowerCase().includes(addMemberSearch.toLowerCase()))
+                                                .map((s, idx, arr) => (
+                                                    <Box key={s.id}
+                                                        sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: 1.5, borderBottom: idx < arr.length - 1 ? "1px solid" : "none", borderColor: "grey.200", borderRadius: 1 }}
+                                                    >
+                                                        <Box>
+                                                            <Typography variant="body2" fontWeight={600}>{s.first_name} {s.last_name}</Typography>
+                                                            <Typography variant="caption" color="text.secondary">{s.email}</Typography>
+                                                        </Box>
+                                                        <Button
+                                                            size="small"
+                                                            variant="contained"
+                                                            disabled={addingMember === s.id}
+                                                            onClick={() => handleAddMember(s)}
+                                                            sx={{ minWidth: 56, bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" } }}
+                                                        >
+                                                            {addingMember === s.id ? <CircularProgress size={14} color="inherit" /> : "Add"}
+                                                        </Button>
+                                                    </Box>
+                                                ))
+                                        )
+                                    )}
+                                </Box>
+                            </Box>
+                        )}
+                    </Box>
+
+                    {/* Current members list */}
+                    <Box sx={{ px: 2, pb: 2 }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" mb={1} mt={1.5}>
+                            CURRENT MEMBERS ({membersGroup?.members_detail?.length ?? 0})
+                        </Typography>
+                        {(membersGroup?.members_detail || []).length === 0 ? (
+                            <Box sx={{ py: 4, textAlign: "center", border: "1px dashed", borderColor: "grey.300", borderRadius: 2 }}>
+                                <People sx={{ fontSize: 40, color: "text.disabled", mb: 1 }} />
+                                <Typography variant="body2" color="text.secondary">No members yet. Add some above!</Typography>
+                            </Box>
+                        ) : (
+                            <Box sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 2, overflow: "hidden" }}>
+                                {(membersGroup?.members_detail || []).map((member, idx, arr) => (
+                                    <Box key={member.id}
+                                        sx={{ display: "flex", alignItems: "center", gap: 2, p: 1.5, borderBottom: idx < arr.length - 1 ? "1px solid" : "none", borderColor: "grey.200", "&:hover": { bgcolor: "grey.50" } }}
+                                    >
+                                        <Box sx={{ width: 36, height: 36, borderRadius: "50%", bgcolor: "#0f172a", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
+                                            {member.first_name?.charAt(0)?.toUpperCase() || "?"}
+                                        </Box>
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                            <Typography variant="body2" fontWeight={600} noWrap>{member.first_name} {member.last_name}</Typography>
+                                            <Typography variant="caption" color="text.secondary" noWrap>{member.email}</Typography>
+                                        </Box>
+                                        <Tooltip title="Remove from group">
+                                            <IconButton
+                                                size="small"
+                                                color="error"
+                                                onClick={() => confirmAction(`Remove ${member.first_name} ${member.last_name} from this group?`, () => handleRemoveMember(member.id), null, "Remove", "Cancel", true)}
+                                            >
+                                                <PersonRemove fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Box>
+                                ))}
+                            </Box>
+                        )}
+                    </Box>
                 </DialogContent>
                 <DialogActions><Button onClick={() => setMembersDialogOpen(false)}>Done</Button></DialogActions>
             </Dialog>
