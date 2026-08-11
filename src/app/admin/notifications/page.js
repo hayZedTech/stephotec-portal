@@ -379,48 +379,59 @@ export default function AdminNotificationsPage() {
                                  </Box>
                              ) : (
                                  <Stack divider={<Divider />}>
-                                     {filteredAlerts.map((alert) => (
-                                        <Box
-                                            key={alert.id}
-                                            sx={{
-                                                py: 2,
-                                                display: "flex",
-                                                alignItems: "flex-start",
-                                                justifyContent: "space-between",
-                                                gap: 2,
-                                                bgcolor: alert.is_read ? "transparent" : "#faf5ff",
-                                                borderRadius: 2,
-                                                px: 1,
-                                                transition: "background 0.2s",
-                                            }}
-                                        >
-                                            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
-                                                <Avatar sx={{ bgcolor: alert.is_read ? "#e5e7eb" : "#7c3aed", width: 40, height: 40, fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
-                                                    {alert.triggered_by_name?.charAt(0) || alert.triggered_by_username?.charAt(0) || "S"}
-                                                </Avatar>
-                                                <Box>
-                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.25 }}>
-                                                        <Typography variant="body2" fontWeight={700}>{alert.title}</Typography>
-                                                        {!alert.is_read && (
-                                                            <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#7c3aed", flexShrink: 0 }} />
-                                                        )}
-                                                    </Box>
-                                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>{alert.message}</Typography>
-                                                    <Typography variant="caption" color="text.disabled">
-                                                        {new Date(alert.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
-                                            {!alert.is_read && (
-                                                <Button size="small" variant="text" onClick={() => handleMarkAlertRead(alert.id)} sx={{ flexShrink: 0, color: "#7c3aed", fontSize: "0.75rem" }}>
-                                                    Mark read
-                                                </Button>
-                                            )}
-                                            <MuiIconButton size="small" color="error" onClick={() => handleDeleteAlert(alert.id)} disabled={deletingAlertId === alert.id} sx={{ flexShrink: 0 }}>
-                                                {deletingAlertId === alert.id ? <CircularProgress size={16} /> : <Delete fontSize="small" />}
-                                            </MuiIconButton>
-                                        </Box>
-                                    ))}
+                                      {filteredAlerts.map((alert) => (
+                                         <Box
+                                             key={alert.id}
+                                             sx={{
+                                                 py: 2,
+                                                 display: "flex",
+                                                 alignItems: "flex-start",
+                                                 justifyContent: "space-between",
+                                                 gap: 2,
+                                                 bgcolor: alert.is_read ? "transparent" : "#faf5ff",
+                                                 borderRadius: 2,
+                                                 px: 1.5,
+                                                 transition: "background 0.2s",
+                                             }}
+                                         >
+                                             <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2, flex: 1, minWidth: 0 }}>
+                                                 <Avatar sx={{ bgcolor: alert.is_read ? "#e5e7eb" : "#7c3aed", width: 40, height: 40, fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
+                                                     {alert.triggered_by_name?.charAt(0) || alert.triggered_by_username?.charAt(0) || "S"}
+                                                 </Avatar>
+                                                 <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.25 }}>
+                                                         <Typography variant="body2" fontWeight={700}>{alert.title}</Typography>
+                                                         {!alert.is_read && (
+                                                             <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#7c3aed", flexShrink: 0 }} />
+                                                         )}
+                                                     </Box>
+                                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, wordBreak: "break-word" }}>{alert.message}</Typography>
+                                                     <Typography variant="caption" color="text.disabled">
+                                                         {new Date(alert.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                                     </Typography>
+                                                 </Box>
+                                             </Box>
+
+                                              {/* Actions Column (Delete on top, Mark read below with comfortable spacing) */}
+                                              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1.5, flexShrink: 0 }}>
+                                                  <MuiTooltip title="Delete alert">
+                                                      <MuiIconButton size="small" color="error" onClick={() => handleDeleteAlert(alert.id)} disabled={deletingAlertId === alert.id}>
+                                                          {deletingAlertId === alert.id ? <CircularProgress size={16} /> : <Delete fontSize="small" />}
+                                                      </MuiIconButton>
+                                                  </MuiTooltip>
+                                                  {!alert.is_read && (
+                                                      <Button
+                                                          size="small"
+                                                          variant="text"
+                                                          onClick={() => handleMarkAlertRead(alert.id)}
+                                                          sx={{ color: "#7c3aed", fontSize: "0.75rem", textTransform: "none", p: 0, minWidth: "auto", whiteSpace: "nowrap", mt: 0.5 }}
+                                                      >
+                                                          Mark read
+                                                      </Button>
+                                                  )}
+                                              </Box>
+                                         </Box>
+                                     ))}
                                 </Stack>
                             )}
                         </Box>
@@ -577,7 +588,7 @@ export default function AdminNotificationsPage() {
                                                      <TableCell>{n.recipient_count}</TableCell>
                                                      <TableCell sx={{ whiteSpace: "nowrap" }}>{new Date(n.created_at).toLocaleDateString()}</TableCell>
                                                      <TableCell>
-                                                          <Stack direction="row" spacing={0.5} alignItems="center">
+                                                          <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
                                                               <Button
                                                                   size="small"
                                                                   variant="outlined"
