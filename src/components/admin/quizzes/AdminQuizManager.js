@@ -39,6 +39,8 @@ import {
     useMediaQuery,
     useTheme,
     Pagination,
+    Checkbox,
+    ListItemText,
 } from "@mui/material";
 import {
     Quiz as QuizIcon,
@@ -84,6 +86,7 @@ export default function AdminQuizManager() {
     const [openQuizDialog, setOpenQuizDialog] = useState(false);
     const [editingQuizId, setEditingQuizId] = useState(null);
     const [quizFormData, setQuizFormData] = useState({
+        course_ids: [],
         course: "",
         title: "",
         description: "",
@@ -255,6 +258,7 @@ export default function AdminQuizManager() {
     const handleOpenAddQuiz = () => {
         setEditingQuizId(null);
         setQuizFormData({
+            course_ids: courses[0]?.id ? [courses[0].id] : [],
             course: courses[0]?.id || "",
             title: "",
             description: "",
@@ -269,8 +273,13 @@ export default function AdminQuizManager() {
 
     const handleOpenEditQuiz = (quiz) => {
         setEditingQuizId(quiz.id);
+        const assignedIds = quiz.courses_details && quiz.courses_details.length > 0 
+            ? quiz.courses_details.map((c) => c.id)
+            : quiz.course ? [quiz.course] : [];
+
         setQuizFormData({
-            course: quiz.course,
+            course_ids: assignedIds,
+            course: quiz.course || (assignedIds[0] || ""),
             title: quiz.title,
             description: quiz.description || "",
             level: quiz.level || "BEGINNER",
@@ -284,14 +293,21 @@ export default function AdminQuizManager() {
 
     const handleSaveQuiz = async (e) => {
         e.preventDefault();
-        if (!quizFormData.course || !quizFormData.title) {
-            errorToast("Please select a course and enter a quiz title.");
+        const selectedCourses = quizFormData.course_ids || [];
+        if (selectedCourses.length === 0 && !quizFormData.course) {
+            errorToast("Please select at least one course for the quiz.");
+            return;
+        }
+        if (!quizFormData.title) {
+            errorToast("Please enter a quiz title.");
             return;
         }
 
         try {
             const payload = {
                 ...quizFormData,
+                course_ids: selectedCourses,
+                course: selectedCourses[0] || quizFormData.course,
                 display_questions_count: quizFormData.display_questions_count === "" ? null : parseInt(quizFormData.display_questions_count)
             };
             if (editingQuizId) {
@@ -703,23 +719,48 @@ export default function AdminQuizManager() {
                                                     color="warning"
                                                     sx={{ fontWeight: 700, fontSize: "0.65rem", height: 22 }}
                                                 />
-                                                <Typography
-                                                    variant="caption"
-                                                    fontWeight={700}
-                                                    sx={{
-                                                        bgcolor: "#eff6ff",
-                                                        color: "#1d4ed8",
-                                                        px: 1.2,
-                                                        py: 0.4,
-                                                        borderRadius: 1.5,
-                                                        fontSize: "0.7rem",
-                                                        lineHeight: 1.3,
-                                                        wordBreak: "break-word",
-                                                        display: "inline-block",
-                                                    }}
-                                                >
-                                                    {quiz.course_name || "General Course"}
-                                                </Typography>
+                                                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                                                    {quiz.courses_details && quiz.courses_details.length > 0 ? (
+                                                        quiz.courses_details.map((c) => (
+                                                            <Typography
+                                                                key={c.id}
+                                                                variant="caption"
+                                                                fontWeight={700}
+                                                                sx={{
+                                                                    bgcolor: "#eff6ff",
+                                                                    color: "#1d4ed8",
+                                                                    px: 1.2,
+                                                                    py: 0.4,
+                                                                    borderRadius: 1.5,
+                                                                    fontSize: "0.7rem",
+                                                                    lineHeight: 1.3,
+                                                                    wordBreak: "break-word",
+                                                                    display: "inline-block",
+                                                                }}
+                                                            >
+                                                                {c.name} ({c.code_prefix})
+                                                            </Typography>
+                                                        ))
+                                                    ) : (
+                                                        <Typography
+                                                            variant="caption"
+                                                            fontWeight={700}
+                                                            sx={{
+                                                                bgcolor: "#eff6ff",
+                                                                color: "#1d4ed8",
+                                                                px: 1.2,
+                                                                py: 0.4,
+                                                                borderRadius: 1.5,
+                                                                fontSize: "0.7rem",
+                                                                lineHeight: 1.3,
+                                                                wordBreak: "break-word",
+                                                                display: "inline-block",
+                                                            }}
+                                                        >
+                                                            {quiz.course_name || "General Course"}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
                                             </Stack>
 
                                             <Typography variant="h6" fontWeight={700} color="slate.900" mb={1}>
@@ -855,15 +896,40 @@ export default function AdminQuizManager() {
                     <DialogContent sx={{ pt: 3 }}>
                         <Stack spacing={2.5} sx={{ mt: 1 }}>
                             <FormControl fullWidth required>
-                                <InputLabel>Course</InputLabel>
+                                <InputLabel>Assign to Courses</InputLabel>
                                 <Select
-                                    value={quizFormData.course}
-                                    label="Course"
-                                    onChange={(e) => setQuizFormData({ ...quizFormData, course: e.target.value })}
+                                    multiple
+                                    value={quizFormData.course_ids || []}
+                                    label="Assign to Courses"
+                                    onChange={(e) => {
+                                        const val = typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value;
+                                        setQuizFormData({
+                                            ...quizFormData,
+                                            course_ids: val,
+                                            course: val[0] || "",
+                                        });
+                                    }}
+                                    renderValue={(selected) => (
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                            {selected.map((val) => {
+                                                const c = courses.find((crs) => crs.id === val);
+                                                return (
+                                                    <Chip
+                                                        key={val}
+                                                        label={c ? `${c.name} (${c.code_prefix})` : val}
+                                                        size="small"
+                                                        color="primary"
+                                                        variant="outlined"
+                                                    />
+                                                );
+                                            })}
+                                        </Box>
+                                    )}
                                 >
                                     {courses.map((c) => (
                                         <MenuItem key={c.id} value={c.id}>
-                                            {c.name} ({c.code_prefix})
+                                            <Checkbox checked={(quizFormData.course_ids || []).includes(c.id)} />
+                                            <ListItemText primary={`${c.name} (${c.code_prefix})`} />
                                         </MenuItem>
                                     ))}
                                 </Select>

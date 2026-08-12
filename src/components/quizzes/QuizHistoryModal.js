@@ -51,9 +51,10 @@ export default function QuizHistoryModal({ open, onClose, attempt }) {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
+                    gap: 2,
                 }}
             >
-                <Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: "1.1rem", sm: "1.25rem" } }}>
                         Quiz History: {attempt.quiz_title}
                     </Typography>
@@ -61,7 +62,7 @@ export default function QuizHistoryModal({ open, onClose, attempt }) {
                         Completed on {new Date(attempt.completed_at).toLocaleDateString()}
                     </Typography>
                 </Box>
-                <IconButton onClick={onClose} sx={{ color: "grey.400" }}>
+                <IconButton onClick={onClose} sx={{ color: "grey.400", flexShrink: 0, ml: "auto" }}>
                     <Close />
                 </IconButton>
             </DialogTitle>

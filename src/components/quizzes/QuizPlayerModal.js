@@ -187,12 +187,13 @@ export default function QuizPlayerModal({ open, onClose, quizId, onAttemptComple
                     bgcolor: "#0f172a",
                     color: "white",
                     display: "flex",
-                    justify: "space-between",
+                    justifyContent: "space-between",
                     alignItems: "center",
+                    gap: 2,
                 }}
             >
-                <Box sx={{ pr: 2 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}>
                         <Chip
                             label="100% FREE PRACTICE TEST"
                             size="small"
@@ -222,6 +223,7 @@ export default function QuizPlayerModal({ open, onClose, quizId, onAttemptComple
                             py: 0.75,
                             borderRadius: 2.5,
                             border: "1px solid rgba(255,255,255,0.2)",
+                            flexShrink: 0,
                         }}
                     >
                         <Timer sx={{ color: "#fbbf24", fontSize: 20 }} />
@@ -231,7 +233,7 @@ export default function QuizPlayerModal({ open, onClose, quizId, onAttemptComple
                     </Box>
                 )}
 
-                <IconButton onClick={onClose} disabled={submitting} sx={{ color: "grey.400", ml: 1 }}>
+                <IconButton onClick={onClose} disabled={submitting} sx={{ color: "grey.400", flexShrink: 0, ml: "auto" }}>
                     <Close />
                 </IconButton>
             </DialogTitle>
