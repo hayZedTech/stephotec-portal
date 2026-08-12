@@ -14,12 +14,14 @@ import {
     CheckCircle,
     CardGiftcard,
     MenuBook,
+    FolderZip,
 } from "@mui/icons-material";
 import LearningContentManager from "@/components/admin/learning/LearningContentManager";
 import AttendanceManager from "@/components/admin/attendance/AttendanceManager";
 import CertificateManager from "@/components/admin/certificates/CertificateManager";
 import HandoutManager from "@/components/admin/handouts/HandoutManager";
 import BrochureManager from "@/components/admin/brochures/BrochureManager";
+import ClassFileManager from "@/components/admin/class_files/ClassFileManager";
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -129,28 +131,34 @@ export default function AdminLearningPage() {
                         id="tab-0"
                     />
                     <Tab
+                        label="Class Code & Files"
+                        icon={<FolderZip />}
+                        iconPosition="start"
+                        id="tab-1"
+                    />
+                    <Tab
                         label="Attendance"
                         icon={<CheckCircle />}
                         iconPosition="start"
-                        id="tab-1"
+                        id="tab-2"
                     />
                     <Tab
                         label="Certificates"
                         icon={<CardGiftcard />}
                         iconPosition="start"
-                        id="tab-2"
+                        id="tab-3"
                     />
                     <Tab
                         label="Handouts & Study Materials"
                         icon={<School />}
                         iconPosition="start"
-                        id="tab-3"
+                        id="tab-4"
                     />
                     <Tab
                         label="Brochures / Outlines"
                         icon={<MenuBook />}
                         iconPosition="start"
-                        id="tab-4"
+                        id="tab-5"
                     />
                 </Tabs>
 
@@ -160,18 +168,22 @@ export default function AdminLearningPage() {
                     </TabPanel>
 
                     <TabPanel value={tabValue} index={1}>
-                        <AttendanceManager />
+                        <ClassFileManager />
                     </TabPanel>
 
                     <TabPanel value={tabValue} index={2}>
-                        <CertificateManager />
+                        <AttendanceManager />
                     </TabPanel>
 
                     <TabPanel value={tabValue} index={3}>
-                        <HandoutManager />
+                        <CertificateManager />
                     </TabPanel>
 
                     <TabPanel value={tabValue} index={4}>
+                        <HandoutManager />
+                    </TabPanel>
+
+                    <TabPanel value={tabValue} index={5}>
                         <BrochureManager />
                     </TabPanel>
                 </Box>

@@ -45,6 +45,8 @@ import {
     WorkspacePremium,
     Print,
     ContentCopy,
+    FolderZip,
+    Folder,
 } from "@mui/icons-material";
 import CertificateModal from "@/components/common/CertificateModal";
 import QuizPlayerModal from "@/components/quizzes/QuizPlayerModal";
@@ -100,6 +102,11 @@ export default function LearningPage() {
     const [filteredBrochures, setFilteredBrochures] = useState([]);
     const [searchTermBrochures, setSearchTermBrochures] = useState("");
 
+    // Class Files & Code Drops State
+    const [classMaterials, setClassMaterials] = useState([]);
+    const [filteredClassMaterials, setFilteredClassMaterials] = useState([]);
+    const [searchTermClassMaterials, setSearchTermClassMaterials] = useState("");
+
     const [loading, setLoading] = useState(true);
 
     const loadAllData = async () => {
@@ -108,7 +115,7 @@ export default function LearningPage() {
             setLoading(true);
             const courseId = filterCourse || user.courses?.[0]?.course?.id || "";
 
-            const [contentRes, handoutsRes, purchasesRes, certsRes, bankAccountsRes, brochuresRes, quizzesRes] = await Promise.all([
+            const [contentRes, handoutsRes, purchasesRes, certsRes, bankAccountsRes, brochuresRes, quizzesRes, classMaterialsRes] = await Promise.all([
                 api.get("/learning/student-learning-content/student_content/", {
                     params: { student_id: user.id, course_id: courseId },
                 }).catch(() => ({ data: [] })),
@@ -118,6 +125,7 @@ export default function LearningPage() {
                 api.get("/payments/bank-accounts/").catch(() => ({ data: { results: [] } })),
                 api.get("/learning/brochures/").catch(() => ({ data: { results: [] } })),
                 api.get("/learning/quizzes/").catch(() => ({ data: { results: [] } })),
+                api.get("/learning/class-materials/").catch(() => ({ data: { results: [] } })),
             ]);
 
             // Transform learning content
@@ -158,6 +166,10 @@ export default function LearningPage() {
             // Quizzes
             const quizData = quizzesRes.data.results || quizzesRes.data || [];
             setQuizzes(Array.isArray(quizData) ? quizData : []);
+
+            // Class Materials / Code Drops
+            const classMatData = classMaterialsRes.data.results || classMaterialsRes.data || [];
+            setClassMaterials(Array.isArray(classMatData) ? classMatData : []);
         } catch (error) {
             console.error("Failed to load student learning data:", error);
             errorToast(error, "Failed to load learning resources");
@@ -217,11 +229,24 @@ export default function LearningPage() {
             filtered = filtered.filter(
                 (item) =>
                     item.title.toLowerCase().includes(term) ||
-                    (item.description && item.description.toLowerCase().includes(term)) ||
-                    (item.course_name && item.course_name.toLowerCase().includes(term))
+                    (item.description && item.description.toLowerCase().includes(term))
             );
         }
         setFilteredBrochures(filtered);
+    };
+
+    const applyClassMaterialFilters = () => {
+        let filtered = [...classMaterials];
+        if (searchTermClassMaterials) {
+            const term = searchTermClassMaterials.toLowerCase();
+            filtered = filtered.filter(
+                (item) =>
+                    item.title.toLowerCase().includes(term) ||
+                    (item.description && item.description.toLowerCase().includes(term)) ||
+                    (item.file_name && item.file_name.toLowerCase().includes(term))
+            );
+        }
+        setFilteredClassMaterials(filtered);
     };
 
     useEffect(() => {
@@ -375,6 +400,7 @@ export default function LearningPage() {
                     <Tab label="Handouts & Study Materials" icon={<School />} iconPosition="start" />
                     <Tab label="My Certificates" icon={<WorkspacePremium />} iconPosition="start" />
                     <Tab label="Course Brochure / Outline" icon={<Description />} iconPosition="start" />
+                    <Tab label="Class Code & Files" icon={<FolderZip />} iconPosition="start" />
                 </Tabs>
 
                 <Box sx={{ p: { xs: 2, sm: 3 } }}>
@@ -637,6 +663,77 @@ export default function LearningPage() {
                                 <Paper elevation={0} sx={{ p: 5, textAlign: "center", borderRadius: 3, border: "1px solid #e2e8f0" }}>
                                     <Description sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
                                     <Typography color="text.secondary">No course brochures available.</Typography>
+                                </Paper>
+                            )}
+                        </Stack>
+                    </TabPanel>
+
+                    {/* TAB 4: CLASS CODE & FILES */}
+                    <TabPanel value={tabValue} index={4}>
+                        <Stack spacing={3}>
+                            <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
+                                <TextField
+                                    fullWidth
+                                    placeholder="Search assigned class code, zip folders, or files..."
+                                    value={searchTermClassMaterials}
+                                    onChange={(e) => setSearchTermClassMaterials(e.target.value)}
+                                    size="small"
+                                />
+                            </Paper>
+
+                            {filteredClassMaterials.length > 0 ? (
+                                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: 3 }}>
+                                    {filteredClassMaterials.map((m) => (
+                                        <Card key={m.id} sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                                            <CardContent>
+                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+                                                    <Folder sx={{ color: "#d97706" }} />
+                                                    <Typography variant="h6" fontWeight={700} color="slate.900">
+                                                        {m.title}
+                                                    </Typography>
+                                                </Box>
+                                                <Typography variant="body2" color="text.secondary" mb={2}>
+                                                    {m.description || "Daily class file drop sent by your instructor."}
+                                                </Typography>
+                                                <Stack direction="row" spacing={1} alignItems="center" sx={{ bgcolor: "#f8fafc", p: 1.5, borderRadius: 2 }}>
+                                                    <FolderZip fontSize="small" sx={{ color: "grey.600" }} />
+                                                    <Typography variant="caption" fontWeight={600} color="slate.800" noWrap sx={{ flex: 1 }}>
+                                                        {m.file_name || "Class Code Archive"}
+                                                    </Typography>
+                                                    {m.file_size && (
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {m.file_size}
+                                                        </Typography>
+                                                    )}
+                                                </Stack>
+                                            </CardContent>
+                                            <Box sx={{ p: 2, pt: 0 }}>
+                                                <Button
+                                                    fullWidth
+                                                    variant="contained"
+                                                    startIcon={<Download />}
+                                                    component="a"
+                                                    href={m.file}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    download
+                                                    sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, textTransform: "none", fontWeight: 700, borderRadius: 2 }}
+                                                >
+                                                    Download Class File
+                                                </Button>
+                                            </Box>
+                                        </Card>
+                                    ))}
+                                </Box>
+                            ) : (
+                                <Paper elevation={0} sx={{ p: 5, textAlign: "center", borderRadius: 3, border: "1px solid #e2e8f0" }}>
+                                    <FolderZip sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
+                                    <Typography variant="h6" fontWeight={700} color="slate.900" mb={1}>
+                                        No Class Code Files Sent Yet
+                                    </Typography>
+                                    <Typography color="text.secondary">
+                                        When your instructor sends daily class code or zip folders after class, they will appear here for download.
+                                    </Typography>
                                 </Paper>
                             )}
                         </Stack>
