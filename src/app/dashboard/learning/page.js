@@ -26,6 +26,7 @@ import {
     MenuItem,
     Tabs,
     Tab,
+    IconButton,
 } from "@mui/material";
 import {
     School,
@@ -47,6 +48,7 @@ import {
     ContentCopy,
     FolderZip,
     Folder,
+    InsertDriveFile,
 } from "@mui/icons-material";
 import CertificateModal from "@/components/common/CertificateModal";
 import QuizPlayerModal from "@/components/quizzes/QuizPlayerModal";
@@ -125,9 +127,13 @@ export default function LearningPage() {
                 api.get("/payments/bank-accounts/").catch(() => ({ data: { results: [] } })),
                 api.get("/learning/brochures/").catch(() => ({ data: { results: [] } })),
                 api.get("/learning/quizzes/").catch(() => ({ data: { results: [] } })),
-                api.get("/learning/class-materials/").catch(() => ({ data: { results: [] } })),
+                api.get("/learning/class-materials/", {
+                    params: { _t: Date.now() }
+                }).catch((err) => {
+                    console.error("API Error fetching class materials:", err);
+                    return { data: { results: [] } };
+                }),
             ]);
-
             // Transform learning content
             const contentData = contentRes.data.results || contentRes.data || [];
             const transformedContent = Array.isArray(contentData)
@@ -276,6 +282,11 @@ export default function LearningPage() {
         applyBrochureFilters();
     }, [brochures, searchTermBrochures]);
 
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        applyClassMaterialFilters();
+    }, [classMaterials, searchTermClassMaterials]);
+
     const handleOpenContent = (content) => {
         setSelectedContent(content);
         setViewContentOpen(true);
@@ -397,10 +408,10 @@ export default function LearningPage() {
                     scrollButtons="auto"
                 >
                     <Tab label="Learning Materials" icon={<MenuBook />} iconPosition="start" />
+                    <Tab label="Class Code & Files" icon={<FolderZip />} iconPosition="start" />
                     <Tab label="Handouts & Study Materials" icon={<School />} iconPosition="start" />
                     <Tab label="My Certificates" icon={<WorkspacePremium />} iconPosition="start" />
                     <Tab label="Course Brochure / Outline" icon={<Description />} iconPosition="start" />
-                    <Tab label="Class Code & Files" icon={<FolderZip />} iconPosition="start" />
                 </Tabs>
 
                 <Box sx={{ p: { xs: 2, sm: 3 } }}>
@@ -497,8 +508,8 @@ export default function LearningPage() {
                     </TabPanel>
 
 
-                    {/* TAB 1: HANDOUTS & STUDY MATERIALS */}
-                    <TabPanel value={tabValue} index={1}>
+                    {/* TAB 2: HANDOUTS & STUDY MATERIALS */}
+                    <TabPanel value={tabValue} index={2}>
                         <Stack spacing={3}>
                             <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
                                 <TextField
@@ -573,8 +584,8 @@ export default function LearningPage() {
                         </Stack>
                     </TabPanel>
 
-                    {/* TAB 2: MY CERTIFICATES */}
-                    <TabPanel value={tabValue} index={2}>
+                    {/* TAB 3: MY CERTIFICATES */}
+                    <TabPanel value={tabValue} index={3}>
                         <Stack spacing={3}>
                             <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
                                 <TextField
@@ -589,7 +600,7 @@ export default function LearningPage() {
                             {filteredCertificates.length > 0 ? (
                                 <Grid container spacing={3}>
                                     {filteredCertificates.map((cert) => (
-                                        <Grid xs={12} sm={6} md={4} key={cert.id}>
+                                        <Grid item xs={12} sm={6} md={4} key={cert.id}>
                                             <Card sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                                                 <CardContent>
                                                     <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
@@ -630,8 +641,8 @@ export default function LearningPage() {
                         </Stack>
                     </TabPanel>
 
-                    {/* TAB 3: BROCHURES */}
-                    <TabPanel value={tabValue} index={3}>
+                    {/* TAB 4: BROCHURES */}
+                    <TabPanel value={tabValue} index={4}>
                         <Stack spacing={3}>
                             <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
                                 <TextField
@@ -668,8 +679,8 @@ export default function LearningPage() {
                         </Stack>
                     </TabPanel>
 
-                    {/* TAB 4: CLASS CODE & FILES */}
-                    <TabPanel value={tabValue} index={4}>
+                    {/* TAB 1: CLASS CODE & FILES */}
+                    <TabPanel value={tabValue} index={1}>
                         <Stack spacing={3}>
                             <Paper sx={{ p: 2, borderRadius: 2 }} elevation={0} variant="outlined">
                                 <TextField
@@ -683,7 +694,26 @@ export default function LearningPage() {
 
                             {filteredClassMaterials.length > 0 ? (
                                 <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: 3 }}>
-                                    {filteredClassMaterials.map((m) => (
+                                    {filteredClassMaterials.map((m) => {
+                                        const hasMultipleFiles = m.files && m.files.length > 0;
+                                        
+                                        const handleDownloadAll = (e) => {
+                                            e.preventDefault();
+                                            if (hasMultipleFiles) {
+                                                m.files.forEach(f => {
+                                                    const link = document.createElement('a');
+                                                    link.href = f.url;
+                                                    link.target = "_blank";
+                                                    link.download = f.name;
+                                                    link.rel = "noopener noreferrer";
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                });
+                                            }
+                                        };
+                                        
+                                        return (
                                         <Card key={m.id} sx={{ borderRadius: 3, border: "1px solid", borderColor: "grey.200", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                                             <CardContent>
                                                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
@@ -695,35 +725,88 @@ export default function LearningPage() {
                                                 <Typography variant="body2" color="text.secondary" mb={2}>
                                                     {m.description || "Daily class file drop sent by your instructor."}
                                                 </Typography>
-                                                <Stack direction="row" spacing={1} alignItems="center" sx={{ bgcolor: "#f8fafc", p: 1.5, borderRadius: 2 }}>
-                                                    <FolderZip fontSize="small" sx={{ color: "grey.600" }} />
-                                                    <Typography variant="caption" fontWeight={600} color="slate.800" noWrap sx={{ flex: 1 }}>
-                                                        {m.file_name || "Class Code Archive"}
-                                                    </Typography>
-                                                    {m.file_size && (
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            {m.file_size}
-                                                        </Typography>
+                                                
+                                                <Stack spacing={1}>
+                                                    {hasMultipleFiles ? (
+                                                        m.files.map((file, idx) => (
+                                                            <Stack key={idx} direction="row" spacing={1} sx={{ alignItems: "center", bgcolor: "#f8fafc", p: 1.5, borderRadius: 2 }}>
+                                                                <InsertDriveFile fontSize="small" sx={{ color: "grey.600" }} />
+                                                                <Typography variant="caption" fontWeight={600} color="slate.800" noWrap sx={{ flex: 1 }}>
+                                                                    {file.name}
+                                                                </Typography>
+                                                                {file.size && (
+                                                                    <Typography variant="caption" color="text.secondary">
+                                                                        {file.size}
+                                                                    </Typography>
+                                                                )}
+                                                                <IconButton
+                                                                    component="a"
+                                                                    href={file.url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    download
+                                                                    size="small"
+                                                                    sx={{ color: "primary.main", ml: 1 }}
+                                                                >
+                                                                    <Download fontSize="small" />
+                                                                </IconButton>
+                                                            </Stack>
+                                                        ))
+                                                    ) : (
+                                                        <Stack direction="row" spacing={1} sx={{ alignItems: "center", bgcolor: "#f8fafc", p: 1.5, borderRadius: 2 }}>
+                                                            <FolderZip fontSize="small" sx={{ color: "grey.600" }} />
+                                                            <Typography variant="caption" fontWeight={600} color="slate.800" noWrap sx={{ flex: 1 }}>
+                                                                {m.file_name || "Class Code Archive"}
+                                                            </Typography>
+                                                            {m.file_size && (
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    {m.file_size}
+                                                                </Typography>
+                                                            )}
+                                                            <IconButton
+                                                                component="a"
+                                                                href={m.file}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                download
+                                                                size="small"
+                                                                sx={{ color: "primary.main", ml: 1 }}
+                                                            >
+                                                                <Download fontSize="small" />
+                                                            </IconButton>
+                                                        </Stack>
                                                     )}
                                                 </Stack>
                                             </CardContent>
                                             <Box sx={{ p: 2, pt: 0 }}>
-                                                <Button
-                                                    fullWidth
-                                                    variant="contained"
-                                                    startIcon={<Download />}
-                                                    component="a"
-                                                    href={m.file}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    download
-                                                    sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, textTransform: "none", fontWeight: 700, borderRadius: 2 }}
-                                                >
-                                                    Download Class File
-                                                </Button>
+                                                {hasMultipleFiles ? (
+                                                    <Button
+                                                        fullWidth
+                                                        variant="contained"
+                                                        startIcon={<Download />}
+                                                        onClick={handleDownloadAll}
+                                                        sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, textTransform: "none", fontWeight: 700, borderRadius: 2 }}
+                                                    >
+                                                        Download All
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        fullWidth
+                                                        variant="contained"
+                                                        startIcon={<Download />}
+                                                        component="a"
+                                                        href={m.file}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        download
+                                                        sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, textTransform: "none", fontWeight: 700, borderRadius: 2 }}
+                                                    >
+                                                        Download Class File
+                                                    </Button>
+                                                )}
                                             </Box>
                                         </Card>
-                                    ))}
+                                    )})}
                                 </Box>
                             ) : (
                                 <Paper elevation={0} sx={{ p: 5, textAlign: "center", borderRadius: 3, border: "1px solid #e2e8f0" }}>

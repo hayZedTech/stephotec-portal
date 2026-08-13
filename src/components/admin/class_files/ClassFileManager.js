@@ -32,6 +32,7 @@ import {
     useTheme,
     InputAdornment,
     ListItemText,
+    ListSubheader,
 } from "@mui/material";
 import {
     Delete,
@@ -67,7 +68,10 @@ export default function ClassFileManager() {
 
     // Modal State
     const [openDialog, setOpenDialog] = useState(false);
-    const [selectedFile, setSelectedFile] = useState(null);
+    const [viewDialogOpen, setViewDialogOpen] = useState(false);
+    const [editingMaterial, setEditingMaterial] = useState(null);
+    const [viewingMaterial, setViewingMaterial] = useState(null);
+    const [selectedFiles, setSelectedFiles] = useState([]);
     const fileInputRef = useRef(null);
 
     const [formData, setFormData] = useState({
@@ -76,6 +80,11 @@ export default function ClassFileManager() {
         assigned_group_ids: [],
         assigned_student_ids: [],
     });
+
+    const [groupSelectOpen, setGroupSelectOpen] = useState(false);
+    const [studentSelectOpen, setStudentSelectOpen] = useState(false);
+    const [groupSearch, setGroupSearch] = useState("");
+    const [studentSearch, setStudentSearch] = useState("");
 
     useEffect(() => {
         loadData();
@@ -88,35 +97,35 @@ export default function ClassFileManager() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [materialsRes, groupsRes, studentsData] = await Promise.allSettled([
-                api.get("/learning/class-materials/"),
-                api.get("/admin/groups/"),
-                getStudents(),
-            ]);
+            const materialsRes = await api.get("/learning/class-materials/", {
+                params: { _t: Date.now() }
+            });
+            const mats = Array.isArray(materialsRes.data)
+                ? materialsRes.data
+                : materialsRes.data?.results || [];
+            setMaterials(mats);
+        } catch (error) {
+            errorToast(error, "Failed to load class materials");
+        } finally {
+            setLoading(false);
+        }
 
-            if (materialsRes.status === "fulfilled") {
-                const mats = Array.isArray(materialsRes.value.data)
-                    ? materialsRes.value.data
-                    : materialsRes.value.data?.results || [];
-                setMaterials(mats);
-            }
-
+        // Load auxiliary data (groups/students) in background for dialogs
+        Promise.allSettled([
+            api.get("/admin/groups/"),
+            getStudents(),
+        ]).then(([groupsRes, studentsData]) => {
             if (groupsRes.status === "fulfilled") {
                 const grps = Array.isArray(groupsRes.value.data)
                     ? groupsRes.value.data
                     : groupsRes.value.data?.results || [];
                 setGroups(grps);
             }
-
             if (studentsData.status === "fulfilled") {
                 const stds = Array.isArray(studentsData.value) ? studentsData.value : [];
                 setStudents(stds);
             }
-        } catch (error) {
-            errorToast(error, "Failed to load class materials");
-        } finally {
-            setLoading(false);
-        }
+        });
     };
 
     const filterClassMaterials = () => {
@@ -141,37 +150,74 @@ export default function ClassFileManager() {
         setFilteredMaterials(filtered);
     };
 
-    const handleOpenAdd = () => {
-        setSelectedFile(null);
+    const handleOpenDialog = () => {
+        setEditingMaterial(null);
+        setSelectedFiles([]);
         setFormData({
             title: "",
             description: "",
+            existing_files: [],
             assigned_group_ids: [],
             assigned_student_ids: [],
         });
         setOpenDialog(true);
     };
 
+    const handleEdit = (material) => {
+        setEditingMaterial(material);
+        setSelectedFiles([]);
+        
+        // Handle files (fallback for legacy single file)
+        let existingFiles = [];
+        if (material.files && material.files.length > 0) {
+            existingFiles = material.files;
+        } else if (material.file) {
+            existingFiles = [{ url: material.file, name: material.file_name, size: material.file_size }];
+        }
+
+        setFormData({
+            title: material.title,
+            description: material.description || "",
+            existing_files: existingFiles,
+            assigned_group_ids: material.assigned_group_ids || [],
+            assigned_student_ids: material.assigned_student_ids || [],
+        });
+        setOpenDialog(true);
+    };
+
+    const handleView = (material) => {
+        setViewingMaterial(material);
+        setViewDialogOpen(true);
+    };
+
+    const handleRemoveExistingFile = (indexToRemove) => {
+        setFormData((prev) => ({
+            ...prev,
+            existing_files: prev.existing_files.filter((_, idx) => idx !== indexToRemove),
+        }));
+    };
+
     const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setSelectedFile(file);
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) {
+            setSelectedFiles(files);
             if (!formData.title) {
-                const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-                setFormData((prev) => ({ ...prev, title: baseName }));
+                if (files.length === 1) {
+                    const baseName = files[0].name.substring(0, files[0].name.lastIndexOf('.')) || files[0].name;
+                    setFormData((prev) => ({ ...prev, title: baseName }));
+                } else {
+                    setFormData((prev) => ({ ...prev, title: `Class Code Files (${files.length} files)` }));
+                }
             }
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.title.trim()) {
-            errorToast("Please enter a title for the class material.");
-            return;
-        }
-
-        if (!selectedFile) {
-            errorToast("Please select a class file or folder archive to upload.");
+        
+        // If uploading a new material (not editing), files are required
+        if (!editingMaterial && selectedFiles.length === 0) {
+            errorToast("Please select at least one class file or folder archive to upload.");
             return;
         }
 
@@ -185,7 +231,16 @@ export default function ClassFileManager() {
             const uploadPayload = new FormData();
             uploadPayload.append("title", formData.title.trim());
             uploadPayload.append("description", formData.description.trim());
-            uploadPayload.append("file", selectedFile);
+
+            // Append all new files
+            selectedFiles.forEach((file) => {
+                uploadPayload.append("files", file);
+            });
+            
+            // Append existing files if editing
+            if (editingMaterial && formData.existing_files) {
+                uploadPayload.append("existing_files", JSON.stringify(formData.existing_files));
+            }
 
             formData.assigned_group_ids.forEach((id) => {
                 uploadPayload.append("assigned_group_ids", id);
@@ -195,15 +250,23 @@ export default function ClassFileManager() {
                 uploadPayload.append("assigned_student_ids", id);
             });
 
-            await api.post("/learning/class-materials/", uploadPayload, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-
-            successToast("Class material uploaded and sent successfully!");
+            if (editingMaterial) {
+                await api.patch(`/learning/class-materials/${editingMaterial.id}/`, uploadPayload, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                successToast(`Class material bundle updated successfully!`);
+            } else {
+                await api.post("/learning/class-materials/", uploadPayload, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                successToast(`Class material bundle created successfully!`);
+            }
+            
             setOpenDialog(false);
+            setEditingMaterial(null);
             loadData();
         } catch (error) {
-            errorToast(error, "Failed to upload class material");
+            errorToast(error, editingMaterial ? "Failed to update class materials" : "Failed to upload class materials");
         } finally {
             setSubmitting(false);
         }
@@ -275,7 +338,7 @@ export default function ClassFileManager() {
                     <Button
                         variant="contained"
                         startIcon={<CloudUpload />}
-                        onClick={handleOpenAdd}
+                        onClick={handleOpenDialog}
                         sx={{
                             bgcolor: "#0f172a",
                             "&:hover": { bgcolor: "#1e293b" },
@@ -308,7 +371,7 @@ export default function ClassFileManager() {
                         <Button
                             variant="contained"
                             startIcon={<Add />}
-                            onClick={handleOpenAdd}
+                            onClick={handleOpenDialog}
                             sx={{ bgcolor: "#d97706", "&:hover": { bgcolor: "#b45309" } }}
                         >
                             Upload First Class File
@@ -423,10 +486,12 @@ export default function ClassFileManager() {
                                             <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
                                                 <InsertDriveFile fontSize="small" sx={{ color: "grey.500" }} />
                                                 <Typography variant="caption" fontWeight={600}>
-                                                    {m.file_name || "Class Code / Folder"}
+                                                    {m.files && m.files.length > 0 
+                                                        ? `${m.files.length} File(s)` 
+                                                        : (m.file_name || "Class Code / Folder")}
                                                 </Typography>
                                             </Stack>
-                                            {m.file_size && (
+                                            {m.files && m.files.length > 0 ? null : m.file_size && (
                                                 <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                                                     {m.file_size}
                                                 </Typography>
@@ -467,17 +532,21 @@ export default function ClassFileManager() {
                                         <TableCell align="right">
                                             <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
                                                 <Button
-                                                    component="a"
-                                                    href={m.file}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    download
                                                     size="small"
                                                     variant="outlined"
-                                                    startIcon={<Download />}
+                                                    onClick={() => handleView(m)}
                                                     sx={{ fontWeight: 700, textTransform: "none" }}
                                                 >
-                                                    Download
+                                                    View
+                                                </Button>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="primary"
+                                                    onClick={() => handleEdit(m)}
+                                                    sx={{ fontWeight: 700, textTransform: "none" }}
+                                                >
+                                                    Edit
                                                 </Button>
                                                 <IconButton
                                                     onClick={() => handleDelete(m.id)}
@@ -537,23 +606,60 @@ export default function ClassFileManager() {
                             <Box sx={{ border: "2px dashed #cbd5e1", borderRadius: 3, p: 3, textAlign: "center", bgcolor: "#f8fafc" }}>
                                 <input
                                     type="file"
+                                    multiple
                                     ref={fileInputRef}
                                     onChange={handleFileChange}
                                     style={{ display: "none" }}
                                 />
                                 <CloudUpload sx={{ fontSize: 40, color: "#d97706", mb: 1 }} />
                                 <Typography variant="subtitle2" fontWeight={700}>
-                                    {selectedFile ? selectedFile.name : "Select Class Code, Zip Folder, or File"}
+                                    {selectedFiles.length > 0
+                                        ? selectedFiles.length === 1
+                                            ? selectedFiles[0].name
+                                            : `Selected ${selectedFiles.length} New Files`
+                                        : "Select Class Code, Zip Folders, or Files (Multiple Supported)"}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 2 }}>
-                                    Supports .zip, .rar, .7z, .pdf, .txt, code files, and documents (up to 50MB)
+                                
+                                {/* Existing Files */}
+                                {formData.existing_files && formData.existing_files.length > 0 && (
+                                    <Box sx={{ mt: 2, mb: 1, maxHeight: 150, overflowY: "auto", display: "flex", flexDirection: "column", gap: 1, alignItems: "center" }}>
+                                        <Typography variant="caption" fontWeight={700} color="text.secondary">Existing Files (Saved):</Typography>
+                                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, justifyContent: "center" }}>
+                                            {formData.existing_files.map((f, i) => (
+                                                <Chip 
+                                                    key={i} 
+                                                    label={`${f.name} ${f.size ? `(${f.size})` : ""}`} 
+                                                    size="small" 
+                                                    variant="outlined" 
+                                                    color="success" 
+                                                    onDelete={() => handleRemoveExistingFile(i)}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                )}
+
+                                {/* New Files */}
+                                {selectedFiles.length > 0 && (
+                                    <Box sx={{ mt: 2, mb: 1, maxHeight: 150, overflowY: "auto", display: "flex", flexDirection: "column", gap: 1, alignItems: "center" }}>
+                                        <Typography variant="caption" fontWeight={700} color="text.secondary">New Files to Upload:</Typography>
+                                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, justifyContent: "center" }}>
+                                            {selectedFiles.map((f, i) => (
+                                                <Chip key={i} label={f.name} size="small" variant="outlined" color="warning" />
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                )}
+
+                                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 2, mb: 2 }}>
+                                    Hold Ctrl / Shift to select multiple files at once. Supports .zip, .rar, .7z, .pdf, .txt, code files, and documents (up to 50MB per file)
                                 </Typography>
                                 <Button
                                     variant="outlined"
                                     onClick={() => fileInputRef.current?.click()}
                                     sx={{ borderRadius: 2, fontWeight: 700 }}
                                 >
-                                    {selectedFile ? "Change Selected File" : "Browse File"}
+                                    {selectedFiles.length > 0 ? "Add More / Change Files" : "Browse Files"}
                                 </Button>
                             </Box>
 
@@ -562,14 +668,19 @@ export default function ClassFileManager() {
                                 <InputLabel>Target Student Group(s)</InputLabel>
                                 <Select
                                     multiple
+                                    open={groupSelectOpen}
+                                    onOpen={() => setGroupSelectOpen(true)}
+                                    onClose={() => { setGroupSelectOpen(false); setGroupSearch(""); }}
                                     value={formData.assigned_group_ids}
                                     label="Target Student Group(s)"
-                                    onChange={(e) =>
+                                    onChange={(e) => {
+                                        // Ignore clicks from our custom buttons/inputs that don't pass an array
+                                        if (!e.target.value) return;
                                         setFormData({
                                             ...formData,
                                             assigned_group_ids: typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value,
-                                        })
-                                    }
+                                        });
+                                    }}
                                     renderValue={(selected) => (
                                         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                                             {selected.map((val) => {
@@ -586,13 +697,40 @@ export default function ClassFileManager() {
                                             })}
                                         </Box>
                                     )}
+                                    MenuProps={{ autoFocus: false }}
                                 >
-                                    {groups.map((g) => (
+                                    <ListSubheader sx={{ bgcolor: "background.paper", zIndex: 2 }}>
+                                        <TextField
+                                            size="small"
+                                            autoFocus
+                                            placeholder="Search groups..."
+                                            fullWidth
+                                            value={groupSearch}
+                                            onChange={(e) => setGroupSearch(e.target.value)}
+                                            onKeyDown={(e) => e.stopPropagation()}
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                    </ListSubheader>
+                                    {groups.filter(g => g.name.toLowerCase().includes(groupSearch.toLowerCase())).map((g) => (
                                         <MenuItem key={g.id} value={g.id}>
                                             <Checkbox checked={formData.assigned_group_ids.includes(g.id)} />
                                             <ListItemText primary={g.name} />
                                         </MenuItem>
                                     ))}
+                                    {groups.filter(g => g.name.toLowerCase().includes(groupSearch.toLowerCase())).length === 0 && (
+                                        <MenuItem disabled>No groups found</MenuItem>
+                                    )}
+                                    <Box sx={{ p: 1, position: 'sticky', bottom: 0, bgcolor: 'background.paper', zIndex: 2, borderTop: '1px solid #e2e8f0' }}>
+                                        <Button 
+                                            variant="contained" 
+                                            fullWidth 
+                                            size="small"
+                                            onClick={(e) => { e.stopPropagation(); setGroupSelectOpen(false); setGroupSearch(""); }}
+                                            sx={{ bgcolor: "#d97706", "&:hover": { bgcolor: "#b45309" } }}
+                                        >
+                                            Add Groups & Close
+                                        </Button>
+                                    </Box>
                                 </Select>
                             </FormControl>
 
@@ -600,14 +738,18 @@ export default function ClassFileManager() {
                                 <InputLabel>Target Individual Student(s)</InputLabel>
                                 <Select
                                     multiple
+                                    open={studentSelectOpen}
+                                    onOpen={() => setStudentSelectOpen(true)}
+                                    onClose={() => { setStudentSelectOpen(false); setStudentSearch(""); }}
                                     value={formData.assigned_student_ids}
                                     label="Target Individual Student(s)"
-                                    onChange={(e) =>
+                                    onChange={(e) => {
+                                        if (!e.target.value) return;
                                         setFormData({
                                             ...formData,
                                             assigned_student_ids: typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value,
-                                        })
-                                    }
+                                        });
+                                    }}
                                     renderValue={(selected) => (
                                         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                                             {selected.map((val) => {
@@ -625,8 +767,24 @@ export default function ClassFileManager() {
                                             })}
                                         </Box>
                                     )}
+                                    MenuProps={{ autoFocus: false }}
                                 >
-                                    {students.map((s) => {
+                                    <ListSubheader sx={{ bgcolor: "background.paper", zIndex: 2 }}>
+                                        <TextField
+                                            size="small"
+                                            autoFocus
+                                            placeholder="Search students..."
+                                            fullWidth
+                                            value={studentSearch}
+                                            onChange={(e) => setStudentSearch(e.target.value)}
+                                            onKeyDown={(e) => e.stopPropagation()}
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                    </ListSubheader>
+                                    {students.filter(s => {
+                                        const n = s.first_name ? `${s.first_name} ${s.last_name}` : (s.full_name || s.username);
+                                        return n.toLowerCase().includes(studentSearch.toLowerCase());
+                                    }).map((s) => {
                                         const sName = s.first_name ? `${s.first_name} ${s.last_name}` : (s.full_name || s.username);
                                         return (
                                             <MenuItem key={s.id} value={s.id}>
@@ -635,6 +793,23 @@ export default function ClassFileManager() {
                                             </MenuItem>
                                         );
                                     })}
+                                    {students.filter(s => {
+                                        const n = s.first_name ? `${s.first_name} ${s.last_name}` : (s.full_name || s.username);
+                                        return n.toLowerCase().includes(studentSearch.toLowerCase());
+                                    }).length === 0 && (
+                                        <MenuItem disabled>No students found</MenuItem>
+                                    )}
+                                    <Box sx={{ p: 1, position: 'sticky', bottom: 0, bgcolor: 'background.paper', zIndex: 2, borderTop: '1px solid #e2e8f0' }}>
+                                        <Button 
+                                            variant="contained" 
+                                            fullWidth 
+                                            size="small"
+                                            onClick={(e) => { e.stopPropagation(); setStudentSelectOpen(false); setStudentSearch(""); }}
+                                            sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" } }}
+                                        >
+                                            Add Students & Close
+                                        </Button>
+                                    </Box>
                                 </Select>
                             </FormControl>
                         </Stack>
@@ -650,10 +825,129 @@ export default function ClassFileManager() {
                             disabled={submitting}
                             sx={{ borderRadius: 2, bgcolor: "#d97706", "&:hover": { bgcolor: "#b45309" } }}
                         >
-                            {submitting ? <CircularProgress size={24} color="inherit" /> : "Send Class File"}
+                            {submitting ? <CircularProgress size={24} color="inherit" /> : (editingMaterial ? "Update Class Material" : "Send Class File")}
                         </Button>
                     </DialogActions>
                 </form>
+            </Dialog>
+            <Dialog
+                open={viewDialogOpen}
+                onClose={() => {
+                    setViewDialogOpen(false);
+                    setViewingMaterial(null);
+                }}
+                maxWidth="sm"
+                fullWidth
+                slotProps={{ paper: { sx: { borderRadius: 4 } } }}
+            >
+                {viewingMaterial && (
+                    <>
+                        <DialogTitle sx={{ fontWeight: 800, bgcolor: "#0f172a", color: "white" }}>
+                            {viewingMaterial.title}
+                        </DialogTitle>
+                        <DialogContent sx={{ pt: 3 }}>
+                            <Stack spacing={3}>
+                                {viewingMaterial.description && (
+                                    <Box>
+                                        <Typography variant="subtitle2" fontWeight={700} color="text.secondary" mb={0.5}>
+                                            Description
+                                        </Typography>
+                                        <Typography variant="body2">{viewingMaterial.description}</Typography>
+                                    </Box>
+                                )}
+
+                                <Box>
+                                    <Typography variant="subtitle2" fontWeight={700} color="text.secondary" mb={1}>
+                                        Attached Files
+                                    </Typography>
+                                    <Stack spacing={1}>
+                                        {viewingMaterial.files && viewingMaterial.files.length > 0 ? (
+                                            viewingMaterial.files.map((file, index) => (
+                                                <Paper key={index} variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                        <InsertDriveFile color="action" />
+                                                        <Box>
+                                                            <Typography variant="body2" fontWeight={600}>{file.name}</Typography>
+                                                            <Typography variant="caption" color="text.secondary">{file.size}</Typography>
+                                                        </Box>
+                                                    </Box>
+                                                    <Button
+                                                        component="a"
+                                                        href={file.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        download
+                                                        size="small"
+                                                        variant="contained"
+                                                        color="primary"
+                                                        startIcon={<Download />}
+                                                        sx={{ textTransform: "none" }}
+                                                    >
+                                                        Download
+                                                    </Button>
+                                                </Paper>
+                                            ))
+                                        ) : viewingMaterial.file ? (
+                                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                    <InsertDriveFile color="action" />
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={600}>{viewingMaterial.file_name || "File"}</Typography>
+                                                        <Typography variant="caption" color="text.secondary">{viewingMaterial.file_size}</Typography>
+                                                    </Box>
+                                                </Box>
+                                                <Button
+                                                    component="a"
+                                                    href={viewingMaterial.file}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    download
+                                                    size="small"
+                                                    variant="contained"
+                                                    color="primary"
+                                                    startIcon={<Download />}
+                                                    sx={{ textTransform: "none" }}
+                                                >
+                                                    Download
+                                                </Button>
+                                            </Paper>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">No files attached.</Typography>
+                                        )}
+                                    </Stack>
+                                </Box>
+
+                                <Box>
+                                    <Typography variant="subtitle2" fontWeight={700} color="text.secondary" mb={1}>
+                                        Recipients
+                                    </Typography>
+                                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                                        {viewingMaterial.assigned_groups_details?.map((g) => (
+                                            <Chip key={`g-${g.id}`} icon={<Group sx={{ fontSize: "14px !important" }} />} label={g.name} size="small" color="primary" variant="outlined" />
+                                        ))}
+                                        {viewingMaterial.assigned_students_details?.map((s) => (
+                                            <Chip key={`s-${s.id}`} icon={<Person sx={{ fontSize: "14px !important" }} />} label={s.full_name || s.username} size="small" color="secondary" variant="outlined" />
+                                        ))}
+                                    </Box>
+                                </Box>
+
+                                <Box sx={{ display: "flex", justifyContent: "space-between", pt: 2, borderTop: "1px solid #e2e8f0" }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Sent by: {viewingMaterial.created_by_name || "Admin"}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Date: {new Date(viewingMaterial.created_at).toLocaleString()}
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                        </DialogContent>
+                        <DialogActions sx={{ p: 2, bgcolor: "#f8fafc" }}>
+                            <Button onClick={() => setViewDialogOpen(false)} variant="outlined">
+                                Close
+                            </Button>
+                        </DialogActions>
+                    </>
+                )}
             </Dialog>
         </Box>
     );
