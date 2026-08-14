@@ -722,9 +722,14 @@ export default function LearningPage() {
                                                         {m.title}
                                                     </Typography>
                                                 </Box>
-                                                <Typography variant="body2" color="text.secondary" mb={2}>
-                                                    {m.description || "Daily class file drop sent by your instructor."}
+                                                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: m.description ? 1 : 2 }}>
+                                                    Sent on {new Date(m.created_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
                                                 </Typography>
+                                                {m.description && (
+                                                    <Typography variant="body2" color="text.secondary" mb={2}>
+                                                        {m.description}
+                                                    </Typography>
+                                                )}
                                                 
                                                 <Stack spacing={1}>
                                                     {hasMultipleFiles ? (
