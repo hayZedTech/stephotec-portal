@@ -43,6 +43,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
             course_id: "",
             status: "ACTIVE",
             is_industrial_training: false,
+            enrollment_date: "",
         },
     });
 
@@ -85,6 +86,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                 course_id: "",
                 status: "ACTIVE",
                 is_industrial_training: false,
+                enrollment_date: "",
             });
             return;
         }
@@ -104,6 +106,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
             course_id: "",
             status: defaultValues.status || "ACTIVE",
             is_industrial_training: defaultValues.is_industrial_training || false,
+            enrollment_date: defaultValues.enrollment_date || "",
         });
     }, [defaultValues, reset]);
 
@@ -184,6 +187,7 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                 email: values.email,
                 status: values.status,
                 is_industrial_training: values.is_industrial_training,
+                enrollment_date: values.enrollment_date || null,
                 role: "STUDENT",
             };
 
@@ -387,6 +391,27 @@ export default function StudentForm({ defaultValues, onSuccess, onCancel, isEdit
                                 <MenuItem value="WITHDRAWN">WITHDRAWN</MenuItem>
                                 <MenuItem value="INACTIVE">INACTIVE</MenuItem>
                             </TextField>
+                        )}
+                    />
+                </Grid>
+
+                {/* DATE JOINED */}
+                <Grid size={{ xs: 12, sm: 6 }}>
+                    <Controller
+                        name="enrollment_date"
+                        control={control}
+                        render={({ field }) => (
+                            <TextField
+                                {...field}
+                                type="date"
+                                fullWidth
+                                label="Date Joined (Optional)"
+                                disabled={!isEditing}
+                                slotProps={{
+                                    inputLabel: { shrink: true },
+                                    input: { style: { opacity: isEditing ? 1 : 0.8 } }
+                                }}
+                            />
                         )}
                     />
                 </Grid>

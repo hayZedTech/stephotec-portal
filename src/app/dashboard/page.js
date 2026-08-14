@@ -14,6 +14,7 @@ import {
     Divider,
 } from "@mui/material";
 import ImageZoom from "@/components/ui/ImageZoom";
+import CourseDurationProgress from "@/components/courses/CourseDurationProgress";
 import api from "@/lib/axios";
 import {
     School,
@@ -307,6 +308,12 @@ export default function StudentDashboardPage() {
                     <Typography variant="h6" fontWeight={700} mb={2}>
                         Primary Course
                     </Typography>
+
+                    <CourseDurationProgress
+                        course={primaryCourse.course}
+                        enrollmentDate={user?.enrollment_date || user?.enrollmentDate}
+                    />
+
                     <Card
                         sx={{
                             borderRadius: 3,

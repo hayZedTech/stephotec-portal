@@ -10,6 +10,7 @@ import {
     Button,
     Stack,
     InputAdornment,
+    MenuItem,
 } from "@mui/material";
 
 import {
@@ -44,6 +45,8 @@ export default function CourseForm({
             code_prefix: "",
             is_active: true,
             default_fee: "",
+            duration_value: "",
+            duration_unit: "MONTHS",
         },
     });
 
@@ -55,22 +58,25 @@ export default function CourseForm({
             code_prefix: defaultValues.code_prefix || "",
             is_active: defaultValues.is_active ?? true,
             default_fee: defaultValues.default_fee ?? "",
+            duration_value: defaultValues.duration_value ?? "",
+            duration_unit: defaultValues.duration_unit || "MONTHS",
         });
     }, [defaultValues, reset]);
 
     async function onSubmit(values) {
         try {
+            const payload = {
+                ...values,
+                code_prefix: values.code_prefix.toUpperCase().trim(),
+                duration_value: values.duration_value !== "" && values.duration_value !== null ? Number(values.duration_value) : 0,
+                duration_unit: values.duration_unit || "MONTHS",
+            };
+
             if (defaultValues?.id) {
-                await updateCourse(defaultValues.id, {
-                    ...values,
-                    code_prefix: values.code_prefix.toUpperCase().trim(),
-                });
+                await updateCourse(defaultValues.id, payload);
                 successToast("Course updated successfully.");
             } else {
-                await createCourse({
-                    ...values,
-                    code_prefix: values.code_prefix.toUpperCase().trim(),
-                });
+                await createCourse(payload);
                 successToast("Course created successfully.");
             }
 
@@ -117,17 +123,17 @@ export default function CourseForm({
                                 label="Code Prefix"
                                 fullWidth
                                 required
-                                inputProps={{
-                                    maxLength: 10,
-                                    style: {
-                                        textTransform: "uppercase",
-                                    },
-                                }}
                                 disabled={!isEditing}
                                 slotProps={{
                                     input: {
                                         style: {
                                             opacity: isEditing ? 1 : 0.8,
+                                        },
+                                    },
+                                    htmlInput: {
+                                        maxLength: 10,
+                                        style: {
+                                            textTransform: "uppercase",
                                         },
                                     },
                                 }}
@@ -157,6 +163,46 @@ export default function CourseForm({
                             />
                         )}
                     />
+                </Grid>
+
+                <Grid size={{ xs: 12, md: 6 }}>
+                    <Stack direction="row" spacing={1}>
+                        <Controller
+                            name="duration_value"
+                            control={control}
+                            render={({ field }) => (
+                                <TextField
+                                    {...field}
+                                    label="Duration"
+                                    type="number"
+                                    fullWidth
+                                    placeholder="e.g. 6"
+                                    disabled={!isEditing}
+                                    slotProps={{
+                                        input: {
+                                            style: { opacity: isEditing ? 1 : 0.8 },
+                                        },
+                                    }}
+                                />
+                            )}
+                        />
+                        <Controller
+                            name="duration_unit"
+                            control={control}
+                            render={({ field }) => (
+                                <TextField
+                                    {...field}
+                                    select
+                                    label="Unit"
+                                    sx={{ minWidth: 120 }}
+                                    disabled={!isEditing}
+                                >
+                                    <MenuItem value="MONTHS">Months</MenuItem>
+                                    <MenuItem value="WEEKS">Weeks</MenuItem>
+                                </TextField>
+                            )}
+                        />
+                    </Stack>
                 </Grid>
 
                 <Grid size={{ xs: 12, md: 6 }}>

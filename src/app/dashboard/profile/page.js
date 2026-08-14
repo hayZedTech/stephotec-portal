@@ -29,6 +29,7 @@ import {
 } from "@mui/material";
 import { School, DateRange, Edit, CloudUpload, Close, Badge as BadgeIcon, BadgeOutlined } from "@mui/icons-material";
 import ImageZoom from "@/components/ui/ImageZoom";
+import CourseDurationProgress from "@/components/courses/CourseDurationProgress";
 import StudentIDCardModal from "@/components/common/StudentIDCardModal";
 import StaffIDCardModal from "@/components/common/StaffIDCardModal";
 
@@ -565,15 +566,21 @@ export default function ProfilePage() {
             </div>
 
             {primaryCourse && (
-                <Paper
-                    elevation={0}
-                    sx={{
-                        borderRadius: 4,
-                        border: "2px solid",
-                        borderColor: "#2563eb",
-                        p: { xs: 2, sm: 4 },
-                    }}
-                >
+                <>
+                    <CourseDurationProgress
+                        course={primaryCourse.course}
+                        enrollmentDate={formData.enrollment_date || user?.enrollment_date || user?.enrollmentDate}
+                    />
+
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            borderRadius: 4,
+                            border: "2px solid",
+                            borderColor: "#2563eb",
+                            p: { xs: 2, sm: 4 },
+                        }}
+                    >
                     <Typography variant="h6" fontWeight={700} mb={2} sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
                         Primary Course Details
                     </Typography>
@@ -625,6 +632,7 @@ export default function ProfilePage() {
                         )}
                     </Stack>
                 </Paper>
+                </>
             )}
 
             <Dialog open={showPictureDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setShowPictureDialog(false); }} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: { xs: 2, sm: 3 }, m: { xs: 1, sm: 2 } } } }}>

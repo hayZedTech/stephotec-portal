@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
     Dialog,
     DialogTitle,
@@ -10,6 +11,10 @@ import {
     Button,
     Chip,
     IconButton,
+    Box,
+    ToggleButtonGroup,
+    ToggleButton,
+    Typography,
 } from "@mui/material";
 
 import {
@@ -18,6 +23,30 @@ import {
     Delete,
 } from "@mui/icons-material";
 
+export function formatDuration(val, unit, viewMode) {
+    if (!val || val <= 0) return "N/A";
+    const num = Number(val);
+    if (unit === "WEEKS") {
+        if (viewMode === "WEEKS") {
+            return `${num} ${num === 1 ? "Week" : "Weeks"}`;
+        }
+        // View mode MONTHS
+        const months = Math.floor(num / 4);
+        const remWeeks = num % 4;
+        if (months === 0) return `${remWeeks} ${remWeeks === 1 ? "Week" : "Weeks"}`;
+        if (remWeeks === 0) return `${months} ${months === 1 ? "Month" : "Months"}`;
+        return `${months} ${months === 1 ? "Month" : "Months"} ${remWeeks} ${remWeeks === 1 ? "Week" : "Weeks"}`;
+    } else {
+        // unit === "MONTHS"
+        if (viewMode === "MONTHS") {
+            return `${num} ${num === 1 ? "Month" : "Months"}`;
+        }
+        // View mode WEEKS
+        const totalWeeks = num * 4;
+        return `${totalWeeks} ${totalWeeks === 1 ? "Week" : "Weeks"}`;
+    }
+}
+
 export default function CourseViewModal({
     open,
     onClose,
@@ -25,7 +54,11 @@ export default function CourseViewModal({
     onEdit,
     onDelete,
 }) {
+    const [viewUnit, setViewUnit] = useState("MONTHS");
+
     if (!course) return null;
+
+    const formattedDuration = formatDuration(course.duration_value, course.duration_unit, viewUnit);
 
     return (
         <Dialog
@@ -116,6 +149,32 @@ export default function CourseViewModal({
                                 },
                             }}
                         />
+                    </Grid>
+
+                    <Grid size={{ xs: 12 }}>
+                        <Box sx={{ border: "1px solid #e2e8f0", p: 2, borderRadius: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <Box>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
+                                    Duration
+                                </Typography>
+                                <Typography variant="body1" fontWeight={700} color="primary">
+                                    {formattedDuration}
+                                </Typography>
+                            </Box>
+                            <ToggleButtonGroup
+                                value={viewUnit}
+                                exclusive
+                                onChange={(e, newUnit) => { if (newUnit) setViewUnit(newUnit); }}
+                                size="small"
+                            >
+                                <ToggleButton value="MONTHS" sx={{ px: 1.5, py: 0.5, fontWeight: 700, fontSize: "0.75rem" }}>
+                                    Months View
+                                </ToggleButton>
+                                <ToggleButton value="WEEKS" sx={{ px: 1.5, py: 0.5, fontWeight: 700, fontSize: "0.75rem" }}>
+                                    Weeks View
+                                </ToggleButton>
+                            </ToggleButtonGroup>
+                        </Box>
                     </Grid>
 
                     <Grid size={{ xs: 12 }}>

@@ -267,6 +267,15 @@ export default function StudentViewModal({
 
                                 <Box sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
                                     <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1, fontSize: { xs: "0.65rem", sm: "0.75rem" } }}>
+                                        Date Joined
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+                                        {student.enrollment_date ? new Date(student.enrollment_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—"}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 2, border: "1px solid", borderColor: "grey.200", bgcolor: "grey.50" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1, fontSize: { xs: "0.65rem", sm: "0.75rem" } }}>
                                         Primary Course
                                     </Typography>
                                     <Typography variant="body2" fontWeight={600} sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>

@@ -37,19 +37,40 @@ export default function CoursesTable({
             flex: 1.8,
             minWidth: 250,
             headerAlign: "center",
-            renderCell: ({ value }) => (
-                <div
-                    style={{
-                        fontWeight: 600,
-                        width: "100%",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        textAlign: "center",
-                    }}
-                >
-                    {value}
-                </div>
-            ),
+            renderCell: ({ row, value }) => {
+                const durationText = row.duration_value
+                    ? `${row.duration_value} ${row.duration_unit === "WEEKS" ? "Weeks" : "Months"}`
+                    : null;
+                return (
+                    <Box
+                        sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            textAlign: "center",
+                            width: "100%",
+                            py: 0.5,
+                        }}
+                    >
+                        <Typography variant="body2" fontWeight={600} noWrap>
+                            {value}
+                        </Typography>
+                        {durationText && (
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    color: "#4f46e5",
+                                    fontWeight: 600,
+                                    fontSize: "0.75rem",
+                                }}
+                            >
+                                Duration: {durationText}
+                            </Typography>
+                        )}
+                    </Box>
+                );
+            },
         },
         {
             field: "code_prefix",
@@ -153,12 +174,23 @@ export default function CoursesTable({
                         <Stack spacing={1.5} sx={{ mb: 2 }}>
                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                    Code
+                                     Code
                                 </Typography>
                                 <Typography variant="body2" fontWeight={600}>
-                                    {row.code_prefix}
+                                     {row.code_prefix}
                                 </Typography>
                             </Box>
+
+                            {row.duration_value > 0 && (
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                        Duration
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {row.duration_value} {row.duration_unit === "WEEKS" ? "Weeks" : "Months"}
+                                    </Typography>
+                                </Box>
+                            )}
 
                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={600}>
