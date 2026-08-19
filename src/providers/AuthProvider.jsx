@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 import {
     getUser,
@@ -19,17 +19,34 @@ import { isTokenExpired } from "@/utils/token";
 const AuthContext = createContext(null);
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
 
+const PUBLIC_ROUTES = [
+    "/login",
+    "/forgot-password",
+    "/reset-password",
+    "/verify",
+    "/verify-certificate",
+    "/verify-staff",
+];
+
+const isPublicRoute = (path) => {
+    if (!path) return false;
+    return PUBLIC_ROUTES.some((route) => path === route || path.startsWith(`${route}/`) || path.startsWith(`${route}?`));
+};
+
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const inactivityTimerRef = useRef(null);
     const router = useRouter();
+    const pathname = usePathname();
 
     const forceLogout = (showToast = false) => {
         clearSession();
         setUser(null);
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-        router.push("/login");
+        if (!isPublicRoute(pathname)) {
+            router.push("/login");
+        }
     };
 
     const resetInactivityTimer = () => {
@@ -46,7 +63,9 @@ export function AuthProvider({ children }) {
             if (!storedUser || !refreshToken || isTokenExpired(refreshToken)) {
                 clearSession();
                 setLoading(false);
-                router.push("/login");
+                if (!isPublicRoute(pathname)) {
+                    router.push("/login");
+                }
                 return;
             }
 
@@ -58,14 +77,16 @@ export function AuthProvider({ children }) {
                 setUser(storedUser);
             } catch {
                 clearSession();
-                router.push("/login");
+                if (!isPublicRoute(pathname)) {
+                    router.push("/login");
+                }
             } finally {
                 setLoading(false);
             }
         }
 
         initAuth();
-    }, []);
+    }, [pathname]);
 
     useEffect(() => {
         const handleAppResume = async () => {
@@ -77,14 +98,18 @@ export function AuthProvider({ children }) {
             const refreshToken = getRefreshToken();
 
             if (!storedUser || !refreshToken || isTokenExpired(refreshToken)) {
-                forceLogout();
+                if (!isPublicRoute(pathname)) {
+                    forceLogout();
+                }
                 return;
             }
 
             try {
                 await ensureValidAccessToken();
             } catch {
-                forceLogout();
+                if (!isPublicRoute(pathname)) {
+                    forceLogout();
+                }
             }
         };
 
@@ -95,7 +120,7 @@ export function AuthProvider({ children }) {
             document.removeEventListener("visibilitychange", handleAppResume);
             window.removeEventListener("pageshow", handleAppResume);
         };
-    }, []);
+    }, [pathname]);
 
     useEffect(() => {
         if (!user) return;
