@@ -25,6 +25,9 @@ import {
     TableRow,
     CircularProgress,
     Tooltip,
+    Card,
+    CardContent,
+    Grid,
 } from "@mui/material";
 import {
     Add,
@@ -33,10 +36,120 @@ import {
     AccountBalance,
     CheckCircle,
     Cancel,
+    Email as EmailIcon,
+    Key as KeyIcon,
+    PersonAdd as PersonAddIcon,
+    ManageAccounts as ManageAccountsIcon,
+    EventAvailable as EventAvailableIcon,
+    FolderShared as FolderSharedIcon,
+    School as SchoolIcon,
+    Assignment as AssignmentIcon,
+    FactCheck as FactCheckIcon,
+    Quiz as QuizIcon,
+    WorkspacePremium as WorkspacePremiumIcon,
+    Payment as PaymentIcon,
+    NotificationsActive as NotificationsActiveIcon,
+    Check as CheckIcon,
+    Close as CloseIcon,
 } from "@mui/icons-material";
 import api from "@/lib/axios";
 import { successToast, errorToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
+
+const EMAIL_NOTIFICATION_ACTIONS = [
+    {
+        category: "Authentication & Security",
+        items: [
+            {
+                key: "email_password_reset",
+                title: "Password Reset Requests",
+                description: "Dispatches secure password reset link with verification token when requested on login page.",
+                Icon: KeyIcon,
+                color: "#7c3aed",
+            },
+            {
+                key: "email_welcome",
+                title: "New Student Welcome & Login Credentials",
+                description: "Sends initial login details (Student ID & Temporary Password) and activation link upon account creation.",
+                Icon: PersonAddIcon,
+                color: "#2563eb",
+            },
+            {
+                key: "email_status_change",
+                title: "Account Status Updates",
+                description: "Sends an alert when student account status is modified (e.g. Activated, Suspended, Graduated).",
+                Icon: ManageAccountsIcon,
+                color: "#0891b2",
+            },
+        ],
+    },
+    {
+        category: "Learning & Course Activities",
+        items: [
+            {
+                key: "email_attendance",
+                title: "Daily Attendance Approvals & Rejections",
+                description: "Sends an email to the student when an instructor/admin approves or rejects their daily attendance mark.",
+                Icon: EventAvailableIcon,
+                color: "#16a34a",
+            },
+            {
+                key: "email_class_materials",
+                title: "Daily Class Materials & Code Drops",
+                description: "Notifies students and group members when instructors upload daily lecture files, notes, or code zips.",
+                Icon: FolderSharedIcon,
+                color: "#ea580c",
+            },
+            {
+                key: "email_course_enrollment",
+                title: "Course & Study Group Enrollment",
+                description: "Notifies students when they are enrolled in a new course or assigned to a specific study group.",
+                Icon: SchoolIcon,
+                color: "#4f46e5",
+            },
+            {
+                key: "email_new_assignment",
+                title: "New Assignment Announcements",
+                description: "Notifies enrolled students immediately when a new assignment, project, or homework task is published.",
+                Icon: AssignmentIcon,
+                color: "#9333ea",
+            },
+            {
+                key: "email_assignment_grading",
+                title: "Assignment Review & Grading Feedback",
+                description: "Sends review feedback, remarks, and scores to students after an instructor grades their submission.",
+                Icon: FactCheckIcon,
+                color: "#0284c7",
+            },
+        ],
+    },
+    {
+        category: "Assessments, Awards & Billing",
+        items: [
+            {
+                key: "email_quiz_results",
+                title: "Quiz & Assessment Result Releases",
+                description: "Sends test scores, percentage grades, and performance ranking when quiz assessments are submitted.",
+                Icon: QuizIcon,
+                color: "#d97706",
+            },
+            {
+                key: "email_certificate",
+                title: "Certificate Issuance & Awards",
+                description: "Sends celebratory emails with direct PDF download links when a course completion certificate is issued.",
+                Icon: WorkspacePremiumIcon,
+                color: "#ca8a04",
+            },
+            {
+                key: "email_payment_receipt",
+                title: "Payment Approvals & Tuition Receipts",
+                description: "Sends official digital transaction receipts and updated balance breakdown when fee payments are recorded.",
+                Icon: PaymentIcon,
+                color: "#059669",
+            },
+        ],
+    },
+];
 
 const emptyAccount = {
     bank_name: "",
@@ -329,6 +442,17 @@ function BankAccountsManager() {
 
 const DEFAULT_SETTINGS = {
     emailNotifications: true,
+    email_welcome: true,
+    email_password_reset: true,
+    email_status_change: true,
+    email_course_enrollment: true,
+    email_class_materials: true,
+    email_new_assignment: true,
+    email_assignment_grading: true,
+    email_attendance: false,
+    email_quiz_results: true,
+    email_certificate: true,
+    email_payment_receipt: true,
     autoApproveStudents: false,
     maintenanceMode: false,
     allowNewRegistrations: true,
@@ -372,6 +496,18 @@ export default function SettingsPage() {
         }));
     };
 
+    const handleSetAllEmails = (enable) => {
+        setSettings((prev) => {
+            const updated = { ...prev, emailNotifications: enable };
+            EMAIL_NOTIFICATION_ACTIONS.forEach((cat) => {
+                cat.items.forEach((item) => {
+                    updated[item.key] = enable;
+                });
+            });
+            return updated;
+        });
+    };
+
     const handleSave = async () => {
         try {
             setSaving(true);
@@ -396,53 +532,206 @@ export default function SettingsPage() {
                     Settings
                 </Typography>
                 <Typography color="text.secondary">
-                    Manage system configuration and preferences.
+                    Manage system configuration, email triggers, and operational preferences.
                 </Typography>
             </div>
 
             {/* Bank Accounts */}
             <Paper
                 elevation={0}
-                sx={{ borderRadius: 4, border: "1px solid", borderColor: "grey.200", p: 4 }}
+                sx={{ borderRadius: 4, border: "1px solid", borderColor: "grey.200", p: { xs: 2.5, sm: 4 } }}
             >
                 <BankAccountsManager />
             </Paper>
 
             <Divider />
 
-            {/* System Settings */}
+            {/* System & Notification Settings */}
             <Paper
                 elevation={0}
-                sx={{ borderRadius: 4, border: "1px solid", borderColor: "grey.200", p: 4 }}
+                sx={{ borderRadius: 4, border: "1px solid", borderColor: "grey.200", p: { xs: 2.5, sm: 4 } }}
             >
                 <div className="space-y-6">
+                    {/* EMAIL NOTIFICATIONS SECTION */}
                     <div>
-                        <Typography variant="h6" fontWeight={600} mb={3}>
-                            Notifications
-                        </Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2, mb: 2 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                <Box sx={{ p: 1, borderRadius: 2, bgcolor: "primary.50", color: "primary.main", display: "flex" }}>
+                                    <EmailIcon sx={{ fontSize: 24 }} />
+                                </Box>
+                                <Box>
+                                    <Typography variant="h6" fontWeight={700}>
+                                        Email Notifications
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Configure automatic email dispatching for specific student and system events.
+                                    </Typography>
+                                </Box>
+                            </Box>
 
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={settings.emailNotifications}
-                                    onChange={() => handleToggle("emailNotifications")}
-                                />
-                            }
-                            label="Email Notifications"
-                        />
+                            <Box sx={{ display: "flex", gap: 1 }}>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => handleSetAllEmails(true)}
+                                    startIcon={<CheckIcon fontSize="small" />}
+                                    sx={{ textTransform: "none", fontSize: "0.75rem", borderRadius: 2 }}
+                                >
+                                    Enable All
+                                </Button>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="inherit"
+                                    onClick={() => handleSetAllEmails(false)}
+                                    startIcon={<CloseIcon fontSize="small" />}
+                                    sx={{ textTransform: "none", fontSize: "0.75rem", borderRadius: 2 }}
+                                >
+                                    Disable All
+                                </Button>
+                            </Box>
+                        </Box>
 
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            display="block"
-                            mt={1}
+                        {/* Master Switch Card */}
+                        <Box
+                            sx={{
+                                p: 2.5,
+                                mb: 3,
+                                borderRadius: 3,
+                                border: "1px solid",
+                                borderColor: settings.emailNotifications ? "primary.200" : "grey.200",
+                                bgcolor: settings.emailNotifications ? "primary.50" : "grey.50",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 2,
+                            }}
                         >
-                            Send email notifications for important system events.
-                        </Typography>
+                            <Box>
+                                <Typography variant="subtitle2" fontWeight={700} color={settings.emailNotifications ? "primary.900" : "text.secondary"}>
+                                    Master Email Switch
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem", mt: 0.25 }}>
+                                    {settings.emailNotifications
+                                        ? "Email service is actively sending emails according to the selected event toggles below."
+                                        : "Email service is completely paused. No emails will be sent for any events."}
+                                </Typography>
+                            </Box>
+                            <Switch
+                                checked={settings.emailNotifications}
+                                onChange={() => handleToggle("emailNotifications")}
+                                color="primary"
+                            />
+                        </Box>
+
+                        {/* Granular Action Toggles Grouped by Category */}
+                        <Stack spacing={3}>
+                            {EMAIL_NOTIFICATION_ACTIONS.map((category) => (
+                                <Box
+                                    key={category.category}
+                                    sx={{
+                                        border: "1px solid",
+                                        borderColor: "grey.200",
+                                        borderRadius: 3,
+                                        p: { xs: 2, sm: 2.5 },
+                                        bgcolor: "#ffffff",
+                                    }}
+                                >
+                                    <Typography
+                                        variant="caption"
+                                        fontWeight={800}
+                                        sx={{
+                                            textTransform: "uppercase",
+                                            letterSpacing: 0.75,
+                                            color: "text.secondary",
+                                            display: "block",
+                                            mb: 1.5,
+                                        }}
+                                    >
+                                        {category.category}
+                                    </Typography>
+
+                                    <Stack spacing={1.5} divider={<Divider />}>
+                                        {category.items.map((item) => {
+                                            const ItemIcon = item.Icon;
+                                            const isChecked = !!settings[item.key];
+                                            const isEffectivelyActive = settings.emailNotifications && isChecked;
+
+                                            return (
+                                                <Box
+                                                    key={item.key}
+                                                    sx={{
+                                                        display: "flex",
+                                                        alignItems: { xs: "flex-start", sm: "center" },
+                                                        justifyContent: "space-between",
+                                                        gap: 2,
+                                                        py: 1,
+                                                        opacity: settings.emailNotifications ? 1 : 0.6,
+                                                    }}
+                                                >
+                                                    <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-start" }}>
+                                                        <Box
+                                                            sx={{
+                                                                p: 1,
+                                                                borderRadius: 2,
+                                                                bgcolor: `${item.color}15`,
+                                                                color: item.color,
+                                                                display: "flex",
+                                                                mt: { xs: 0.25, sm: 0 },
+                                                            }}
+                                                        >
+                                                            <ItemIcon sx={{ fontSize: 20 }} />
+                                                        </Box>
+                                                        <Box>
+                                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+                                                                <Typography variant="body2" fontWeight={600} color="slate.900">
+                                                                    {item.title}
+                                                                </Typography>
+                                                                {item.key === "email_attendance" && (
+                                                                    <Chip
+                                                                        label="Daily Attendance"
+                                                                        size="small"
+                                                                        sx={{ height: 20, fontSize: "0.65rem", fontWeight: 700 }}
+                                                                    />
+                                                                )}
+                                                            </Box>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25, lineHeight: 1.4 }}>
+                                                                {item.description}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+
+                                                    <Tooltip
+                                                        title={
+                                                            !settings.emailNotifications
+                                                                ? "Master email switch is turned off"
+                                                                : isChecked
+                                                                ? "Click to disable this email"
+                                                                : "Click to enable this email"
+                                                        }
+                                                    >
+                                                        <span>
+                                                            <Switch
+                                                                size="small"
+                                                                checked={isChecked}
+                                                                disabled={!settings.emailNotifications}
+                                                                onChange={() => handleToggle(item.key)}
+                                                                color="primary"
+                                                            />
+                                                        </span>
+                                                    </Tooltip>
+                                                </Box>
+                                            );
+                                        })}
+                                    </Stack>
+                                </Box>
+                            ))}
+                        </Stack>
                     </div>
 
                     <Divider />
 
+                    {/* STUDENT MANAGEMENT SECTION */}
                     <div>
                         <Typography variant="h6" fontWeight={600} mb={3}>
                             Student Management
@@ -491,6 +780,7 @@ export default function SettingsPage() {
 
                     <Divider />
 
+                    {/* SYSTEM MAINTENANCE SECTION */}
                     <div>
                         <Typography variant="h6" fontWeight={600} mb={3}>
                             System
@@ -539,18 +829,11 @@ export default function SettingsPage() {
 
                     <Divider />
 
+                    {/* ACTIONS */}
                     <div className="flex justify-end gap-3">
                         <Button
                             variant="outlined"
-                            onClick={() =>
-                                setSettings({
-                                    emailNotifications: true,
-                                    autoApproveStudents: false,
-                                    maintenanceMode: false,
-                                    allowNewRegistrations: true,
-                                    allowIdCardDownload: true,
-                                })
-                            }
+                            onClick={() => setSettings(DEFAULT_SETTINGS)}
                         >
                             Reset
                         </Button>
