@@ -546,7 +546,7 @@ export default function AttendanceManager() {
                 <Box>
                     {/* Filters */}
                     <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} elevation={0} variant="outlined">
-                        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ alignItems: "center" }}>
                             <TextField
                                 placeholder="Search student name, username, enrollment ID..."
                                 value={searchTerm}
