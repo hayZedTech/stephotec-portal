@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
     Paper,
     Typography,
@@ -15,14 +16,103 @@ import {
     IconButton,
     Tooltip,
 } from "@mui/material";
-import { Info, CheckCircle, WarningAmber, Delete, DoneAll, DeleteSweep } from "@mui/icons-material";
+import {
+    Info,
+    CheckCircle,
+    WarningAmber,
+    Delete,
+    DoneAll,
+    DeleteSweep,
+    ArrowForward,
+    EventAvailable,
+    FolderShared,
+    Assignment,
+    Quiz,
+    School,
+    Payment,
+    Person,
+    WorkspacePremium,
+} from "@mui/icons-material";
 import { getStudentNotifications, markNotificationAsRead } from "@/services/notifications";
 import { useNotifications } from "@/providers/NotificationsProvider";
 import { successToast, errorToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
 import api from "@/lib/axios";
 
+function getStudentActionMeta(notification) {
+    const title = (notification.title || "").toLowerCase();
+    const msg = (notification.message || "").toLowerCase();
+    const type = (notification.type || "").toUpperCase();
+
+    if (type.includes("ATTENDANCE") || title.includes("attendance") || msg.includes("attendance")) {
+        return {
+            label: "View Attendance Record",
+            url: "/dashboard/attendance",
+            icon: <EventAvailable sx={{ fontSize: 16 }} />,
+            color: "success",
+        };
+    }
+    if (type.includes("ASSIGNMENT") || title.includes("assignment") || msg.includes("assignment") || msg.includes("submission") || msg.includes("graded")) {
+        return {
+            label: "Open Assignments",
+            url: "/dashboard/assignments",
+            icon: <Assignment sx={{ fontSize: 16 }} />,
+            color: "primary",
+        };
+    }
+    if (type.includes("HANDOUT") || title.includes("material") || title.includes("class file") || msg.includes("class material") || msg.includes("handout") || msg.includes("download")) {
+        return {
+            label: "Open Learning Materials",
+            url: "/dashboard/learning",
+            icon: <FolderShared sx={{ fontSize: 16 }} />,
+            color: "secondary",
+        };
+    }
+    if (type.includes("QUIZ") || title.includes("quiz") || msg.includes("quiz") || title.includes("assessment") || msg.includes("assessment")) {
+        return {
+            label: "Go to Quizzes",
+            url: "/dashboard/quizzes",
+            icon: <Quiz sx={{ fontSize: 16 }} />,
+            color: "warning",
+        };
+    }
+    if (title.includes("payment") || msg.includes("payment") || msg.includes("₦") || msg.includes("paid") || msg.includes("receipt")) {
+        return {
+            label: "View Payments & Receipts",
+            url: "/dashboard/payments",
+            icon: <Payment sx={{ fontSize: 16 }} />,
+            color: "success",
+        };
+    }
+    if (title.includes("certificate") || msg.includes("certificate")) {
+        return {
+            label: "View Certificate",
+            url: "/dashboard/courses",
+            icon: <WorkspacePremium sx={{ fontSize: 16 }} />,
+            color: "warning",
+        };
+    }
+    if (title.includes("course") || msg.includes("enrolled") || msg.includes("course")) {
+        return {
+            label: "Go to My Courses",
+            url: "/dashboard/courses",
+            icon: <School sx={{ fontSize: 16 }} />,
+            color: "primary",
+        };
+    }
+    if (title.includes("profile") || title.includes("welcome") || msg.includes("account") || msg.includes("welcome")) {
+        return {
+            label: "View My Profile",
+            url: "/dashboard/profile",
+            icon: <Person sx={{ fontSize: 16 }} />,
+            color: "info",
+        };
+    }
+    return null;
+}
+
 export default function NotificationsPage() {
+    const router = useRouter();
     const { decrementUnreadCount, setUnreadCount } = useNotifications();
     const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState([]);
@@ -235,9 +325,41 @@ export default function NotificationsPage() {
                                         <Typography fontWeight={600} sx={{ mb: 0.5, fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                                             {notification.title}
                                         </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
                                             {notification.message}
                                         </Typography>
+
+                                        {/* Contextual Action Navigation Link Button */}
+                                        {(() => {
+                                            const actionMeta = getStudentActionMeta(notification);
+                                            if (!actionMeta) return null;
+                                            return (
+                                                <Box sx={{ mb: 1.5 }}>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        color={actionMeta.color}
+                                                        startIcon={actionMeta.icon}
+                                                        endIcon={<ArrowForward sx={{ fontSize: 14 }} />}
+                                                        onClick={() => {
+                                                            if (!notification.is_read) handleMarkAsRead(notification.id);
+                                                            router.push(actionMeta.url);
+                                                        }}
+                                                        sx={{
+                                                            textTransform: "none",
+                                                            borderRadius: 2,
+                                                            fontSize: "0.75rem",
+                                                            fontWeight: 700,
+                                                            py: 0.25,
+                                                            px: 1.25,
+                                                        }}
+                                                    >
+                                                        {actionMeta.label}
+                                                    </Button>
+                                                </Box>
+                                            );
+                                        })()}
+
                                         <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
                                             <Chip size="small" label={new Date(notification.created_at).toLocaleString()} variant="outlined" sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }} />
                                             <Chip size="small" label={notification.type} color={getTypeColor(notification.type)} variant="outlined" sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }} />

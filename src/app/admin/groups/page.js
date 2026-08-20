@@ -28,7 +28,7 @@ export default function AdminGroupsPage() {
     const [filterCourse, setFilterCourse] = useState("");
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingGroup, setEditingGroup] = useState(null);
-    const [formData, setFormData] = useState({ name: "", description: "", course: "", member_ids: [] });
+    const [formData, setFormData] = useState({ name: "", description: "", course_ids: [], member_ids: [] });
     const [saving, setSaving] = useState(false);
     const [viewOpen, setViewOpen] = useState(false);
     const [viewingGroup, setViewingGroup] = useState(null);
@@ -36,22 +36,27 @@ export default function AdminGroupsPage() {
     const [membersGroup, setMembersGroup] = useState(null);
     const [memberSearchTerm, setMemberSearchTerm] = useState("");
     const [selectedIds, setSelectedIds] = useState(new Set());
+    const [coursesSelectOpen, setCoursesSelectOpen] = useState(false);
     const [createMemberSearchTerm, setCreateMemberSearchTerm] = useState("");
+    const [createMemberFilterMode, setCreateMemberFilterMode] = useState("COURSE_ONLY"); // "COURSE_ONLY" or "ALL"
     const [createSelectOpen, setCreateSelectOpen] = useState(false);
     const [loadingStudents, setLoadingStudents] = useState(false);
     const [addMemberOpen, setAddMemberOpen] = useState(false);
     const [addMemberSearch, setAddMemberSearch] = useState("");
+    const [addMemberFilterMode, setAddMemberFilterMode] = useState("ALL");
     const [addingMember, setAddingMember] = useState(null);
 
     const loadAll = async () => {
         try {
             setLoading(true);
-            const [groupsRes, coursesData] = await Promise.all([
+            const [groupsRes, coursesData, studentsRes] = await Promise.all([
                 api.get("/admin/groups/").catch(() => ({ data: [] })),
                 getCourses().catch(() => []),
+                api.get("/admin/students/").catch(() => ({ data: { results: [] } })),
             ]);
             setGroups(groupsRes.data.results || groupsRes.data || []);
             setCourses(coursesData);
+            setAllStudents(studentsRes.data.results || studentsRes.data || []);
         } catch (err) {
             errorToast(err, "Failed to load groups");
         } finally {
@@ -62,54 +67,69 @@ export default function AdminGroupsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => { loadAll(); }, []);
 
-    const loadStudentsForCourse = async (courseId) => {
-        if (!courseId) { setAllStudents([]); return; }
-        try {
-            setLoadingStudents(true);
-            const res = await api.get(`/admin/students/?courses__course_id=${courseId}`);
-            setAllStudents(res.data.results || res.data || []);
-        } catch { setAllStudents([]); } finally {
-            setLoadingStudents(false);
-        }
-    };
-
     const openCreate = () => {
         setEditingGroup(null);
-        setFormData({ name: "", description: "", course: "", member_ids: [] });
-        setAllStudents([]);
+        setFormData({ name: "", description: "", course_ids: [], member_ids: [] });
         setCreateMemberSearchTerm("");
+        setCreateMemberFilterMode("ALL");
         setDialogOpen(true);
     };
 
     const openEdit = (group) => {
         setEditingGroup(group);
-        setFormData({ name: group.name, description: group.description || "", course: group.course, member_ids: group.members_detail?.map(m => m.id) || [] });
-        loadStudentsForCourse(group.course);
+        const groupCourseIds = group.courses_detail?.map(c => c.id) ||
+            (Array.isArray(group.courses) ? group.courses : (group.course ? [group.course] : []));
+
+        setFormData({
+            name: group.name,
+            description: group.description || "",
+            course_ids: groupCourseIds,
+            member_ids: group.members_detail?.map(m => m.id) || []
+        });
         setCreateMemberSearchTerm("");
+        setCreateMemberFilterMode(groupCourseIds.length > 0 ? "COURSE_ONLY" : "ALL");
         setDialogOpen(true);
     };
 
     const handleSave = async () => {
-        if (!formData.name.trim() || !formData.course) { errorToast(null, "Group Name and Course are required."); return; }
+        if (!formData.name.trim()) {
+            errorToast(null, "Group Name is required.");
+            return;
+        }
         try {
             setSaving(true);
+            const payload = {
+                name: formData.name.trim(),
+                description: formData.description,
+                course_ids: formData.course_ids,
+                member_ids: formData.member_ids,
+            };
+
             if (editingGroup) {
-                await api.patch(`/admin/groups/${editingGroup.id}/`, formData);
+                await api.patch(`/admin/groups/${editingGroup.id}/`, payload);
                 successToast("Group updated successfully!");
             } else {
-                await api.post("/admin/groups/", formData);
+                await api.post("/admin/groups/", payload);
                 successToast("Group created successfully!");
             }
             setDialogOpen(false);
             loadAll();
-        } catch (err) { errorToast(err, "Failed to save group"); }
-        finally { setSaving(false); }
+        } catch (err) {
+            errorToast(err, "Failed to save group");
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleDelete = (group) => {
         confirmAction(`Delete group "${group.name}"?`, async () => {
-            try { await api.delete(`/admin/groups/${group.id}/`); successToast("Group deleted"); loadAll(); }
-            catch (err) { errorToast(err, "Failed to delete"); }
+            try {
+                await api.delete(`/admin/groups/${group.id}/`);
+                successToast("Group deleted");
+                loadAll();
+            } catch (err) {
+                errorToast(err, "Failed to delete");
+            }
         }, null, "Delete", "Cancel", true);
     };
 
@@ -119,8 +139,11 @@ export default function AdminGroupsPage() {
             try {
                 await api.post("/admin/groups/bulk-delete/", { ids: Array.from(selectedIds) });
                 successToast(`${selectedIds.size} group(s) deleted`);
-                setSelectedIds(new Set()); loadAll();
-            } catch (err) { errorToast(err, "Bulk delete failed"); }
+                setSelectedIds(new Set());
+                loadAll();
+            } catch (err) {
+                errorToast(err, "Bulk delete failed");
+            }
         }, null, "Delete", "Cancel", true);
     };
 
@@ -151,15 +174,17 @@ export default function AdminGroupsPage() {
         }
     };
 
-    const toggleSelect = (id) => { const s = new Set(selectedIds || []); s.has(id) ? s.delete(id) : s.add(id); setSelectedIds(s); };
-    const toggleSelectAll = () => { setSelectedIds((selectedIds?.size || 0) === filtered.length && filtered.length > 0 ? new Set() : new Set(filtered.map(g => g.id))); };
-
     const openViewMembers = (group) => { setViewingGroup(group); setViewOpen(true); };
 
     const openManageMembers = (group) => {
-        setMembersGroup(group); setMemberSearchTerm("");
+        setMembersGroup(group);
+        setMemberSearchTerm("");
+        setAddMemberOpen(false);
+        setAddMemberSearch("");
+        const groupCourseIds = group.courses_detail?.map(c => c.id) ||
+            (Array.isArray(group.courses) ? group.courses : (group.course ? [group.course] : []));
+        setAddMemberFilterMode(groupCourseIds.length > 0 ? "COURSE_ONLY" : "ALL");
         setMembersDialogOpen(true);
-        loadStudentsForCourse(group.course);
     };
 
     const handleRemoveMember = async (studentId) => {
@@ -171,7 +196,9 @@ export default function AdminGroupsPage() {
             const updated = res.data;
             setMembersGroup(updated);
             setGroups(prev => prev.map(g => g.id === updated.id ? updated : g));
-        } catch (err) { errorToast(err, "Failed to remove member"); }
+        } catch (err) {
+            errorToast(err, "Failed to remove member");
+        }
     };
 
     const handleAddMember = async (student) => {
@@ -184,38 +211,123 @@ export default function AdminGroupsPage() {
             const updated = res.data;
             setMembersGroup(updated);
             setGroups(prev => prev.map(g => g.id === updated.id ? updated : g));
-        } catch (err) { errorToast(err, "Failed to add member"); }
-        finally { setAddingMember(null); }
+        } catch (err) {
+            errorToast(err, "Failed to add member");
+        } finally {
+            setAddingMember(null);
+        }
     };
 
-    const getCourseName = (id) => courses.find(c => c.id === id)?.name || "Unknown";
-    const filtered = groups.filter(g => (!searchTerm || g.name.toLowerCase().includes(searchTerm.toLowerCase())) && (!filterCourse || g.course === parseInt(filterCourse)));
+    const getGroupCourseIds = (g) => {
+        return g.courses_detail?.map(c => c.id) ||
+            (Array.isArray(g.courses) ? g.courses : (g.course ? [g.course] : []));
+    };
+
+    const filtered = groups.filter((g) => {
+        const matchesSearch = !searchTerm ||
+            g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (g.description && g.description.toLowerCase().includes(searchTerm.toLowerCase()));
+
+        if (!matchesSearch) return false;
+        if (!filterCourse) return true;
+
+        const groupCourseIds = getGroupCourseIds(g);
+        if (filterCourse === "GENERAL") {
+            return groupCourseIds.length === 0;
+        }
+
+        const selectedCourseId = parseInt(filterCourse);
+        return groupCourseIds.includes(selectedCourseId);
+    });
+
     const membersInGroup = new Set(membersGroup?.members_detail?.map(m => m.id) || []);
+
+    // Filter students for Create / Edit modal
+    const getFilteredCreateStudents = () => {
+        let list = allStudents;
+        if (formData.course_ids.length > 0 && createMemberFilterMode === "COURSE_ONLY") {
+            list = allStudents.filter(s => {
+                const sCourses = s.courses?.map(sc => sc.course?.id || sc.course) || [];
+                return formData.course_ids.some(cid => sCourses.includes(cid));
+            });
+        }
+        if (createMemberSearchTerm) {
+            const term = createMemberSearchTerm.toLowerCase();
+            list = list.filter(s =>
+                `${s.first_name} ${s.last_name} ${s.email} ${s.username}`.toLowerCase().includes(term)
+            );
+        }
+        return list;
+    };
+
+    // Filter students for Manage Members modal
+    const getFilteredAddMembersStudents = () => {
+        let list = allStudents.filter(s => !membersInGroup.has(s.id));
+        const groupCourseIds = membersGroup ? getGroupCourseIds(membersGroup) : [];
+        if (groupCourseIds.length > 0 && addMemberFilterMode === "COURSE_ONLY") {
+            list = list.filter(s => {
+                const sCourses = s.courses?.map(sc => sc.course?.id || sc.course) || [];
+                return groupCourseIds.some(cid => sCourses.includes(cid));
+            });
+        }
+        if (addMemberSearch) {
+            const term = addMemberSearch.toLowerCase();
+            list = list.filter(s =>
+                `${s.first_name} ${s.last_name} ${s.email} ${s.username}`.toLowerCase().includes(term)
+            );
+        }
+        return list;
+    };
 
     return (
         <Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 3, flexWrap: "wrap", gap: 2 }}>
                 <Box>
                     <Typography variant="h5" fontWeight={800}>Student Groups</Typography>
-                    <Typography variant="body2" color="text.secondary">Organise students into groups for bulk material and assignment distribution.</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Organise students into general, multi-course, or project-based groups for materials, tests, and announcements.
+                    </Typography>
                 </Box>
-                <Button variant="contained" startIcon={<Add />} onClick={openCreate} sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, fontWeight: 700, borderRadius: 2 }}>
+                <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={openCreate}
+                    sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, fontWeight: 700, borderRadius: 2 }}
+                >
                     Create Group
                 </Button>
             </Box>
+
             <Paper sx={{ p: 2, mb: 2, borderRadius: 3 }}>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                    <TextField size="small" placeholder="Search groups..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                        slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }} sx={{ flex: 1 }} />
-                    <TextField select size="small" label="Filter by Course" value={filterCourse} onChange={e => setFilterCourse(e.target.value)} sx={{ minWidth: 200 }}>
-                        <MenuItem value="">All Courses</MenuItem>
+                    <TextField
+                        size="small"
+                        placeholder="Search groups by name or description..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
+                        sx={{ flex: 1 }}
+                    />
+                    <TextField
+                        select
+                        size="small"
+                        label="Filter by Course"
+                        value={filterCourse}
+                        onChange={e => setFilterCourse(e.target.value)}
+                        sx={{ minWidth: 220 }}
+                    >
+                        <MenuItem value="">All Groups</MenuItem>
+                        <MenuItem value="GENERAL">General Groups (No Course)</MenuItem>
                         {courses.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
                     </TextField>
                     {(selectedIds?.size || 0) > 0 && (
-                        <Button variant="outlined" color="error" startIcon={<DeleteSweep />} onClick={handleBulkDelete}>Delete ({selectedIds.size})</Button>
+                        <Button variant="outlined" color="error" startIcon={<DeleteSweep />} onClick={handleBulkDelete}>
+                            Delete ({selectedIds.size})
+                        </Button>
                     )}
                 </Stack>
             </Paper>
+
             <Paper sx={{ borderRadius: 3, overflow: "hidden" }}>
                 {loading ? (
                     <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}><CircularProgress /></Box>
@@ -247,38 +359,166 @@ export default function AdminGroupsPage() {
                 </DialogTitle>
                 <DialogContent sx={{ pt: 3 }}>
                     <Stack spacing={2.5} sx={{ mt: 1 }}>
-                        <TextField label="Group Name" required fullWidth size="small" value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} />
-                        <TextField label="Description (optional)" fullWidth size="small" multiline rows={2} value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))} />
-                        <TextField select label="Course" required fullWidth size="small" value={formData.course} onChange={e => { const cid = e.target.value; setFormData(p => ({ ...p, course: cid, member_ids: [] })); loadStudentsForCourse(cid); }}>
-                            <MenuItem value="">Select Course</MenuItem>
-                            {courses.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
-                        </TextField>
-                        {formData.course && (
-                            <FormControl fullWidth size="small">
-                                <InputLabel>Add Members (optional)</InputLabel>
-                                <Select multiple label="Add Members (optional)" value={formData.member_ids} onChange={e => setFormData(p => ({ ...p, member_ids: e.target.value }))} renderValue={s => `${s.length} student(s) selected`} open={createSelectOpen} onOpen={() => setCreateSelectOpen(true)} onClose={() => setCreateSelectOpen(false)}>
-                                    <ListSubheader sx={{ pt: 1, pb: 1, zIndex: 2, bgcolor: 'background.paper' }}>
-                                        <TextField size="small" autoFocus placeholder="Search students..." fullWidth value={createMemberSearchTerm} onChange={e => setCreateMemberSearchTerm(e.target.value)} onKeyDown={e => e.stopPropagation()} slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }} />
-                                    </ListSubheader>
-                                    {loadingStudents ? (
-                                        <MenuItem disabled><CircularProgress size={20} sx={{ mr: 2 }} /> Loading students...</MenuItem>
-                                    ) : allStudents.filter(s => !createMemberSearchTerm || `${s.first_name} ${s.last_name} ${s.email}`.toLowerCase().includes(createMemberSearchTerm.toLowerCase())).length === 0 ? <MenuItem disabled>No students found</MenuItem> : allStudents.filter(s => !createMemberSearchTerm || `${s.first_name} ${s.last_name} ${s.email}`.toLowerCase().includes(createMemberSearchTerm.toLowerCase())).map(s => (
-                                        <MenuItem key={s.id} value={s.id}>
-                                            <Checkbox checked={formData.member_ids.includes(s.id)} size="small" />
-                                            {s.first_name} {s.last_name} — {s.email}
-                                        </MenuItem>
-                                    ))}
-                                    <Box sx={{ p: 1, position: 'sticky', bottom: 0, bgcolor: 'background.paper', borderTop: '1px solid', borderColor: 'divider', zIndex: 2 }}>
-                                        <Button fullWidth variant="contained" onClick={() => setCreateSelectOpen(false)} sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" } }}>Add</Button>
-                                    </Box>
-                                </Select>
-                            </FormControl>
-                        )}
+                        <TextField
+                            label="Group Name"
+                            required
+                            fullWidth
+                            size="small"
+                            placeholder="e.g. Frontend Masters, Robotics Club, Final Year Project Team"
+                            value={formData.name}
+                            onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
+                        />
+                        <TextField
+                            label="Description (optional)"
+                            fullWidth
+                            size="small"
+                            multiline
+                            rows={2}
+                            placeholder="Brief description of this group's objective or target..."
+                            value={formData.description}
+                            onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
+                        />
+
+                        {/* Associated Courses (Multi-Select & Optional) */}
+                        <FormControl fullWidth size="small">
+                            <InputLabel id="courses-multi-label">Associated Course(s) (Optional)</InputLabel>
+                            <Select
+                                labelId="courses-multi-label"
+                                multiple
+                                label="Associated Course(s) (Optional)"
+                                value={formData.course_ids}
+                                open={coursesSelectOpen}
+                                onOpen={() => setCoursesSelectOpen(true)}
+                                onClose={() => setCoursesSelectOpen(false)}
+                                onChange={(e) => {
+                                    const val = typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value;
+                                    setFormData(p => ({ ...p, course_ids: val }));
+                                }}
+                                renderValue={(selected) => {
+                                    if (selected.length === 0) return <em>General / All Courses</em>;
+                                    return (
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                            {selected.map((cid) => {
+                                                const c = courses.find(item => item.id === cid);
+                                                return <Chip key={cid} label={c?.name || `Course #${cid}`} size="small" sx={{ fontWeight: 600 }} />;
+                                            })}
+                                        </Box>
+                                    );
+                                }}
+                            >
+                                {courses.map((c) => (
+                                    <MenuItem key={c.id} value={c.id}>
+                                        <Checkbox checked={formData.course_ids.includes(c.id)} size="small" />
+                                        <Typography variant="body2">{c.name}</Typography>
+                                    </MenuItem>
+                                ))}
+                                <Box sx={{ p: 1, position: 'sticky', bottom: 0, bgcolor: 'background.paper', borderTop: '1px solid', borderColor: 'divider', zIndex: 2 }}>
+                                    <Button
+                                        fullWidth
+                                        variant="contained"
+                                        onClick={() => setCoursesSelectOpen(false)}
+                                        sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" } }}
+                                    >
+                                        Add {formData.course_ids.length > 0 ? `(${formData.course_ids.length} selected)` : ""}
+                                    </Button>
+                                </Box>
+                            </Select>
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                                Optional: Leave blank for a general / cross-disciplinary group, or select one or more courses.
+                            </Typography>
+                        </FormControl>
+
+                        {/* Member Selection */}
+                        <FormControl fullWidth size="small">
+                            <InputLabel>Add Members (optional)</InputLabel>
+                            <Select
+                                multiple
+                                label="Add Members (optional)"
+                                value={formData.member_ids}
+                                onChange={e => setFormData(p => ({ ...p, member_ids: e.target.value }))}
+                                renderValue={s => `${s.length} student(s) selected`}
+                                open={createSelectOpen}
+                                onOpen={() => setCreateSelectOpen(true)}
+                                onClose={() => setCreateSelectOpen(false)}
+                            >
+                                <ListSubheader sx={{ pt: 1, pb: 1, zIndex: 2, bgcolor: 'background.paper' }}>
+                                    <Stack spacing={1}>
+                                        <TextField
+                                            size="small"
+                                            autoFocus
+                                            placeholder="Search students by name, email..."
+                                            fullWidth
+                                            value={createMemberSearchTerm}
+                                            onChange={e => setCreateMemberSearchTerm(e.target.value)}
+                                            onKeyDown={e => e.stopPropagation()}
+                                            slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
+                                        />
+                                        {formData.course_ids.length > 0 && (
+                                            <Stack direction="row" spacing={1}>
+                                                <Chip
+                                                    size="small"
+                                                    label="In Selected Course(s)"
+                                                    clickable
+                                                    color={createMemberFilterMode === "COURSE_ONLY" ? "primary" : "default"}
+                                                    variant={createMemberFilterMode === "COURSE_ONLY" ? "filled" : "outlined"}
+                                                    onClick={(e) => { e.stopPropagation(); setCreateMemberFilterMode("COURSE_ONLY"); }}
+                                                    sx={{ fontSize: "0.7rem", fontWeight: 700 }}
+                                                />
+                                                <Chip
+                                                    size="small"
+                                                    label={`All Students (${allStudents.length})`}
+                                                    clickable
+                                                    color={createMemberFilterMode === "ALL" ? "primary" : "default"}
+                                                    variant={createMemberFilterMode === "ALL" ? "filled" : "outlined"}
+                                                    onClick={(e) => { e.stopPropagation(); setCreateMemberFilterMode("ALL"); }}
+                                                    sx={{ fontSize: "0.7rem", fontWeight: 700 }}
+                                                />
+                                            </Stack>
+                                        )}
+                                    </Stack>
+                                </ListSubheader>
+
+                                {getFilteredCreateStudents().length === 0 ? (
+                                    <MenuItem disabled>No matching students found</MenuItem>
+                                ) : (
+                                    getFilteredCreateStudents().map(s => {
+                                        const sCourseNames = s.courses?.map(sc => sc.course?.name || sc.course).filter(Boolean).join(", ");
+                                        return (
+                                            <MenuItem key={s.id} value={s.id}>
+                                                <Checkbox checked={formData.member_ids.includes(s.id)} size="small" />
+                                                <Box>
+                                                    <Typography variant="body2" fontWeight={600}>{s.first_name} {s.last_name}</Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {s.email} {sCourseNames ? `· [${sCourseNames}]` : ""}
+                                                    </Typography>
+                                                </Box>
+                                            </MenuItem>
+                                        );
+                                    })
+                                )}
+
+                                <Box sx={{ p: 1, position: 'sticky', bottom: 0, bgcolor: 'background.paper', borderTop: '1px solid', borderColor: 'divider', zIndex: 2 }}>
+                                    <Button
+                                        fullWidth
+                                        variant="contained"
+                                        onClick={() => setCreateSelectOpen(false)}
+                                        sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" } }}
+                                    >
+                                        Done Selecting ({formData.member_ids.length})
+                                    </Button>
+                                </Box>
+                            </Select>
+                        </FormControl>
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{ p: 2 }}>
                     <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-                    <Button variant="contained" onClick={handleSave} disabled={saving} sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" } }}>
+                    <Button
+                        variant="contained"
+                        onClick={handleSave}
+                        disabled={saving}
+                        sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" } }}
+                    >
                         {saving ? "Saving..." : (editingGroup ? "Update Group" : "Create Group")}
                     </Button>
                 </DialogActions>
@@ -318,7 +558,10 @@ export default function AdminGroupsPage() {
                             <Button
                                 variant="contained"
                                 startIcon={<PersonAdd />}
-                                onClick={() => { setAddMemberOpen(true); setAddMemberSearch(""); loadStudentsForCourse(membersGroup?.course); }}
+                                onClick={() => {
+                                    setAddMemberOpen(true);
+                                    setAddMemberSearch("");
+                                }}
                                 sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, fontWeight: 700, borderRadius: 2 }}
                             >
                                 Add Member
@@ -329,50 +572,71 @@ export default function AdminGroupsPage() {
                                     <Typography variant="subtitle2" fontWeight={700}>Add a Student</Typography>
                                     <IconButton size="small" onClick={() => setAddMemberOpen(false)}><Close fontSize="small" /></IconButton>
                                 </Box>
-                                <TextField
-                                    size="small"
-                                    fullWidth
-                                    placeholder="Search by name or email..."
-                                    value={addMemberSearch}
-                                    onChange={e => setAddMemberSearch(e.target.value)}
-                                    autoFocus
-                                    slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
-                                />
-                                <Box sx={{ maxHeight: 200, overflow: "auto", mt: 1 }}>
-                                    {loadingStudents ? (
-                                        <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={24} /></Box>
+
+                                <Stack spacing={1} sx={{ mb: 1.5 }}>
+                                    <TextField
+                                        size="small"
+                                        fullWidth
+                                        placeholder="Search by name, email, or student ID..."
+                                        value={addMemberSearch}
+                                        onChange={e => setAddMemberSearch(e.target.value)}
+                                        autoFocus
+                                        slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
+                                    />
+                                    {membersGroup && getGroupCourseIds(membersGroup).length > 0 && (
+                                        <Stack direction="row" spacing={1}>
+                                            <Chip
+                                                size="small"
+                                                label="In Group Course(s)"
+                                                clickable
+                                                color={addMemberFilterMode === "COURSE_ONLY" ? "primary" : "default"}
+                                                variant={addMemberFilterMode === "COURSE_ONLY" ? "filled" : "outlined"}
+                                                onClick={() => setAddMemberFilterMode("COURSE_ONLY")}
+                                                sx={{ fontSize: "0.7rem", fontWeight: 700 }}
+                                            />
+                                            <Chip
+                                                size="small"
+                                                label={`All Students (${allStudents.length})`}
+                                                clickable
+                                                color={addMemberFilterMode === "ALL" ? "primary" : "default"}
+                                                variant={addMemberFilterMode === "ALL" ? "filled" : "outlined"}
+                                                onClick={() => setAddMemberFilterMode("ALL")}
+                                                sx={{ fontSize: "0.7rem", fontWeight: 700 }}
+                                            />
+                                        </Stack>
+                                    )}
+                                </Stack>
+
+                                <Box sx={{ maxHeight: 220, overflow: "auto", mt: 1 }}>
+                                    {getFilteredAddMembersStudents().length === 0 ? (
+                                        <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>
+                                            {addMemberSearch ? "No matching students found" : "All eligible students are already members"}
+                                        </Typography>
                                     ) : (
-                                        allStudents
-                                            .filter(s => !membersInGroup.has(s.id))
-                                            .filter(s => !addMemberSearch || `${s.first_name} ${s.last_name} ${s.email}`.toLowerCase().includes(addMemberSearch.toLowerCase()))
-                                            .length === 0 ? (
-                                            <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>
-                                                {addMemberSearch ? "No matching students" : "All students in this course are already members"}
-                                            </Typography>
-                                        ) : (
-                                            allStudents
-                                                .filter(s => !membersInGroup.has(s.id))
-                                                .filter(s => !addMemberSearch || `${s.first_name} ${s.last_name} ${s.email}`.toLowerCase().includes(addMemberSearch.toLowerCase()))
-                                                .map((s, idx, arr) => (
-                                                    <Box key={s.id}
-                                                        sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: 1.5, borderBottom: idx < arr.length - 1 ? "1px solid" : "none", borderColor: "grey.200", borderRadius: 1 }}
-                                                    >
-                                                        <Box>
-                                                            <Typography variant="body2" fontWeight={600}>{s.first_name} {s.last_name}</Typography>
-                                                            <Typography variant="caption" color="text.secondary">{s.email}</Typography>
-                                                        </Box>
-                                                        <Button
-                                                            size="small"
-                                                            variant="contained"
-                                                            disabled={addingMember === s.id}
-                                                            onClick={() => handleAddMember(s)}
-                                                            sx={{ minWidth: 56, bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" } }}
-                                                        >
-                                                            {addingMember === s.id ? <CircularProgress size={14} color="inherit" /> : "Add"}
-                                                        </Button>
+                                        getFilteredAddMembersStudents().map((s, idx, arr) => {
+                                            const sCourseNames = s.courses?.map(sc => sc.course?.name || sc.course).filter(Boolean).join(", ");
+                                            return (
+                                                <Box key={s.id}
+                                                    sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: 1.5, borderBottom: idx < arr.length - 1 ? "1px solid" : "none", borderColor: "grey.200", borderRadius: 1 }}
+                                                >
+                                                    <Box sx={{ flex: 1, minWidth: 0, pr: 1 }}>
+                                                        <Typography variant="body2" fontWeight={600} noWrap>{s.first_name} {s.last_name}</Typography>
+                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                            {s.email} {sCourseNames ? `· [${sCourseNames}]` : ""}
+                                                        </Typography>
                                                     </Box>
-                                                ))
-                                        )
+                                                    <Button
+                                                        size="small"
+                                                        variant="contained"
+                                                        disabled={addingMember === s.id}
+                                                        onClick={() => handleAddMember(s)}
+                                                        sx={{ minWidth: 56, bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" } }}
+                                                    >
+                                                        {addingMember === s.id ? <CircularProgress size={14} color="inherit" /> : "Add"}
+                                                    </Button>
+                                                </Box>
+                                            );
+                                        })
                                     )}
                                 </Box>
                             </Box>

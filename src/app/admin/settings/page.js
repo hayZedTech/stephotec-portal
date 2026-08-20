@@ -28,6 +28,8 @@ import {
     Card,
     CardContent,
     Grid,
+    Tabs,
+    Tab,
 } from "@mui/material";
 import {
     Add,
@@ -51,9 +53,11 @@ import {
     NotificationsActive as NotificationsActiveIcon,
     Check as CheckIcon,
     Close as CloseIcon,
+    Tune as TuneIcon,
+    People as PeopleIcon,
 } from "@mui/icons-material";
 import api from "@/lib/axios";
-import { successToast, errorToast } from "@/lib/toast";
+import { successToast, errorToast, infoToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
 
 const EMAIL_NOTIFICATION_ACTIONS = [
@@ -460,6 +464,7 @@ const DEFAULT_SETTINGS = {
 };
 
 export default function SettingsPage() {
+    const [activeTab, setActiveTab] = useState(0);
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [saving, setSaving] = useState(false);
 
@@ -497,15 +502,47 @@ export default function SettingsPage() {
     };
 
     const handleSetAllEmails = (enable) => {
-        setSettings((prev) => {
-            const updated = { ...prev, emailNotifications: enable };
-            EMAIL_NOTIFICATION_ACTIONS.forEach((cat) => {
-                cat.items.forEach((item) => {
-                    updated[item.key] = enable;
+        const message = enable
+            ? "Are you sure you want to enable all email notifications?"
+            : "Are you sure you want to disable all email notifications?";
+
+        confirmAction(
+            message,
+            () => {
+                setSettings((prev) => {
+                    const updated = { ...prev, emailNotifications: enable };
+                    EMAIL_NOTIFICATION_ACTIONS.forEach((cat) => {
+                        cat.items.forEach((item) => {
+                            updated[item.key] = enable;
+                        });
+                    });
+                    return updated;
                 });
-            });
-            return updated;
-        });
+                if (enable) {
+                    successToast("All email notifications enabled. Click 'Save Changes' to apply.");
+                } else {
+                    infoToast("All email notifications disabled. Click 'Save Changes' to apply.");
+                }
+            },
+            null,
+            enable ? "Yes, Enable All" : "Yes, Disable All",
+            "No, Cancel",
+            !enable
+        );
+    };
+
+    const handleReset = () => {
+        confirmAction(
+            "Are you sure you want to reset all settings to defaults?",
+            () => {
+                setSettings(DEFAULT_SETTINGS);
+                infoToast("Settings reset to defaults. Click 'Save Changes' to apply.");
+            },
+            null,
+            "Yes, Reset",
+            "No, Cancel",
+            true
+        );
     };
 
     const handleSave = async () => {
@@ -532,29 +569,89 @@ export default function SettingsPage() {
                     Settings
                 </Typography>
                 <Typography color="text.secondary">
-                    Manage system configuration, email triggers, and operational preferences.
+                    Manage school bank accounts, email triggers, student workflows, and system preferences.
                 </Typography>
             </div>
 
-            {/* Bank Accounts */}
+            {/* Navigation Tabs Header */}
             <Paper
                 elevation={0}
-                sx={{ borderRadius: 4, border: "1px solid", borderColor: "grey.200", p: { xs: 2.5, sm: 4 } }}
+                sx={{
+                    borderRadius: 3,
+                    border: "1px solid",
+                    borderColor: "grey.200",
+                    p: 0.75,
+                    bgcolor: "grey.50",
+                }}
             >
-                <BankAccountsManager />
+                <Tabs
+                    value={activeTab}
+                    onChange={(e, val) => setActiveTab(val)}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    sx={{
+                        "& .MuiTabs-indicator": {
+                            display: "none",
+                        },
+                        "& .MuiTab-root": {
+                            textTransform: "none",
+                            fontWeight: 600,
+                            fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                            minHeight: 42,
+                            borderRadius: 2.5,
+                            px: { xs: 2, sm: 2.5 },
+                            py: 1,
+                            color: "text.secondary",
+                            transition: "all 0.2s ease",
+                            "&.Mui-selected": {
+                                bgcolor: "#ffffff",
+                                color: "primary.main",
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                            },
+                        },
+                    }}
+                >
+                    <Tab
+                        icon={<AccountBalance sx={{ fontSize: 19 }} />}
+                        iconPosition="start"
+                        label="Bank Accounts"
+                    />
+                    <Tab
+                        icon={<EmailIcon sx={{ fontSize: 19 }} />}
+                        iconPosition="start"
+                        label="Email Notifications"
+                    />
+                    <Tab
+                        icon={<PeopleIcon sx={{ fontSize: 19 }} />}
+                        iconPosition="start"
+                        label="Student Management"
+                    />
+                    <Tab
+                        icon={<TuneIcon sx={{ fontSize: 19 }} />}
+                        iconPosition="start"
+                        label="System & Maintenance"
+                    />
+                </Tabs>
             </Paper>
 
-            <Divider />
+            {/* TAB 0: BANK ACCOUNTS */}
+            {activeTab === 0 && (
+                <Paper
+                    elevation={0}
+                    sx={{ borderRadius: 4, border: "1px solid", borderColor: "grey.200", p: { xs: 2.5, sm: 4 } }}
+                >
+                    <BankAccountsManager />
+                </Paper>
+            )}
 
-            {/* System & Notification Settings */}
-            <Paper
-                elevation={0}
-                sx={{ borderRadius: 4, border: "1px solid", borderColor: "grey.200", p: { xs: 2.5, sm: 4 } }}
-            >
-                <div className="space-y-6">
-                    {/* EMAIL NOTIFICATIONS SECTION */}
-                    <div>
-                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2, mb: 2 }}>
+            {/* TAB 1: EMAIL NOTIFICATIONS */}
+            {activeTab === 1 && (
+                <Paper
+                    elevation={0}
+                    sx={{ borderRadius: 4, border: "1px solid", borderColor: "grey.200", p: { xs: 2.5, sm: 4 } }}
+                >
+                    <div className="space-y-6">
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
                             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                                 <Box sx={{ p: 1, borderRadius: 2, bgcolor: "primary.50", color: "primary.main", display: "flex" }}>
                                     <EmailIcon sx={{ fontSize: 24 }} />
@@ -596,7 +693,6 @@ export default function SettingsPage() {
                         <Box
                             sx={{
                                 p: 2.5,
-                                mb: 3,
                                 borderRadius: 3,
                                 border: "1px solid",
                                 borderColor: settings.emailNotifications ? "primary.200" : "grey.200",
@@ -655,7 +751,6 @@ export default function SettingsPage() {
                                         {category.items.map((item) => {
                                             const ItemIcon = item.Icon;
                                             const isChecked = !!settings[item.key];
-                                            const isEffectivelyActive = settings.emailNotifications && isChecked;
 
                                             return (
                                                 <Box
@@ -727,127 +822,189 @@ export default function SettingsPage() {
                                 </Box>
                             ))}
                         </Stack>
+
+                        <Divider />
+
+                        {/* ACTION BUTTONS */}
+                        <div className="flex justify-end gap-3">
+                            <Button
+                                variant="outlined"
+                                onClick={handleReset}
+                            >
+                                Reset
+                            </Button>
+
+                            <Button
+                                variant="contained"
+                                onClick={handleSave}
+                                disabled={saving}
+                            >
+                                {saving ? "Saving..." : "Save Changes"}
+                            </Button>
+                        </div>
                     </div>
+                </Paper>
+            )}
 
-                    <Divider />
+            {/* TAB 2: STUDENT MANAGEMENT */}
+            {activeTab === 2 && (
+                <Paper
+                    elevation={0}
+                    sx={{ borderRadius: 4, border: "1px solid", borderColor: "grey.200", p: { xs: 2.5, sm: 4 } }}
+                >
+                    <div className="space-y-6">
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                            <Box sx={{ p: 1, borderRadius: 2, bgcolor: "primary.50", color: "primary.main", display: "flex" }}>
+                                <PeopleIcon sx={{ fontSize: 24 }} />
+                            </Box>
+                            <Box>
+                                <Typography variant="h6" fontWeight={700}>
+                                    Student Management
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    Configure student onboarding approvals and ID card downloads.
+                                </Typography>
+                            </Box>
+                        </Box>
 
-                    {/* STUDENT MANAGEMENT SECTION */}
-                    <div>
-                        <Typography variant="h6" fontWeight={600} mb={3}>
-                            Student Management
-                        </Typography>
+                        <Box sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 3, p: 3, bgcolor: "#ffffff" }}>
+                            <Stack spacing={3} divider={<Divider />}>
+                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
+                                    <Box>
+                                        <Typography variant="body2" fontWeight={600}>
+                                            Auto-Approve New Students
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Automatically approve new student registrations without requiring manual admin confirmation.
+                                        </Typography>
+                                    </Box>
+                                    <Switch
+                                        checked={settings.autoApproveStudents}
+                                        onChange={() => handleToggle("autoApproveStudents")}
+                                        color="primary"
+                                    />
+                                </Box>
 
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={settings.autoApproveStudents}
-                                    onChange={() => handleToggle("autoApproveStudents")}
-                                />
-                            }
-                            label="Auto-Approve New Students"
-                        />
-
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            display="block"
-                            mt={1}
-                        >
-                            Automatically approve new student registrations.
-                        </Typography>
-
-                        <Box mt={3}>
-                            <FormControlLabel
-                                control={
+                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
+                                    <Box>
+                                        <Typography variant="body2" fontWeight={600}>
+                                            Allow Student ID Card Downloads
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Enable or disable digital student ID card viewing and PDF downloading on the student portal.
+                                        </Typography>
+                                    </Box>
                                     <Switch
                                         checked={settings.allowIdCardDownload}
                                         onChange={() => handleToggle("allowIdCardDownload")}
+                                        color="primary"
                                     />
-                                }
-                                label="Allow Student ID Card Downloads"
-                            />
-
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                display="block"
-                                mt={1}
-                            >
-                                Enable or disable digital ID card viewing and downloads for students.
-                            </Typography>
+                                </Box>
+                            </Stack>
                         </Box>
+
+                        <Divider />
+
+                        {/* ACTION BUTTONS */}
+                        <div className="flex justify-end gap-3">
+                            <Button
+                                variant="outlined"
+                                onClick={handleReset}
+                            >
+                                Reset
+                            </Button>
+
+                            <Button
+                                variant="contained"
+                                onClick={handleSave}
+                                disabled={saving}
+                            >
+                                {saving ? "Saving..." : "Save Changes"}
+                            </Button>
+                        </div>
                     </div>
+                </Paper>
+            )}
 
-                    <Divider />
+            {/* TAB 3: SYSTEM & MAINTENANCE */}
+            {activeTab === 3 && (
+                <Paper
+                    elevation={0}
+                    sx={{ borderRadius: 4, border: "1px solid", borderColor: "grey.200", p: { xs: 2.5, sm: 4 } }}
+                >
+                    <div className="space-y-6">
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                            <Box sx={{ p: 1, borderRadius: 2, bgcolor: "primary.50", color: "primary.main", display: "flex" }}>
+                                <TuneIcon sx={{ fontSize: 24 }} />
+                            </Box>
+                            <Box>
+                                <Typography variant="h6" fontWeight={700}>
+                                    System & Maintenance
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    Control global portal availability, maintenance mode, and public registrations.
+                                </Typography>
+                            </Box>
+                        </Box>
 
-                    {/* SYSTEM MAINTENANCE SECTION */}
-                    <div>
-                        <Typography variant="h6" fontWeight={600} mb={3}>
-                            System
-                        </Typography>
+                        <Box sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 3, p: 3, bgcolor: "#ffffff" }}>
+                            <Stack spacing={3} divider={<Divider />}>
+                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
+                                    <Box>
+                                        <Typography variant="body2" fontWeight={600} color={settings.maintenanceMode ? "error.main" : "text.primary"}>
+                                            Maintenance Mode
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Temporarily disable access for students and non-administrators while system maintenance is performed.
+                                        </Typography>
+                                    </Box>
+                                    <Switch
+                                        checked={settings.maintenanceMode}
+                                        onChange={() => handleToggle("maintenanceMode")}
+                                        color="error"
+                                    />
+                                </Box>
 
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={settings.maintenanceMode}
-                                    onChange={() => handleToggle("maintenanceMode")}
-                                />
-                            }
-                            label="Maintenance Mode"
-                        />
-
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            display="block"
-                            mt={1}
-                        >
-                            Disable access for all users except administrators.
-                        </Typography>
-
-                        <Box mt={3}>
-                            <FormControlLabel
-                                control={
+                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
+                                    <Box>
+                                        <Typography variant="body2" fontWeight={600}>
+                                            Allow New Registrations
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Allow prospective students to register new accounts via the public portal registration page.
+                                        </Typography>
+                                    </Box>
                                     <Switch
                                         checked={settings.allowNewRegistrations}
                                         onChange={() => handleToggle("allowNewRegistrations")}
+                                        color="primary"
                                     />
-                                }
-                                label="Allow New Registrations"
-                            />
-
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                display="block"
-                                mt={1}
-                            >
-                                Allow new students to register in the system.
-                            </Typography>
+                                </Box>
+                            </Stack>
                         </Box>
+
+                        <Divider />
+
+                        {/* ACTION BUTTONS */}
+                        <div className="flex justify-end gap-3">
+                            <Button
+                                variant="outlined"
+                                onClick={handleReset}
+                            >
+                                Reset
+                            </Button>
+
+                            <Button
+                                variant="contained"
+                                onClick={handleSave}
+                                disabled={saving}
+                            >
+                                {saving ? "Saving..." : "Save Changes"}
+                            </Button>
+                        </div>
                     </div>
-
-                    <Divider />
-
-                    {/* ACTIONS */}
-                    <div className="flex justify-end gap-3">
-                        <Button
-                            variant="outlined"
-                            onClick={() => setSettings(DEFAULT_SETTINGS)}
-                        >
-                            Reset
-                        </Button>
-
-                        <Button
-                            variant="contained"
-                            onClick={handleSave}
-                            disabled={saving}
-                        >
-                            {saving ? "Saving..." : "Save Changes"}
-                        </Button>
-                    </div>
-                </div>
-            </Paper>
+                </Paper>
+            )}
         </div>
     );
 }

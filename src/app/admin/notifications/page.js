@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
     Paper,
     Typography,
@@ -33,10 +34,92 @@ import { useForm, Controller } from "react-hook-form";
 import { successToast, errorToast } from "@/lib/toast";
 import api from "@/lib/axios";
 import { confirmAction } from "@/utils/confirmAction";
-import { Send, Visibility, CheckCircle, Inbox, SendOutlined, Delete, DeleteSweep } from "@mui/icons-material";
+import {
+    Send,
+    Visibility,
+    CheckCircle,
+    Inbox,
+    SendOutlined,
+    Delete,
+    DeleteSweep,
+    ArrowForward,
+    EventAvailable,
+    Payment,
+    Assignment,
+    Quiz,
+    School,
+    People,
+    FolderShared,
+    WorkspacePremium,
+} from "@mui/icons-material";
 import { IconButton as MuiIconButton, Tooltip as MuiTooltip } from "@mui/material";
 
+function getAlertActionMeta(alert) {
+    const title = (alert.title || "").toLowerCase();
+    const msg = (alert.message || "").toLowerCase();
+    const type = (alert.alert_type || "").toUpperCase();
+
+    if (type.includes("ATTENDANCE") || title.includes("attendance") || msg.includes("attendance")) {
+        return {
+            label: "Review Attendance",
+            url: "/dashboard/admin/learning?tab=attendance",
+            icon: <EventAvailable sx={{ fontSize: 16 }} />,
+            color: "success",
+        };
+    }
+    if (type.includes("PAYMENT") || title.includes("payment") || msg.includes("payment") || title.includes("handout") || msg.includes("handout") || msg.includes("₦")) {
+        return {
+            label: "Review Payments",
+            url: "/admin/payments",
+            icon: <Payment sx={{ fontSize: 16 }} />,
+            color: "primary",
+        };
+    }
+    if (type.includes("ASSIGNMENT") || title.includes("assignment") || msg.includes("assignment") || msg.includes("submission")) {
+        return {
+            label: "View Assignments",
+            url: "/dashboard/admin/learning",
+            icon: <Assignment sx={{ fontSize: 16 }} />,
+            color: "secondary",
+        };
+    }
+    if (type.includes("QUIZ") || title.includes("quiz") || msg.includes("quiz") || title.includes("assessment")) {
+        return {
+            label: "Manage Quizzes",
+            url: "/admin/quizzes",
+            icon: <Quiz sx={{ fontSize: 16 }} />,
+            color: "warning",
+        };
+    }
+    if (title.includes("certificate") || msg.includes("certificate")) {
+        return {
+            label: "Manage Certificates",
+            url: "/dashboard/admin/learning?tab=certificates",
+            icon: <WorkspacePremium sx={{ fontSize: 16 }} />,
+            color: "warning",
+        };
+    }
+    if (title.includes("student") || msg.includes("registration") || msg.includes("profile") || msg.includes("activation")) {
+        return {
+            label: "View Students",
+            url: "/admin/students",
+            icon: <People sx={{ fontSize: 16 }} />,
+            color: "info",
+        };
+    }
+    if (title.includes("material") || title.includes("class file") || msg.includes("file") || msg.includes("code")) {
+        return {
+            label: "Manage Class Files",
+            url: "/dashboard/admin/learning?tab=files",
+            icon: <FolderShared sx={{ fontSize: 16 }} />,
+            color: "primary",
+        };
+    }
+    return null;
+}
+
 export default function AdminNotificationsPage() {
+    const router = useRouter();
     const [tab, setTab] = useState(0);
     const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState([]);
@@ -405,7 +488,39 @@ export default function AdminNotificationsPage() {
                                                              <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#7c3aed", flexShrink: 0 }} />
                                                          )}
                                                      </Box>
-                                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, wordBreak: "break-word" }}>{alert.message}</Typography>
+                                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75, wordBreak: "break-word" }}>{alert.message}</Typography>
+
+                                                     {/* Navigation Link Button */}
+                                                     {(() => {
+                                                         const actionMeta = getAlertActionMeta(alert);
+                                                         if (!actionMeta) return null;
+                                                         return (
+                                                             <Box sx={{ mb: 1 }}>
+                                                                 <Button
+                                                                     size="small"
+                                                                     variant="outlined"
+                                                                     color={actionMeta.color}
+                                                                     startIcon={actionMeta.icon}
+                                                                     endIcon={<ArrowForward sx={{ fontSize: 14 }} />}
+                                                                     onClick={() => {
+                                                                         if (!alert.is_read) handleMarkAlertRead(alert.id);
+                                                                         router.push(actionMeta.url);
+                                                                     }}
+                                                                     sx={{
+                                                                         textTransform: "none",
+                                                                         borderRadius: 2,
+                                                                         fontSize: "0.75rem",
+                                                                         fontWeight: 700,
+                                                                         py: 0.25,
+                                                                         px: 1.25,
+                                                                     }}
+                                                                 >
+                                                                     {actionMeta.label}
+                                                                 </Button>
+                                                             </Box>
+                                                         );
+                                                     })()}
+
                                                      <Typography variant="caption" color="text.disabled">
                                                          {new Date(alert.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                                                      </Typography>

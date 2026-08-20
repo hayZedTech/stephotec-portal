@@ -60,7 +60,13 @@ export default function MyGroupsPage() {
                                         <Box sx={{ flex: 1, minWidth: 0 }}>
                                             <Typography fontWeight={800} variant="body1" sx={{ wordBreak: "break-word", lineHeight: 1.3, mb: 0.5 }}>{group.name}</Typography>
                                             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                                                <Chip icon={<School sx={{ fontSize: "1rem !important" }} />} label={group.course_name} size="small" sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", fontWeight: 700, "& .MuiChip-icon": { color: "white" } }} />
+                                                {group.courses_detail && group.courses_detail.length > 0 ? (
+                                                    group.courses_detail.map(c => (
+                                                        <Chip key={c.id} icon={<School sx={{ fontSize: "1rem !important" }} />} label={c.name} size="small" sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", fontWeight: 700, "& .MuiChip-icon": { color: "white" } }} />
+                                                    ))
+                                                ) : (
+                                                    <Chip icon={<School sx={{ fontSize: "1rem !important" }} />} label={group.course_name || "General Group"} size="small" sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", fontWeight: 700, "& .MuiChip-icon": { color: "white" } }} />
+                                                )}
                                                 <Chip icon={<People sx={{ fontSize: "1rem !important" }} />} label={`${group.member_count} member(s)`} size="small" sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", fontWeight: 700, "& .MuiChip-icon": { color: "white" } }} />
                                             </Box>
                                         </Box>

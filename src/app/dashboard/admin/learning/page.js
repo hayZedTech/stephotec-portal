@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
     Box,
     Tabs,
@@ -39,13 +40,24 @@ function TabPanel(props) {
     );
 }
 
-export default function AdminLearningPage() {
+function AdminLearningContent() {
+    const searchParams = useSearchParams();
     const [tabValue, setTabValue] = useState(0);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         setLoading(false);
-    }, []);
+        const tabParam = searchParams.get("tab");
+        if (tabParam) {
+            if (tabParam === "attendance" || tabParam === "2") setTabValue(2);
+            else if (tabParam === "materials" || tabParam === "0") setTabValue(0);
+            else if (tabParam === "files" || tabParam === "1") setTabValue(1);
+            else if (tabParam === "certificates" || tabParam === "3") setTabValue(3);
+            else if (tabParam === "handouts" || tabParam === "4") setTabValue(4);
+            else if (tabParam === "brochures" || tabParam === "5") setTabValue(5);
+            else if (!isNaN(parseInt(tabParam))) setTabValue(parseInt(tabParam));
+        }
+    }, [searchParams]);
 
     const handleTabChange = (event, newValue) => {
         setTabValue(newValue);
@@ -189,5 +201,13 @@ export default function AdminLearningPage() {
                 </Box>
             </Paper>
         </div>
+    );
+}
+
+export default function AdminLearningPage() {
+    return (
+        <Suspense fallback={<Box sx={{ p: 4, textAlign: "center" }}><CircularProgress /></Box>}>
+            <AdminLearningContent />
+        </Suspense>
     );
 }

@@ -84,8 +84,70 @@ export default function AttendanceManager() {
     const [filterCourse, setFilterCourse] = useState("");
     const [filterApproval, setFilterApproval] = useState("");
     const [selectedIds, setSelectedIds] = useState(new Set());
+    const [selectedPendingIds, setSelectedPendingIds] = useState(new Set());
+    const [bulkActionLoading, setBulkActionLoading] = useState(false);
+    const [bulkRejectDialogOpen, setBulkRejectDialogOpen] = useState(false);
+    const [bulkRejectRemark, setBulkRejectRemark] = useState("");
     const [statusMenuAnchor, setStatusMenuAnchor] = useState(null);
     const [statusMenuRecord, setStatusMenuRecord] = useState(null);
+
+    const togglePendingSelect = (id) => {
+        setSelectedPendingIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const handleSelectAllPending = () => {
+        if (selectedPendingIds.size === pending.length) {
+            setSelectedPendingIds(new Set());
+        } else {
+            setSelectedPendingIds(new Set(pending.map((p) => p.id)));
+        }
+    };
+
+    const handleBulkApprove = async (targetIds = null) => {
+        const idsToApprove = targetIds || Array.from(selectedPendingIds.size > 0 ? selectedPendingIds : selectedIds);
+        if (idsToApprove.length === 0) return;
+
+        setBulkActionLoading(true);
+        try {
+            await api.post("/learning/attendance/bulk-approve/", { ids: idsToApprove });
+            successToast(`${idsToApprove.length} attendance record(s) approved.`);
+            setSelectedPendingIds(new Set());
+            setSelectedIds(new Set());
+            loadData();
+        } catch (err) {
+            errorToast(err, "Failed to bulk approve");
+        } finally {
+            setBulkActionLoading(false);
+        }
+    };
+
+    const handleBulkRejectSubmit = async () => {
+        const idsToReject = Array.from(selectedPendingIds.size > 0 ? selectedPendingIds : selectedIds);
+        if (idsToReject.length === 0) return;
+
+        setBulkActionLoading(true);
+        try {
+            await api.post("/learning/attendance/bulk-reject/", {
+                ids: idsToReject,
+                remarks: bulkRejectRemark,
+            });
+            successToast(`${idsToReject.length} attendance record(s) rejected.`);
+            setSelectedPendingIds(new Set());
+            setSelectedIds(new Set());
+            setBulkRejectDialogOpen(false);
+            setBulkRejectRemark("");
+            loadData();
+        } catch (err) {
+            errorToast(err, "Failed to bulk reject");
+        } finally {
+            setBulkActionLoading(false);
+        }
+    };
 
     const handleStatusClick = (record, event) => {
         setStatusMenuRecord(record);
@@ -327,85 +389,154 @@ export default function AttendanceManager() {
                             </Typography>
                         </Paper>
                     ) : (
-                        <Stack spacing={2}>
-                            {pending.map((record) => (
-                                <Paper
-                                    key={record.id}
-                                    elevation={0}
-                                    sx={{
-                                        borderRadius: 3,
-                                        border: "1px solid",
-                                        borderColor: "#fcd34d",
-                                        bgcolor: "#fffbeb",
-                                        p: 2.5,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        gap: 2,
-                                        flexWrap: "wrap",
-                                    }}
-                                >
-                                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                                        <Avatar sx={{ bgcolor: "#7c3aed", width: 44, height: 44, fontWeight: 700 }}>
-                                            {record.student_name?.charAt(0) || "S"}
-                                        </Avatar>
-                                        <Box>
-                                            <Typography fontWeight={700} variant="body2">
-                                                {record.student_name || record.student_username}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {record.enrollment_id} · {record.course_name}
-                                            </Typography>
-                                            <Box sx={{ mt: 0.5 }}>
-                                                <Typography variant="caption" fontWeight={600} color="#d97706">
-                                                    📅{" "}
-                                                    {new Date(record.date).toLocaleDateString("en-US", {
-                                                        weekday: "short",
-                                                        year: "numeric",
-                                                        month: "short",
-                                                        day: "numeric",
-                                                    })}
-                                                </Typography>
-                                                {record.remarks && (
-                                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                                                        — {record.remarks}
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                        </Box>
-                                    </Box>
+                        <Box>
+                            {/* Bulk Actions Header */}
+                            <Paper
+                                elevation={0}
+                                sx={{
+                                    p: 2,
+                                    mb: 2.5,
+                                    borderRadius: 3,
+                                    border: "1px solid",
+                                    borderColor: "grey.200",
+                                    bgcolor: "#f8fafc",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    flexWrap: "wrap",
+                                    gap: 2,
+                                }}
+                            >
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                    <Checkbox
+                                        checked={selectedPendingIds.size === pending.length && pending.length > 0}
+                                        indeterminate={selectedPendingIds.size > 0 && selectedPendingIds.size < pending.length}
+                                        onChange={handleSelectAllPending}
+                                    />
+                                    <Typography variant="body2" fontWeight={600}>
+                                        {selectedPendingIds.size > 0
+                                            ? `${selectedPendingIds.size} of ${pending.length} selected`
+                                            : `Select All (${pending.length} pending)`}
+                                    </Typography>
+                                </Box>
 
-                                    <Box sx={{ display: "flex", gap: 1 }}>
+                                {selectedPendingIds.size > 0 && (
+                                    <Stack direction="row" spacing={1}>
                                         <Button
                                             variant="contained"
                                             size="small"
                                             color="success"
-                                            startIcon={
-                                                actionLoading[record.id] === "approve"
-                                                    ? <CircularProgress size={14} color="inherit" />
-                                                    : <CheckCircle />
-                                            }
-                                            onClick={() => handleApprove(record.id)}
-                                            disabled={!!actionLoading[record.id]}
-                                            sx={{ borderRadius: 2 }}
+                                            startIcon={bulkActionLoading ? <CircularProgress size={14} color="inherit" /> : <CheckCircle />}
+                                            onClick={() => handleBulkApprove()}
+                                            disabled={bulkActionLoading}
+                                            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700 }}
                                         >
-                                            Approve
+                                            Approve Selected ({selectedPendingIds.size})
                                         </Button>
                                         <Button
                                             variant="outlined"
                                             size="small"
                                             color="error"
                                             startIcon={<Cancel />}
-                                            onClick={() => { setRejectDialogId(record.id); setRejectRemark(""); }}
-                                            disabled={!!actionLoading[record.id]}
-                                            sx={{ borderRadius: 2 }}
+                                            onClick={() => { setBulkRejectRemark(""); setBulkRejectDialogOpen(true); }}
+                                            disabled={bulkActionLoading}
+                                            sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700 }}
                                         >
-                                            Reject
+                                            Reject Selected ({selectedPendingIds.size})
                                         </Button>
-                                    </Box>
-                                </Paper>
-                            ))}
-                        </Stack>
+                                    </Stack>
+                                )}
+                            </Paper>
+
+                            <Stack spacing={2}>
+                                {pending.map((record) => {
+                                    const isSelected = selectedPendingIds.has(record.id);
+                                    return (
+                                        <Paper
+                                            key={record.id}
+                                            elevation={0}
+                                            sx={{
+                                                borderRadius: 3,
+                                                border: "1px solid",
+                                                borderColor: isSelected ? "#7c3aed" : "#fcd34d",
+                                                bgcolor: isSelected ? "#f5f3ff" : "#fffbeb",
+                                                p: 2.5,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                gap: 2,
+                                                flexWrap: "wrap",
+                                                transition: "all 0.15s ease-in-out",
+                                            }}
+                                        >
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                                <Checkbox
+                                                    checked={isSelected}
+                                                    onChange={() => togglePendingSelect(record.id)}
+                                                    sx={{ p: 0.5 }}
+                                                />
+                                                <Avatar sx={{ bgcolor: "#7c3aed", width: 44, height: 44, fontWeight: 700 }}>
+                                                    {record.student_name?.charAt(0) || "S"}
+                                                </Avatar>
+                                                <Box>
+                                                    <Typography fontWeight={700} variant="body2">
+                                                        {record.student_name || record.student_username}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {record.enrollment_id} · {record.course_name}
+                                                    </Typography>
+                                                    <Box sx={{ mt: 0.5 }}>
+                                                        <Typography variant="caption" fontWeight={600} color="#d97706">
+                                                            📅{" "}
+                                                            {new Date(record.date).toLocaleDateString("en-US", {
+                                                                weekday: "short",
+                                                                year: "numeric",
+                                                                month: "short",
+                                                                day: "numeric",
+                                                            })}
+                                                        </Typography>
+                                                        {record.remarks && (
+                                                            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                                                — {record.remarks}
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                </Box>
+                                            </Box>
+
+                                            <Box sx={{ display: "flex", gap: 1 }}>
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    color="success"
+                                                    startIcon={
+                                                        actionLoading[record.id] === "approve"
+                                                            ? <CircularProgress size={14} color="inherit" />
+                                                            : <CheckCircle />
+                                                    }
+                                                    onClick={() => handleApprove(record.id)}
+                                                    disabled={!!actionLoading[record.id] || bulkActionLoading}
+                                                    sx={{ borderRadius: 2 }}
+                                                >
+                                                    Approve
+                                                </Button>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    color="error"
+                                                    startIcon={<Cancel />}
+                                                    onClick={() => { setRejectDialogId(record.id); setRejectRemark(""); }}
+                                                    disabled={!!actionLoading[record.id] || bulkActionLoading}
+                                                    sx={{ borderRadius: 2 }}
+                                                >
+                                                    Reject
+                                                </Button>
+                                            </Box>
+                                        </Paper>
+                                    );
+                                })}
+                            </Stack>
+                        </Box>
                     )}
                 </Box>
             )}
@@ -442,15 +573,38 @@ export default function AttendanceManager() {
                                 </Select>
                             </FormControl>
                             {selectedIds.size > 0 && (
-                                <Button
-                                    size="small"
-                                    color="error"
-                                    startIcon={<DeleteOutlined />}
-                                    onClick={handleBulkDelete}
-                                    variant="outlined"
-                                >
-                                    Delete ({selectedIds.size})
-                                </Button>
+                                <Stack direction="row" spacing={1}>
+                                    <Button
+                                        size="small"
+                                        color="success"
+                                        startIcon={<CheckCircle />}
+                                        onClick={() => handleBulkApprove(Array.from(selectedIds))}
+                                        variant="outlined"
+                                        disabled={bulkActionLoading}
+                                    >
+                                        Approve ({selectedIds.size})
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        color="warning"
+                                        startIcon={<Cancel />}
+                                        onClick={() => { setBulkRejectRemark(""); setBulkRejectDialogOpen(true); }}
+                                        variant="outlined"
+                                        disabled={bulkActionLoading}
+                                    >
+                                        Reject ({selectedIds.size})
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        color="error"
+                                        startIcon={<DeleteOutlined />}
+                                        onClick={handleBulkDelete}
+                                        variant="outlined"
+                                        disabled={bulkActionLoading}
+                                    >
+                                        Delete ({selectedIds.size})
+                                    </Button>
+                                </Stack>
                             )}
                         </Stack>
                     </Paper>
@@ -789,6 +943,46 @@ export default function AttendanceManager() {
                     <Button onClick={() => setRejectDialogId(null)}>Cancel</Button>
                     <Button onClick={handleReject} variant="contained" color="error">
                         Reject
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Bulk Reject Dialog */}
+            <Dialog
+                open={bulkRejectDialogOpen}
+                onClose={(e, reason) => { if (reason === 'backdropClick') return; setBulkRejectDialogOpen(false); }}
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle>
+                    Reject Selected Attendance ({selectedPendingIds.size > 0 ? selectedPendingIds.size : selectedIds.size})
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" mb={2}>
+                        Are you sure you want to reject the selected attendance records? You can provide a reason below.
+                    </Typography>
+                    <TextField
+                        fullWidth
+                        label="Reason for rejection (optional)"
+                        value={bulkRejectRemark}
+                        onChange={(e) => setBulkRejectRemark(e.target.value)}
+                        multiline
+                        rows={2}
+                        size="small"
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setBulkRejectDialogOpen(false)} disabled={bulkActionLoading}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleBulkRejectSubmit}
+                        variant="contained"
+                        color="error"
+                        disabled={bulkActionLoading}
+                        startIcon={bulkActionLoading ? <CircularProgress size={16} color="inherit" /> : null}
+                    >
+                        {bulkActionLoading ? "Rejecting..." : "Reject All Selected"}
                     </Button>
                 </DialogActions>
             </Dialog>

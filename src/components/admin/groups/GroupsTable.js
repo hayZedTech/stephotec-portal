@@ -18,9 +18,18 @@ export default function GroupsTable({
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-    const getCourseName = (courseId) => {
-        const c = courses.find((c) => c.id === courseId);
-        return c ? c.name : "Unknown Course";
+    const getGroupCourses = (row) => {
+        if (row.courses_detail && row.courses_detail.length > 0) {
+            return row.courses_detail;
+        }
+        if (row.courses && row.courses.length > 0) {
+            return row.courses.map(id => courses.find(c => c.id === id) || { id, name: typeof id === 'object' ? id.name : `Course #${id}` });
+        }
+        if (row.course) {
+            const c = courses.find((c) => c.id === row.course);
+            return [c || { id: row.course, name: row.course_name || "Course" }];
+        }
+        return [];
     };
 
     const columns = [
@@ -38,12 +47,39 @@ export default function GroupsTable({
         },
         {
             field: "course",
-            headerName: "Course",
-            flex: 1,
-            minWidth: 150,
-            renderCell: (params) => (
-                <Chip label={getCourseName(params.row.course)} size="small" sx={{ fontWeight: 700, bgcolor: "#f1f5f9" }} />
-            ),
+            headerName: "Courses",
+            flex: 1.2,
+            minWidth: 180,
+            renderCell: (params) => {
+                const groupCourses = getGroupCourses(params.row);
+                if (groupCourses.length === 0) {
+                    return (
+                        <Chip
+                            label="General / All Courses"
+                            size="small"
+                            variant="outlined"
+                            sx={{ fontWeight: 600, color: "text.secondary", bgcolor: "#f8fafc" }}
+                        />
+                    );
+                }
+                if (groupCourses.length === 1) {
+                    return <Chip label={groupCourses[0].name} size="small" sx={{ fontWeight: 700, bgcolor: "#f1f5f9" }} />;
+                }
+                return (
+                    <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", flexWrap: "wrap" }}>
+                        <Chip label={groupCourses[0].name} size="small" sx={{ fontWeight: 700, bgcolor: "#f1f5f9" }} />
+                        <Tooltip title={groupCourses.map(c => c.name).join(", ")}>
+                            <Chip
+                                label={`+${groupCourses.length - 1} more`}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                                sx={{ fontWeight: 700, cursor: "pointer" }}
+                            />
+                        </Tooltip>
+                    </Box>
+                );
+            },
         },
         {
             field: "member_count",
@@ -125,10 +161,18 @@ export default function GroupsTable({
 
                             <Stack spacing={1.5} sx={{ mb: 2 }}>
                                 <Box>
-                                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" mb={0.5}>Course</Typography>
-                                    <Typography variant="body2" fontWeight={600} sx={{ wordBreak: "break-word" }}>
-                                        {getCourseName(row.course)}
-                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" mb={0.5}>Courses</Typography>
+                                    <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                                        {(() => {
+                                            const groupCourses = getGroupCourses(row);
+                                            if (groupCourses.length === 0) {
+                                                return <Chip label="General / All Courses" size="small" variant="outlined" sx={{ fontWeight: 600, color: "text.secondary" }} />;
+                                            }
+                                            return groupCourses.map((c, i) => (
+                                                <Chip key={c.id || i} label={c.name} size="small" sx={{ fontWeight: 700, bgcolor: "#f1f5f9" }} />
+                                            ));
+                                        })()}
+                                    </Box>
                                 </Box>
                                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <Typography variant="caption" color="text.secondary" fontWeight={600}>Members</Typography>
