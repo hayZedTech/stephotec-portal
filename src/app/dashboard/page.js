@@ -12,6 +12,7 @@ import {
     Chip,
     Stack,
     Divider,
+    Button,
 } from "@mui/material";
 import ImageZoom from "@/components/ui/ImageZoom";
 import CourseDurationProgress from "@/components/courses/CourseDurationProgress";
@@ -26,6 +27,8 @@ import {
     Info,
     CardGiftcard,
     MenuBook,
+    Schedule,
+    VideoCameraFront,
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 
@@ -34,6 +37,7 @@ export default function StudentDashboardPage() {
     const [loading, setLoading] = useState(true);
     const [certCount, setCertCount] = useState(0);
     const [handoutCount, setHandoutCount] = useState(0);
+    const [nextClass, setNextClass] = useState(null);
 
     useEffect(() => {
         if (user) {
@@ -44,14 +48,16 @@ export default function StudentDashboardPage() {
 
     const loadStats = async () => {
         try {
-            const [certsRes, purchasesRes] = await Promise.all([
+            const [certsRes, purchasesRes, nextClassRes] = await Promise.all([
                 api.get("/learning/certificates/").catch(() => ({ data: [] })),
                 api.get("/learning/handout-purchases/").catch(() => ({ data: [] })),
+                api.get("/learning/lecture-schedules/next-class/").catch(() => ({ data: { next_class: null } })),
             ]);
             const certs = certsRes.data.results || certsRes.data || [];
             const purchases = purchasesRes.data.results || purchasesRes.data || [];
             setCertCount(Array.isArray(certs) ? certs.length : 0);
             setHandoutCount(Array.isArray(purchases) ? purchases.filter(p => p.status === "COMPLETED").length : 0);
+            setNextClass(nextClassRes.data?.next_class || null);
         } catch (error) {
             console.error("Error loading student stats:", error);
         }
@@ -218,6 +224,79 @@ export default function StudentDashboardPage() {
                     </Box>
                 </Box>
             </Paper>
+
+            {/* Next Upcoming Class Banner */}
+            {nextClass && (
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: { xs: 2, sm: 2.5 },
+                        borderRadius: 3,
+                        bgcolor: "#0f172a",
+                        color: "white",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        display: "flex",
+                        flexDirection: { xs: "column", md: "row" },
+                        justifyContent: "space-between",
+                        alignItems: { md: "center" },
+                        gap: 2,
+                    }}
+                >
+                    <Box sx={{ flex: 1 }}>
+                        <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 0.8 }}>
+                            <Chip
+                                icon={<Schedule sx={{ fontSize: "0.9rem !important", color: "#4ade80 !important" }} />}
+                                label={nextClass.next_occurrence?.is_today ? "NEXT CLASS TODAY" : `NEXT CLASS (${nextClass.next_occurrence?.day || "UPCOMING"})`}
+                                size="small"
+                                sx={{ bgcolor: "rgba(74, 222, 128, 0.15)", color: "#4ade80", fontWeight: 800, fontSize: "0.7rem" }}
+                            />
+                            {nextClass.formatted_time && (
+                                <Typography variant="caption" sx={{ color: "grey.300", fontWeight: 700 }}>
+                                    {nextClass.formatted_time}
+                                </Typography>
+                            )}
+                            {nextClass.duration_minutes && (
+                                <Chip
+                                    label={`${nextClass.duration_minutes}m`}
+                                    size="small"
+                                    sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", fontWeight: 700, fontSize: "0.65rem", height: 18 }}
+                                />
+                            )}
+                        </Stack>
+                        <Typography variant="subtitle1" fontWeight={800} color="white">
+                            {nextClass.title}
+                        </Typography>
+                        <Typography variant="caption" color="grey.400">
+                            {nextClass.course_name ? `${nextClass.course_name} · ` : ""}{nextClass.instructor_name ? `Tutor: ${nextClass.instructor_name}` : ""}
+                        </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", flexShrink: 0 }}>
+                        {nextClass.mode === "ONLINE" && nextClass.venue_or_link ? (
+                            <Button
+                                variant="contained"
+                                href={nextClass.venue_or_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                size="small"
+                                startIcon={<VideoCameraFront />}
+                                sx={{ bgcolor: "#2563eb", "&:hover": { bgcolor: "#1d4ed8" }, fontWeight: 700, textTransform: "none" }}
+                            >
+                                Join Class
+                            </Button>
+                        ) : nextClass.venue_or_link ? (
+                            <Chip label={`📍 ${nextClass.venue_or_link}`} sx={{ bgcolor: "rgba(255,255,255,0.15)", color: "white", fontWeight: 700 }} />
+                        ) : null}
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            href="/dashboard/schedule"
+                            sx={{ color: "white", borderColor: "rgba(255,255,255,0.3)", "&:hover": { borderColor: "white", bgcolor: "rgba(255,255,255,0.05)" }, fontWeight: 700, textTransform: "none" }}
+                        >
+                            View Timetable
+                        </Button>
+                    </Stack>
+                </Paper>
+            )}
 
             {/* Quick Stats */}
             <Grid container spacing={3}>

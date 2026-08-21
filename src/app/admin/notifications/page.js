@@ -51,6 +51,7 @@ import {
     People,
     FolderShared,
     WorkspacePremium,
+    Schedule,
 } from "@mui/icons-material";
 import { IconButton as MuiIconButton, Tooltip as MuiTooltip } from "@mui/material";
 
@@ -59,6 +60,14 @@ function getAlertActionMeta(alert) {
     const msg = (alert.message || "").toLowerCase();
     const type = (alert.alert_type || "").toUpperCase();
 
+    if (type.includes("LECTURE") || type.includes("SCHEDULE") || title.includes("lecture") || title.includes("schedule") || msg.includes("lecture")) {
+        return {
+            label: "Open Timetable",
+            url: "/admin/schedule",
+            icon: <Schedule sx={{ fontSize: 16 }} />,
+            color: "primary",
+        };
+    }
     if (type.includes("ATTENDANCE") || title.includes("attendance") || msg.includes("attendance")) {
         return {
             label: "Review Attendance",

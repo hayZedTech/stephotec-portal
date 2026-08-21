@@ -27,6 +27,7 @@ import {
     ExpandMore,
     ChevronRight,
     Verified,
+    Schedule,
 } from "@mui/icons-material";
 
 export default function SidebarNav({ user, collapsed }) {
@@ -77,6 +78,11 @@ export default function SidebarNav({ user, collapsed }) {
                     label: "Groups",
                     href: "/admin/groups",
                     icon: <Workspaces fontSize="small" />,
+                },
+                {
+                    label: "Lecture Schedule",
+                    href: "/admin/schedule",
+                    icon: <Schedule fontSize="small" />,
                 },
                 {
                     label: "Verification Portal",
@@ -130,6 +136,11 @@ export default function SidebarNav({ user, collapsed }) {
                     label: "Dashboard",
                     href: "/dashboard",
                     icon: <Dashboard fontSize="small" />,
+                },
+                {
+                    label: "Lecture Schedule",
+                    href: "/dashboard/schedule",
+                    icon: <Schedule fontSize="small" />,
                 },
                 {
                     label: "My Courses",

@@ -32,6 +32,7 @@ import {
     Payment,
     Person,
     WorkspacePremium,
+    Schedule,
 } from "@mui/icons-material";
 import { getStudentNotifications, markNotificationAsRead } from "@/services/notifications";
 import { useNotifications } from "@/providers/NotificationsProvider";
@@ -44,6 +45,14 @@ function getStudentActionMeta(notification) {
     const msg = (notification.message || "").toLowerCase();
     const type = (notification.type || "").toUpperCase();
 
+    if (type.includes("LECTURE") || type.includes("SCHEDULE") || title.includes("class today") || title.includes("lecture") || msg.includes("lecture") || msg.includes("timetable") || msg.includes("scheduled today")) {
+        return {
+            label: "View Lecture Schedule",
+            url: "/dashboard/schedule",
+            icon: <Schedule sx={{ fontSize: 16 }} />,
+            color: "primary",
+        };
+    }
     if (type.includes("ATTENDANCE") || title.includes("attendance") || msg.includes("attendance")) {
         return {
             label: "View Attendance Record",
