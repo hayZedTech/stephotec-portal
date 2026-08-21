@@ -105,11 +105,11 @@ export default function StudentSchedulePage() {
                             <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1 }}>
                                 <Chip
                                     icon={<Schedule sx={{ fontSize: "1rem !important", color: "#4ade80 !important" }} />}
-                                    label={nextClass.next_occurrence?.is_today ? "NEXT CLASS TODAY" : `NEXT CLASS (${nextClass.next_occurrence?.day || "UPCOMING"})`}
+                                    label={nextClass.next_occurrence?.is_live ? "CLASS IN PROGRESS NOW" : nextClass.next_occurrence?.is_today ? "NEXT CLASS TODAY" : `NEXT CLASS (${nextClass.next_occurrence?.day || "UPCOMING"})`}
                                     size="small"
                                     sx={{
-                                        bgcolor: "rgba(74, 222, 128, 0.15)",
-                                        color: "#4ade80",
+                                        bgcolor: nextClass.next_occurrence?.is_live ? "#16a34a" : "rgba(74, 222, 128, 0.15)",
+                                        color: nextClass.next_occurrence?.is_live ? "#ffffff" : "#4ade80",
                                         fontWeight: 800,
                                         fontSize: "0.75rem",
                                     }}

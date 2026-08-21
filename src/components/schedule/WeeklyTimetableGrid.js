@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
     Box,
     Paper,
@@ -27,14 +27,29 @@ import {
     OpenInNew,
     CalendarToday,
     ViewWeek,
+    PlayCircleFilled,
+    Star,
+    CheckCircle,
 } from "@mui/icons-material";
 import { DAYS_OF_WEEK, formatTime12 } from "@/utils/scheduleUtils";
 
 export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, onEdit, onDelete }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-    const todayIndex = new Date().getDay(); // 0 is Sunday, 1 is Monday...
-    const todayName = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"][todayIndex];
+
+    // Real-time ticking clock so timetable transitions the exact moment lecture ends
+    const [now, setNow] = useState(() => new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setNow(new Date());
+        }, 10000); // Check every 10 seconds for real-time reactivity
+        return () => clearInterval(timer);
+    }, []);
+
+    const DAYS_ORDER = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+    const currentDayIndex = now.getDay();
+    const currentDayName = DAYS_ORDER[currentDayIndex];
 
     // Group schedules by day with per-day timing overrides
     const getSchedulesForDay = (dayKey) => {
@@ -55,6 +70,96 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
             })
             .sort((a, b) => (a.effective_start_time || "").localeCompare(b.effective_start_time || ""));
     };
+
+    // Calculate real-time active / next schedule across the week
+    const activeScheduleInfo = useMemo(() => {
+        const occurrences = [];
+        const [cH, cM, cS] = [now.getHours(), now.getMinutes(), now.getSeconds()];
+        const curSecs = cH * 3600 + cM * 60 + cS;
+
+        schedules.forEach((s) => {
+            const dayTimes = (s.day_times && Array.isArray(s.day_times) && s.day_times.length > 0)
+                ? s.day_times
+                : (s.days_of_week || []).map((d) => ({
+                    day: d,
+                    start_time: s.start_time || "10:30:00",
+                    end_time: s.end_time || "12:00:00",
+                    duration_minutes: s.duration_minutes || 90,
+                }));
+
+            dayTimes.forEach((dt) => {
+                const dayKey = String(dt.day).toUpperCase();
+                const dayIdx = DAYS_ORDER.indexOf(dayKey);
+                if (dayIdx === -1) return;
+
+                const st = String(dt.start_time || s.start_time || "10:30:00").slice(0, 8);
+                const et = String(dt.end_time || s.end_time || "12:00:00").slice(0, 8);
+
+                const [stH, stM] = st.split(":").map(Number);
+                const [etH, etM] = et.split(":").map(Number);
+                const startSecs = (stH || 0) * 3600 + (stM || 0) * 60;
+                const endSecs = (etH || 0) * 3600 + (etM || 0) * 60;
+
+                const diffDays = (dayIdx - currentDayIndex + 7) % 7;
+                let status = "UPCOMING";
+                let secondsUntilNext = 0;
+
+                if (diffDays === 0) {
+                    if (curSecs >= startSecs && curSecs < endSecs) {
+                        status = "IN_PROGRESS";
+                        secondsUntilNext = 0; // Live class takes highest priority
+                    } else if (curSecs < startSecs) {
+                        status = "UPCOMING_TODAY";
+                        secondsUntilNext = startSecs - curSecs;
+                    } else {
+                        // Class has passed for today -> shifts to next week
+                        status = "PASSED_TODAY";
+                        secondsUntilNext = 7 * 86400 + (startSecs - curSecs);
+                    }
+                } else {
+                    status = "UPCOMING_FUTURE";
+                    secondsUntilNext = diffDays * 86400 + (startSecs - curSecs);
+                }
+
+                occurrences.push({
+                    scheduleId: s.id,
+                    dayKey,
+                    start_time: st,
+                    end_time: et,
+                    duration_minutes: dt.duration_minutes || s.duration_minutes || 90,
+                    status,
+                    secondsUntilNext,
+                    schedule: s,
+                });
+            });
+        });
+
+        if (occurrences.length === 0) {
+            return {
+                activeDayKey: currentDayName,
+                activeScheduleId: null,
+                activeStatus: null,
+                slotStatusMap: {},
+            };
+        }
+
+        const slotStatusMap = {};
+        occurrences.forEach((occ) => {
+            slotStatusMap[`${occ.dayKey}-${occ.scheduleId}`] = occ.status;
+        });
+
+        // Sort by priority (0 seconds = LIVE, then earliest upcoming)
+        occurrences.sort((a, b) => a.secondsUntilNext - b.secondsUntilNext);
+        const top = occurrences[0];
+
+        return {
+            activeDayKey: top.dayKey,
+            activeScheduleId: top.scheduleId,
+            activeStatus: top.status,
+            slotStatusMap,
+            topOccurrence: top,
+        };
+    }, [schedules, now, currentDayIndex, currentDayName]);
 
     // Calculate active days that have at least 1 class
     const activeDays = useMemo(() => {
@@ -133,7 +238,8 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
 
                     {relevantDays.map((d) => {
                         const count = getSchedulesForDay(d.key).length;
-                        const isToday = d.key === todayName;
+                        const isToday = d.key === currentDayName;
+                        const isActiveDay = d.key === activeScheduleInfo.activeDayKey;
                         const isSelected = selectedDayTab === d.key;
 
                         return (
@@ -150,19 +256,26 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                                     py: { xs: 0.6, sm: 0.8 },
                                     px: { xs: 1, sm: 1.5 },
                                     textTransform: "none",
-                                    bgcolor: isSelected ? "#0f172a" : isToday ? "#ecfdf5" : "transparent",
-                                    borderColor: isSelected ? "#0f172a" : isToday ? "#86efac" : "grey.300",
-                                    color: isSelected ? "white" : isToday ? "#15803d" : "text.secondary",
-                                    "&:hover": { bgcolor: isSelected ? "#1e293b" : isToday ? "#d1fae5" : "grey.100" },
+                                    bgcolor: isSelected ? "#0f172a" : isActiveDay ? "#ecfdf5" : isToday ? "#f8fafc" : "transparent",
+                                    borderColor: isSelected ? "#0f172a" : isActiveDay ? "#86efac" : isToday ? "grey.300" : "grey.200",
+                                    color: isSelected ? "white" : isActiveDay ? "#15803d" : "text.secondary",
+                                    "&:hover": { bgcolor: isSelected ? "#1e293b" : isActiveDay ? "#d1fae5" : "grey.100" },
                                     gap: 0.6,
                                 }}
                             >
                                 <span>{isMobile ? d.short : d.label}</span>
-                                {isToday && !isSelected && (
+                                {isActiveDay && !isSelected && (
+                                    <Chip
+                                        label={activeScheduleInfo.activeStatus === "IN_PROGRESS" ? "LIVE NOW" : isToday ? "NEXT UP" : "NEXT SCHEDULE"}
+                                        size="small"
+                                        sx={{ height: 16, fontSize: "0.55rem", fontWeight: 900, bgcolor: "#15803d", color: "white", px: 0.2 }}
+                                    />
+                                )}
+                                {isToday && !isActiveDay && !isSelected && (
                                     <Chip
                                         label="TODAY"
                                         size="small"
-                                        sx={{ height: 16, fontSize: "0.58rem", fontWeight: 900, bgcolor: "#15803d", color: "white", px: 0.2 }}
+                                        sx={{ height: 16, fontSize: "0.55rem", fontWeight: 700, bgcolor: "grey.200", color: "grey.700", px: 0.2 }}
                                     />
                                 )}
                                 {count > 0 && (
@@ -174,8 +287,8 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                                             minWidth: 18,
                                             fontSize: "0.65rem",
                                             fontWeight: 800,
-                                            bgcolor: isSelected ? "rgba(255,255,255,0.2)" : isToday ? "#15803d" : "#e2e8f0",
-                                            color: isSelected ? "white" : isToday ? "white" : "#334155",
+                                            bgcolor: isSelected ? "rgba(255,255,255,0.2)" : isActiveDay ? "#15803d" : "#e2e8f0",
+                                            color: isSelected ? "white" : isActiveDay ? "white" : "#334155",
                                         }}
                                     />
                                 )}
@@ -202,7 +315,8 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                     >
                         {relevantDays.map((day) => {
                             const daySchedules = getSchedulesForDay(day.key);
-                            const isToday = day.key === todayName;
+                            const isToday = day.key === currentDayName;
+                            const isActiveDay = day.key === activeScheduleInfo.activeDayKey;
 
                             return (
                                 <DayColumn
@@ -210,6 +324,10 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                                     day={day}
                                     daySchedules={daySchedules}
                                     isToday={isToday}
+                                    isActiveDay={isActiveDay}
+                                    activeStatus={activeScheduleInfo.activeStatus}
+                                    activeScheduleId={activeScheduleInfo.activeScheduleId}
+                                    slotStatusMap={activeScheduleInfo.slotStatusMap}
                                     isAdmin={isAdmin}
                                     onEdit={onEdit}
                                     onDelete={onDelete}
@@ -228,7 +346,8 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                         <Box sx={{ display: "flex", gap: { xs: 1.5, md: 2.5 }, minWidth: { xs: relevantDays.length * 220, md: relevantDays.length * 260 } }}>
                             {relevantDays.map((day) => {
                                 const daySchedules = getSchedulesForDay(day.key);
-                                const isToday = day.key === todayName;
+                                const isToday = day.key === currentDayName;
+                                const isActiveDay = day.key === activeScheduleInfo.activeDayKey;
 
                                 return (
                                     <Box key={day.key} sx={{ flex: "1 1 220px", minWidth: { xs: 220, md: 250 } }}>
@@ -236,6 +355,10 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                                             day={day}
                                             daySchedules={daySchedules}
                                             isToday={isToday}
+                                            isActiveDay={isActiveDay}
+                                            activeStatus={activeScheduleInfo.activeStatus}
+                                            activeScheduleId={activeScheduleInfo.activeScheduleId}
+                                            slotStatusMap={activeScheduleInfo.slotStatusMap}
                                             isAdmin={isAdmin}
                                             onEdit={onEdit}
                                             onDelete={onDelete}
@@ -251,7 +374,8 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                 <Box>
                     {daysToRender.map((day) => {
                         const daySchedules = getSchedulesForDay(day.key);
-                        const isToday = day.key === todayName;
+                        const isToday = day.key === currentDayName;
+                        const isActiveDay = day.key === activeScheduleInfo.activeDayKey;
 
                         return (
                             <Box key={day.key}>
@@ -259,8 +383,16 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                                     <Typography variant="h6" fontWeight={800} sx={{ fontSize: { xs: "1rem", sm: "1.15rem" } }}>
                                         {day.label}
                                     </Typography>
-                                    {isToday && (
-                                        <Chip label="Today" size="small" color="success" sx={{ fontWeight: 800, height: 20, fontSize: "0.65rem" }} />
+                                    {isActiveDay && (
+                                        <Chip
+                                            label={activeScheduleInfo.activeStatus === "IN_PROGRESS" ? "LIVE CLASS NOW" : isToday ? "Next Class Today" : "Next Schedule"}
+                                            size="small"
+                                            color="success"
+                                            sx={{ fontWeight: 800, height: 20, fontSize: "0.65rem" }}
+                                        />
+                                    )}
+                                    {isToday && !isActiveDay && (
+                                        <Chip label="Today (All classes completed)" size="small" variant="outlined" sx={{ fontWeight: 700, height: 20, fontSize: "0.65rem" }} />
                                     )}
                                     <Chip label={`${daySchedules.length} class${daySchedules.length === 1 ? "" : "es"}`} size="small" variant="outlined" sx={{ fontWeight: 700, height: 20, fontSize: "0.65rem" }} />
                                 </Box>
@@ -280,15 +412,24 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                                             gap: { xs: 1.25, sm: 2 },
                                         }}
                                     >
-                                        {daySchedules.map((sched) => (
-                                            <ScheduleCard
-                                                key={`${day.key}-${sched.id}`}
-                                                sched={sched}
-                                                isAdmin={isAdmin}
-                                                onEdit={onEdit}
-                                                onDelete={onDelete}
-                                            />
-                                        ))}
+                                        {daySchedules.map((sched) => {
+                                            const slotKey = `${day.key}-${sched.id}`;
+                                            const cardStatus = activeScheduleInfo.slotStatusMap?.[slotKey];
+                                            const isCardActive = isActiveDay && sched.id === activeScheduleInfo.activeScheduleId;
+
+                                            return (
+                                                <ScheduleCard
+                                                    key={slotKey}
+                                                    sched={sched}
+                                                    dayKey={day.key}
+                                                    isCardActive={isCardActive}
+                                                    cardStatus={cardStatus}
+                                                    isAdmin={isAdmin}
+                                                    onEdit={onEdit}
+                                                    onDelete={onDelete}
+                                                />
+                                            );
+                                        })}
                                     </Box>
                                 )}
                             </Box>
@@ -301,20 +442,33 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
 }
 
 /**
- * Single Day Column for Grid View with tight compact heights on mobile
+ * Single Day Column for Grid View with real-time active schedule highlighting
  */
-function DayColumn({ day, daySchedules, isToday, isAdmin, onEdit, onDelete }) {
+function DayColumn({
+    day,
+    daySchedules,
+    isToday,
+    isActiveDay,
+    activeStatus,
+    activeScheduleId,
+    slotStatusMap = {},
+    isAdmin,
+    onEdit,
+    onDelete,
+}) {
     return (
         <Box
             sx={{
                 display: "flex",
                 flexDirection: "column",
                 borderRadius: 2.5,
-                bgcolor: isToday ? "#f0fdf4" : "#f8fafc",
+                bgcolor: isActiveDay ? "#f0fdf4" : "#f8fafc",
                 border: "1px solid",
-                borderColor: isToday ? "#86efac" : "grey.200",
+                borderColor: isActiveDay ? "#86efac" : "grey.200",
+                boxShadow: isActiveDay ? "0 4px 20px rgba(22, 128, 61, 0.10)" : "none",
                 overflow: "hidden",
-                minHeight: { xs: "auto", md: 440 }, // Tight auto height on mobile, comfortable on desktop
+                minHeight: { xs: "auto", md: 440 },
+                transition: "all 0.3s ease",
             }}
         >
             {/* Day Column Header */}
@@ -322,26 +476,39 @@ function DayColumn({ day, daySchedules, isToday, isAdmin, onEdit, onDelete }) {
                 sx={{
                     px: { xs: 1.5, sm: 2 },
                     py: { xs: 1, sm: 1.25 },
-                    bgcolor: isToday ? "#15803d" : "#0f172a",
+                    bgcolor: isActiveDay ? "#15803d" : "#0f172a",
                     color: "white",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
+                    transition: "bgcolor 0.3s ease",
                 }}
             >
                 <Typography variant="subtitle2" fontWeight={800} sx={{ letterSpacing: 0.3, fontSize: { xs: "0.82rem", sm: "0.88rem" } }}>
                     {day.label}
                 </Typography>
-                {isToday ? (
+                {isActiveDay ? (
+                    <Chip
+                        label={activeStatus === "IN_PROGRESS" ? "LIVE NOW" : isToday ? "NEXT UP" : "NEXT SCHEDULE"}
+                        size="small"
+                        sx={{
+                            height: 18,
+                            fontSize: "0.58rem",
+                            fontWeight: 900,
+                            bgcolor: "white",
+                            color: "#15803d",
+                        }}
+                    />
+                ) : isToday ? (
                     <Chip
                         label="TODAY"
                         size="small"
                         sx={{
                             height: 18,
-                            fontSize: "0.6rem",
-                            fontWeight: 900,
-                            bgcolor: "white",
-                            color: "#15803d",
+                            fontSize: "0.58rem",
+                            fontWeight: 700,
+                            bgcolor: "rgba(255,255,255,0.15)",
+                            color: "grey.300",
                         }}
                     />
                 ) : (
@@ -361,15 +528,24 @@ function DayColumn({ day, daySchedules, isToday, isAdmin, onEdit, onDelete }) {
                         </Typography>
                     </Box>
                 ) : (
-                    daySchedules.map((sched) => (
-                        <ScheduleCard
-                            key={`${day.key}-${sched.id}`}
-                            sched={sched}
-                            isAdmin={isAdmin}
-                            onEdit={onEdit}
-                            onDelete={onDelete}
-                        />
-                    ))
+                    daySchedules.map((sched) => {
+                        const slotKey = `${day.key}-${sched.id}`;
+                        const cardStatus = slotStatusMap?.[slotKey];
+                        const isCardActive = isActiveDay && sched.id === activeScheduleId;
+
+                        return (
+                            <ScheduleCard
+                                key={slotKey}
+                                sched={sched}
+                                dayKey={day.key}
+                                isCardActive={isCardActive}
+                                cardStatus={cardStatus}
+                                isAdmin={isAdmin}
+                                onEdit={onEdit}
+                                onDelete={onDelete}
+                            />
+                        );
+                    })
                 )}
             </Box>
         </Box>
@@ -377,32 +553,104 @@ function DayColumn({ day, daySchedules, isToday, isAdmin, onEdit, onDelete }) {
 }
 
 /**
- * Reusable Class Card with compact padding & zero text cutoffs
+ * Reusable Class Card with dynamic Live/Next/Passed status indicator
  */
-function ScheduleCard({ sched, isAdmin, onEdit, onDelete }) {
+function ScheduleCard({
+    sched,
+    dayKey,
+    isCardActive = false,
+    cardStatus,
+    isAdmin,
+    onEdit,
+    onDelete,
+}) {
     const cardColor = sched.color_tag || "#2563eb";
+    const isLive = cardStatus === "IN_PROGRESS";
+    const isPassed = cardStatus === "PASSED_TODAY";
 
     return (
         <Card
             elevation={0}
             sx={{
                 borderRadius: 2,
-                border: "1px solid",
-                borderColor: "grey.200",
-                borderLeft: `4px solid ${cardColor}`,
-                bgcolor: "white",
-                transition: "transform 0.15s, box-shadow 0.15s",
+                border: isLive
+                    ? "2px solid #22c55e"
+                    : isCardActive
+                    ? "2px solid #16a34a"
+                    : "1px solid",
+                borderColor: isLive ? "#22c55e" : isCardActive ? "#16a34a" : "grey.200",
+                borderLeft: isLive
+                    ? "6px solid #22c55e"
+                    : isCardActive
+                    ? "6px solid #16a34a"
+                    : `4px solid ${cardColor}`,
+                bgcolor: isLive ? "#f0fdf4" : isCardActive ? "#f0fdf4" : isPassed ? "#fcfcfd" : "white",
+                opacity: isPassed ? 0.72 : 1,
+                transition: "all 0.2s ease",
                 "&:hover": {
                     boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
                     transform: "translateY(-1px)",
+                    opacity: 1,
                 },
             }}
         >
             <CardContent sx={{ p: { xs: 1.25, sm: 1.5 }, "&:last-child": { pb: { xs: 1.25, sm: 1.5 } } }}>
+                {/* Live / Next Class / Ended Badge */}
+                {isLive && (
+                    <Chip
+                        icon={<PlayCircleFilled sx={{ fontSize: "0.85rem !important", color: "white !important" }} />}
+                        label="CLASS IN PROGRESS NOW"
+                        size="small"
+                        sx={{
+                            height: 20,
+                            fontSize: "0.62rem",
+                            fontWeight: 900,
+                            bgcolor: "#16a34a",
+                            color: "white",
+                            mb: 0.8,
+                            width: "100%",
+                            justifyContent: "center",
+                        }}
+                    />
+                )}
+                {isCardActive && !isLive && (
+                    <Chip
+                        icon={<Star sx={{ fontSize: "0.85rem !important", color: "white !important" }} />}
+                        label="NEXT UPCOMING CLASS"
+                        size="small"
+                        sx={{
+                            height: 20,
+                            fontSize: "0.62rem",
+                            fontWeight: 900,
+                            bgcolor: "#15803d",
+                            color: "white",
+                            mb: 0.8,
+                            width: "100%",
+                            justifyContent: "center",
+                        }}
+                    />
+                )}
+                {isPassed && (
+                    <Chip
+                        icon={<CheckCircle sx={{ fontSize: "0.8rem !important", color: "text.disabled !important" }} />}
+                        label="Ended for Today"
+                        size="small"
+                        variant="outlined"
+                        sx={{
+                            height: 18,
+                            fontSize: "0.6rem",
+                            fontWeight: 700,
+                            borderColor: "grey.300",
+                            color: "text.disabled",
+                            mb: 0.8,
+                        }}
+                    />
+                )}
+
                 {/* Time & Duration Header */}
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 0.8, mb: 0.8 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.6, color: "text.primary" }}>
-                        <AccessTime sx={{ fontSize: 14, color: cardColor, flexShrink: 0 }} />
+                        <AccessTime sx={{ fontSize: 14, color: isLive ? "#16a34a" : isCardActive ? "#15803d" : cardColor, flexShrink: 0 }} />
                         <Typography variant="caption" fontWeight={800} sx={{ fontSize: { xs: "0.75rem", sm: "0.8rem" }, lineHeight: 1.2 }}>
                             {formatTime12(sched.effective_start_time)} – {formatTime12(sched.effective_end_time)}
                         </Typography>
@@ -411,7 +659,7 @@ function ScheduleCard({ sched, isAdmin, onEdit, onDelete }) {
                         <Chip
                             label={`${sched.effective_duration}m`}
                             size="small"
-                            sx={{ height: 18, fontSize: "0.62rem", fontWeight: 800, bgcolor: "#f1f5f9", flexShrink: 0 }}
+                            sx={{ height: 18, fontSize: "0.62rem", fontWeight: 800, bgcolor: isLive || isCardActive ? "#dcfce7" : "#f1f5f9", flexShrink: 0 }}
                         />
                     )}
                 </Box>
@@ -524,13 +772,13 @@ function ScheduleCard({ sched, isAdmin, onEdit, onDelete }) {
                                 height: 22,
                                 fontSize: "0.65rem",
                                 fontWeight: 800,
-                                bgcolor: "#0f172a",
-                                "&:hover": { bgcolor: "#1e293b" },
+                                bgcolor: isLive ? "#16a34a" : "#0f172a",
+                                "&:hover": { bgcolor: isLive ? "#15803d" : "#1e293b" },
                                 px: 1,
                                 textTransform: "none",
                             }}
                         >
-                            Join
+                            {isLive ? "Join Now" : "Join"}
                         </Button>
                     ) : sched.venue_or_link ? (
                         <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ wordBreak: "break-word", fontSize: "0.7rem" }}>

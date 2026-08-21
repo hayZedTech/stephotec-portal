@@ -36,6 +36,9 @@ import {
     AccordionSummary,
     AccordionDetails,
     Divider,
+    Alert,
+    RadioGroup,
+    Radio,
 } from "@mui/material";
 import {
     Add,
@@ -56,6 +59,11 @@ import {
     ExpandMore,
     ContentCopy,
     AutoAwesome,
+    Email,
+    NotificationsActive,
+    Send,
+    Campaign,
+    CheckCircle,
 } from "@mui/icons-material";
 import api from "@/lib/axios";
 import { getCourses } from "@/services/courses";
@@ -89,12 +97,24 @@ export default function AdminSchedulePage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingSchedule, setEditingSchedule] = useState(null);
     const [saving, setSaving] = useState(false);
+    const [savingType, setSavingType] = useState(null); // "SAVE_ONLY" or "SAVE_EMAIL"
     const [groupsSelectOpen, setGroupsSelectOpen] = useState(false);
     const [studentsSelectOpen, setStudentsSelectOpen] = useState(false);
     const [studentSearchTerm, setStudentSearchTerm] = useState("");
     const [bulkDuration, setBulkDuration] = useState(90);
 
     const [loadingStudents, setLoadingStudents] = useState(false);
+
+    // Standalone Reminder Dialog State
+    const [reminderOpen, setReminderOpen] = useState(false);
+    const [reminderSending, setReminderSending] = useState(false);
+    const [reminderTargetType, setReminderTargetType] = useState("SCHEDULE"); // "SCHEDULE", "GROUP", "STUDENTS", "COURSE"
+    const [reminderScheduleId, setReminderScheduleId] = useState("");
+    const [reminderGroupId, setReminderGroupId] = useState("");
+    const [reminderCourseId, setReminderCourseId] = useState("");
+    const [reminderStudentIds, setReminderStudentIds] = useState([]);
+    const [reminderCustomNote, setReminderCustomNote] = useState("");
+    const [reminderStudentSearch, setReminderStudentSearch] = useState("");
 
     // Form state
     const [formData, setFormData] = useState({
@@ -218,7 +238,7 @@ export default function AdminSchedulePage() {
         loadStudents();
     };
 
-    const handleSave = async () => {
+    const handleSave = async (sendEmail = false) => {
         if (!formData.title.trim()) {
             errorToast(null, "Lecture Title is required.");
             return;
@@ -238,6 +258,7 @@ export default function AdminSchedulePage() {
 
         try {
             setSaving(true);
+            setSavingType(sendEmail ? "SAVE_EMAIL" : "SAVE_ONLY");
             const daysOfWeek = formData.day_times.map((dt) => dt.day);
             const firstDt = formData.day_times[0];
 
@@ -264,14 +285,17 @@ export default function AdminSchedulePage() {
                 color_tag: formData.color_tag,
                 notes: formData.notes.trim(),
                 is_active: formData.is_active,
+                send_email: Boolean(sendEmail),
             };
 
             if (editingSchedule) {
-                await api.patch(`/learning/lecture-schedules/${editingSchedule.id}/`, payload);
-                successToast("Lecture schedule updated successfully!");
+                const res = await api.patch(`/learning/lecture-schedules/${editingSchedule.id}/`, payload);
+                const count = res.data?.emails_sent;
+                successToast(sendEmail && count ? `Schedule updated & email dispatched to ${count} student(s)!` : (sendEmail ? "Schedule updated & notification emails dispatched!" : "Lecture schedule updated successfully!"));
             } else {
-                await api.post("/learning/lecture-schedules/", payload);
-                successToast("Lecture scheduled successfully!");
+                const res = await api.post("/learning/lecture-schedules/", payload);
+                const count = res.data?.emails_sent;
+                successToast(sendEmail && count ? `Lecture scheduled & email dispatched to ${count} student(s)!` : (sendEmail ? "Lecture scheduled & notification emails dispatched!" : "Lecture scheduled successfully!"));
             }
 
             setDialogOpen(false);
@@ -280,6 +304,56 @@ export default function AdminSchedulePage() {
             errorToast(err, "Failed to save lecture schedule");
         } finally {
             setSaving(false);
+            setSavingType(null);
+        }
+    };
+
+    const handleOpenReminderModal = (preselectedScheduleId = "") => {
+        setReminderScheduleId(preselectedScheduleId || (schedules[0]?.id || ""));
+        setReminderGroupId("");
+        setReminderCourseId("");
+        setReminderStudentIds([]);
+        setReminderCustomNote("");
+        setReminderTargetType(preselectedScheduleId ? "SCHEDULE" : "SCHEDULE");
+        setReminderOpen(true);
+        loadStudents();
+    };
+
+    const handleSendReminder = async () => {
+        if (reminderTargetType === "SCHEDULE" && !reminderScheduleId) {
+            errorToast(null, "Please select a lecture schedule.");
+            return;
+        }
+        if (reminderTargetType === "GROUP" && !reminderGroupId) {
+            errorToast(null, "Please select a student group.");
+            return;
+        }
+        if (reminderTargetType === "COURSE" && !reminderCourseId) {
+            errorToast(null, "Please select a course.");
+            return;
+        }
+        if (reminderTargetType === "STUDENTS" && reminderStudentIds.length === 0) {
+            errorToast(null, "Please select at least one student.");
+            return;
+        }
+
+        try {
+            setReminderSending(true);
+            const payload = {
+                schedule_id: reminderTargetType === "SCHEDULE" ? reminderScheduleId : undefined,
+                group_id: reminderTargetType === "GROUP" ? reminderGroupId : undefined,
+                course_id: reminderTargetType === "COURSE" ? reminderCourseId : undefined,
+                student_ids: reminderTargetType === "STUDENTS" ? reminderStudentIds : undefined,
+                custom_note: reminderCustomNote.trim() || undefined,
+            };
+
+            const res = await api.post("/learning/lecture-schedules/send-reminder/", payload);
+            successToast(res.data?.message || "Lecture reminders sent successfully!");
+            setReminderOpen(false);
+        } catch (err) {
+            errorToast(err, "Failed to send lecture reminder");
+        } finally {
+            setReminderSending(false);
         }
     };
 
@@ -393,17 +467,73 @@ export default function AdminSchedulePage() {
                         Schedule and manage recurring classes for student groups, individual students, or entire courses with custom per-day timings.
                     </Typography>
                 </Box>
-                <Stack direction="row" spacing={1.5}>
+                <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+                    <Button
+                        variant="outlined"
+                        startIcon={<NotificationsActive />}
+                        onClick={() => handleOpenReminderModal()}
+                        sx={{
+                            color: "#2563eb",
+                            borderColor: "#bfdbfe",
+                            bgcolor: "#eff6ff",
+                            "&:hover": { bgcolor: "#dbeafe", borderColor: "#93c5fd" },
+                            fontWeight: 700,
+                            borderRadius: 2,
+                            textTransform: "none",
+                        }}
+                    >
+                        Send Schedule Reminder
+                    </Button>
                     <Button
                         variant="contained"
                         startIcon={<Add />}
                         onClick={openCreate}
-                        sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, fontWeight: 700, borderRadius: 2 }}
+                        sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, fontWeight: 700, borderRadius: 2, textTransform: "none" }}
                     >
                         Schedule Class
                     </Button>
                 </Stack>
             </Box>
+
+            {/* Quick Broadcast Alert Banner */}
+            <Alert
+                severity="info"
+                icon={<Campaign sx={{ color: "#2563eb" }} />}
+                sx={{
+                    mb: 3,
+                    borderRadius: 2.5,
+                    bgcolor: "#f0fdf4",
+                    border: "1px solid #bbf7d0",
+                    "& .MuiAlert-message": { width: "100%" },
+                }}
+                action={
+                    <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<Send sx={{ fontSize: "0.85rem !important" }} />}
+                        onClick={() => handleOpenReminderModal()}
+                        sx={{
+                            bgcolor: "#15803d",
+                            "&:hover": { bgcolor: "#166534" },
+                            fontWeight: 800,
+                            fontSize: "0.75rem",
+                            textTransform: "none",
+                            borderRadius: 1.5,
+                            boxShadow: "none",
+                            whiteSpace: "nowrap",
+                        }}
+                    >
+                        Broadcast Reminder
+                    </Button>
+                }
+            >
+                <Typography variant="subtitle2" fontWeight={800} color="#15803d">
+                    Instant Schedule Reminder Alert
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.82rem" }}>
+                    Need to remind students about a lecture? Choose any student group, course, or specific students to send email reminders anytime.
+                </Typography>
+            </Alert>
 
             {/* Filter and View Mode Toolbar */}
             <Paper sx={{ p: 2, mb: 3, borderRadius: 3 }}>
@@ -1167,15 +1297,256 @@ export default function AdminSchedulePage() {
                         </Box>
                     </Stack>
                 </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
-                    <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+                <DialogActions sx={{ px: 3, py: 2, justifyContent: "space-between", flexWrap: "wrap", gap: 1.5, bgcolor: "grey.50", borderTop: "1px solid", borderColor: "grey.200" }}>
+                    <Button onClick={() => setDialogOpen(false)} sx={{ textTransform: "none", fontWeight: 600 }}>
+                        Cancel
+                    </Button>
+                    <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+                        <Button
+                            variant="outlined"
+                            onClick={() => handleSave(false)}
+                            disabled={saving}
+                            sx={{
+                                textTransform: "none",
+                                fontWeight: 700,
+                                borderRadius: 2,
+                                borderColor: "grey.400",
+                                color: "#0f172a",
+                                "&:hover": { borderColor: "#0f172a", bgcolor: "grey.100" },
+                            }}
+                        >
+                            {saving && savingType === "SAVE_ONLY" ? "Saving..." : editingSchedule ? "Update Only" : "Add Only"}
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={<Email />}
+                            onClick={() => handleSave(true)}
+                            disabled={saving}
+                            sx={{
+                                bgcolor: "#2563eb",
+                                "&:hover": { bgcolor: "#1d4ed8" },
+                                fontWeight: 700,
+                                borderRadius: 2,
+                                textTransform: "none",
+                                px: 2.5,
+                            }}
+                        >
+                            {saving && savingType === "SAVE_EMAIL" ? "Sending..." : editingSchedule ? "Update & Send Email" : "Add & Send Email"}
+                        </Button>
+                    </Stack>
+                </DialogActions>
+            </Dialog>
+
+            {/* STANDALONE SEND SCHEDULE REMINDER MODAL */}
+            <Dialog
+                open={reminderOpen}
+                onClose={() => setReminderOpen(false)}
+                fullWidth
+                maxWidth="sm"
+                slotProps={{
+                    paper: {
+                        sx: {
+                            borderRadius: 3,
+                            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.2)",
+                        },
+                    },
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 800, pb: 1, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                        <NotificationsActive sx={{ color: "#2563eb" }} />
+                        <Typography variant="h6" fontWeight={800}>
+                            Send Lecture Schedule Reminder
+                        </Typography>
+                    </Box>
+                    <IconButton size="small" onClick={() => setReminderOpen(false)}>
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers sx={{ py: 2.5 }}>
+                    <Stack spacing={2.5}>
+                        <Alert severity="info" sx={{ borderRadius: 2 }}>
+                            Dispatches a branded lecture timetable reminder email and student dashboard notification to selected recipients.
+                        </Alert>
+
+                        {/* 1. Target Type */}
+                        <Box>
+                            <Typography variant="caption" color="text.secondary" fontWeight={800} display="block" mb={1} sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                1. Select Reminder Target
+                            </Typography>
+                            <ToggleButtonGroup
+                                exclusive
+                                value={reminderTargetType}
+                                onChange={(e, val) => { if (val) setReminderTargetType(val); }}
+                                fullWidth
+                                size="small"
+                                sx={{
+                                    "& .MuiToggleButton-root": {
+                                        fontWeight: 700,
+                                        textTransform: "none",
+                                        fontSize: "0.8rem",
+                                        py: 0.8,
+                                    },
+                                    "& .Mui-selected": {
+                                        bgcolor: "#2563eb !important",
+                                        color: "#ffffff !important",
+                                    },
+                                }}
+                            >
+                                <ToggleButton value="SCHEDULE">By Class / Schedule</ToggleButton>
+                                <ToggleButton value="GROUP">By Study Group</ToggleButton>
+                                <ToggleButton value="STUDENTS">Specific Students</ToggleButton>
+                                <ToggleButton value="COURSE">By Course</ToggleButton>
+                            </ToggleButtonGroup>
+                        </Box>
+
+                        {/* 2. Target Specific Selection */}
+                        {reminderTargetType === "SCHEDULE" && (
+                            <TextField
+                                select
+                                label="Choose Lecture Schedule / Class *"
+                                size="small"
+                                fullWidth
+                                value={reminderScheduleId}
+                                onChange={(e) => setReminderScheduleId(e.target.value)}
+                            >
+                                {schedules.map((s) => (
+                                    <MenuItem key={s.id} value={s.id}>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                            <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: s.color_tag || "#2563eb" }} />
+                                            <Typography variant="body2" fontWeight={600}>{s.title}</Typography>
+                                            <Typography variant="caption" color="text.secondary">({(s.days_of_week || []).join(", ")})</Typography>
+                                        </Box>
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+                        )}
+
+                        {reminderTargetType === "GROUP" && (
+                            <TextField
+                                select
+                                label="Choose Student Group *"
+                                size="small"
+                                fullWidth
+                                value={reminderGroupId}
+                                onChange={(e) => setReminderGroupId(e.target.value)}
+                            >
+                                {groups.map((g) => (
+                                    <MenuItem key={g.id} value={g.id}>
+                                        {g.name} ({g.members_count || g.members?.length || 0} members)
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+                        )}
+
+                        {reminderTargetType === "COURSE" && (
+                            <TextField
+                                select
+                                label="Choose Course *"
+                                size="small"
+                                fullWidth
+                                value={reminderCourseId}
+                                onChange={(e) => setReminderCourseId(e.target.value)}
+                            >
+                                {courses.map((c) => (
+                                    <MenuItem key={c.id} value={c.id}>
+                                        {c.name}
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+                        )}
+
+                        {reminderTargetType === "STUDENTS" && (
+                            <Box>
+                                <TextField
+                                    size="small"
+                                    placeholder="Filter students by name or ID..."
+                                    fullWidth
+                                    value={reminderStudentSearch}
+                                    onChange={(e) => setReminderStudentSearch(e.target.value)}
+                                    slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
+                                    sx={{ mb: 1.5 }}
+                                />
+                                <Paper variant="outlined" sx={{ maxHeight: 200, overflowY: "auto", p: 1, borderRadius: 2 }}>
+                                    {students
+                                        .filter((st) => {
+                                            if (!reminderStudentSearch) return true;
+                                            const term = reminderStudentSearch.toLowerCase();
+                                            const name = `${st.first_name || ""} ${st.last_name || ""} ${st.username || ""}`.toLowerCase();
+                                            return name.includes(term);
+                                        })
+                                        .map((st) => {
+                                            const isSelected = reminderStudentIds.includes(st.id);
+                                            return (
+                                                <Box
+                                                    key={st.id}
+                                                    onClick={() => {
+                                                        setReminderStudentIds((prev) =>
+                                                            isSelected ? prev.filter((id) => id !== st.id) : [...prev, st.id]
+                                                        );
+                                                    }}
+                                                    sx={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "space-between",
+                                                        p: 0.8,
+                                                        borderRadius: 1.5,
+                                                        cursor: "pointer",
+                                                        bgcolor: isSelected ? "#eff6ff" : "transparent",
+                                                        "&:hover": { bgcolor: isSelected ? "#dbeafe" : "grey.100" },
+                                                    }}
+                                                >
+                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                        <Checkbox checked={isSelected} size="small" />
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            {st.first_name} {st.last_name}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            ({st.username})
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            );
+                                        })}
+                                </Paper>
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+                                    {reminderStudentIds.length} student(s) selected
+                                </Typography>
+                            </Box>
+                        )}
+
+                        {/* Optional Custom Note */}
+                        <TextField
+                            label="Custom Notice / Announcement Message (Optional)"
+                            multiline
+                            rows={3}
+                            size="small"
+                            fullWidth
+                            placeholder="e.g. Reminder: Tomorrow's lecture will begin at 10:30 AM in Room 4. Please bring your laptops and completed assignment."
+                            value={reminderCustomNote}
+                            onChange={(e) => setReminderCustomNote(e.target.value)}
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
+                    <Button onClick={() => setReminderOpen(false)} sx={{ textTransform: "none" }}>
+                        Cancel
+                    </Button>
                     <Button
                         variant="contained"
-                        onClick={handleSave}
-                        disabled={saving}
-                        sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, fontWeight: 700 }}
+                        startIcon={<Send />}
+                        onClick={handleSendReminder}
+                        disabled={reminderSending}
+                        sx={{
+                            bgcolor: "#2563eb",
+                            "&:hover": { bgcolor: "#1d4ed8" },
+                            fontWeight: 700,
+                            borderRadius: 2,
+                            textTransform: "none",
+                            px: 3,
+                        }}
                     >
-                        {saving ? "Saving..." : editingSchedule ? "Update Schedule" : "Schedule Lecture"}
+                        {reminderSending ? "Dispatching Reminders..." : "Send Reminder Emails"}
                     </Button>
                 </DialogActions>
             </Dialog>

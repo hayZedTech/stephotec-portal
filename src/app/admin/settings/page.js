@@ -55,6 +55,7 @@ import {
     Close as CloseIcon,
     Tune as TuneIcon,
     People as PeopleIcon,
+    CalendarMonth as CalendarMonthIcon,
 } from "@mui/icons-material";
 import api from "@/lib/axios";
 import { successToast, errorToast, infoToast } from "@/lib/toast";
@@ -124,6 +125,13 @@ const EMAIL_NOTIFICATION_ACTIONS = [
                 description: "Sends review feedback, remarks, and scores to students after an instructor grades their submission.",
                 Icon: FactCheckIcon,
                 color: "#0284c7",
+            },
+            {
+                key: "email_lecture_schedule",
+                title: "Lecture Timetable & Class Schedule Reminders",
+                description: "Sends automated class timetable announcements, schedule updates, and targeted lecture reminders to students and study groups.",
+                Icon: CalendarMonthIcon,
+                color: "#2563eb",
             },
         ],
     },
