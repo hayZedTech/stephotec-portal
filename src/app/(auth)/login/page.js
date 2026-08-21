@@ -16,7 +16,13 @@ export default function LoginPage() {
     const [error, setError] = useState("");
 
     useEffect(() => {
-        console.log("Login page mounted");
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const userParam = params.get("username");
+            if (userParam) {
+                setUsername(userParam);
+            }
+        }
     }, []);
 
     const handleSubmit = async (e) => {

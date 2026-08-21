@@ -13,12 +13,17 @@ import {
     IconButton,
     Tooltip,
     Alert,
+    Chip,
 } from "@mui/material";
 import {
     Close,
     ContentCopy,
     Check,
     CheckCircle,
+    Email,
+    OpenInNew,
+    Link as LinkIcon,
+    Send,
 } from "@mui/icons-material";
 import { successToast } from "@/lib/toast";
 
@@ -33,6 +38,29 @@ export default function StudentCreatedModal({ open, onClose, student }) {
     const emailVal = studentObj.email || student.email || "";
     const usernameVal = studentObj.username || student.username || "";
     const tempPasswordVal = student.temporary_password || studentObj.temporary_password || student.temp_password || student.password || "";
+
+    const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+    const activationLink = student.activation_url || `${origin}/activate-profile?username=${encodeURIComponent(usernameVal)}&email=${encodeURIComponent(emailVal)}`;
+
+    // Direct Gmail Compose URL pre-filled with student email, subject, and credentials
+    const emailSubject = encodeURIComponent("Welcome to Stephotec — Your Student Portal Credentials");
+    const emailBody = encodeURIComponent(
+`Hello ${studentName || "Student"},
+
+Welcome to Stephotec Computer Technologies Ltd! Your official student account is ready.
+
+Student ID / Username: ${usernameVal}
+Temporary Password: ${tempPasswordVal}
+
+Click the link below to activate your student profile and set your permanent password:
+${activationLink}
+
+Alternatively, you can visit our portal at ${origin}/login and log in using your Student ID and Temporary Password.
+
+Best regards,
+Stephotec Computer Technologies Ltd`
+    );
+    const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emailVal)}&su=${emailSubject}&body=${emailBody}`;
 
     const handleCopyIndividual = (title, value, key) => {
         if (!value) return;
@@ -49,15 +77,17 @@ export default function StudentCreatedModal({ open, onClose, student }) {
 
     const handleCopyAll = () => {
         const lines = [
+            `Student Name: ${studentName || "N/A"}`,
             `Email: ${emailVal}`,
-            `Username: ${usernameVal}`,
+            `Student ID: ${usernameVal}`,
             `Temporary Password: ${tempPasswordVal}`,
+            `Activation Link: ${activationLink}`,
         ];
         const allText = lines.join("\n");
         navigator.clipboard.writeText(allText);
 
         setCopiedAll(true);
-        successToast("All 3 credentials copied to clipboard!");
+        successToast("All credentials & activation link copied to clipboard!");
 
         setTimeout(() => {
             setCopiedAll(false);
@@ -97,7 +127,7 @@ export default function StudentCreatedModal({ open, onClose, student }) {
             >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                     <CheckCircle color="success" sx={{ fontSize: 28 }} />
-                    <Typography variant="h6" fontWeight={700}>
+                    <Typography variant="h6" fontWeight={800}>
                         Student Account Created
                     </Typography>
                 </Box>
@@ -107,26 +137,59 @@ export default function StudentCreatedModal({ open, onClose, student }) {
             </DialogTitle>
 
             <DialogContent sx={{ py: 1.5 }}>
+                {/* GMAIL DELIVERY STATUS ALERT */}
                 <Alert
                     severity="success"
-                    icon={false}
+                    icon={<Email sx={{ color: "#16a34a" }} />}
                     sx={{
-                        mb: 3,
-                        borderRadius: 2,
-                        bgcolor: "rgba(22, 163, 74, 0.08)",
-                        border: "1px solid rgba(22, 163, 74, 0.2)",
+                        mb: 2.5,
+                        borderRadius: 2.5,
+                        bgcolor: "#f0fdf4",
+                        border: "1px solid #bbf7d0",
+                        "& .MuiAlert-message": { width: "100%" },
                     }}
                 >
-                    <Typography variant="body2" color="text.primary">
-                        Account credentials for <strong>{studentName || "the new student"}</strong> have been generated successfully. Copy these details and send them to the student.
-                    </Typography>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 1 }}>
+                        <Box sx={{ flex: 1 }}>
+                            <Typography variant="subtitle2" fontWeight={800} color="#15803d">
+                                Welcome Email Dispatched to Student's Gmail
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.3, fontSize: "0.82rem" }}>
+                                Sent to <strong>{emailVal}</strong> with Student ID, Temporary Password, and Direct Activation Link.
+                            </Typography>
+                        </Box>
+                        {emailVal && (
+                            <Button
+                                size="small"
+                                variant="contained"
+                                href={gmailComposeUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                startIcon={<Send sx={{ fontSize: "0.85rem !important" }} />}
+                                endIcon={<OpenInNew sx={{ fontSize: "0.75rem !important" }} />}
+                                sx={{
+                                    bgcolor: "#15803d",
+                                    "&:hover": { bgcolor: "#166534" },
+                                    fontWeight: 800,
+                                    fontSize: "0.75rem",
+                                    textTransform: "none",
+                                    borderRadius: 1.5,
+                                    px: 1.5,
+                                    py: 0.6,
+                                    boxShadow: "none",
+                                }}
+                            >
+                                Open in Gmail
+                            </Button>
+                        )}
+                    </Box>
                 </Alert>
 
-                <Stack spacing={2}>
+                <Stack spacing={1.8}>
                     {/* EMAIL */}
                     <Box
                         sx={{
-                            p: 2,
+                            p: 1.8,
                             borderRadius: 2.5,
                             border: "1px solid",
                             borderColor: copiedMap["email"] ? "#16a34a" : "grey.300",
@@ -138,15 +201,15 @@ export default function StudentCreatedModal({ open, onClose, student }) {
                             variant="caption"
                             color="text.secondary"
                             fontWeight={700}
-                            sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.5 }}
+                            sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.3, fontSize: "0.7rem" }}
                         >
-                            Email
+                            Email Address
                         </Typography>
                         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
-                            <Typography variant="body1" fontWeight={600} sx={{ wordBreak: "break-all" }}>
+                            <Typography variant="body2" fontWeight={700} sx={{ wordBreak: "break-all" }}>
                                 {emailVal || "N/A"}
                             </Typography>
-                            <Tooltip title={copiedMap["email"] ? "Copied with title!" : "Copy Email"}>
+                            <Tooltip title={copiedMap["email"] ? "Copied!" : "Copy Email"}>
                                 <IconButton
                                     size="small"
                                     onClick={() => handleCopyIndividual("Email", emailVal, "email")}
@@ -164,10 +227,10 @@ export default function StudentCreatedModal({ open, onClose, student }) {
                         </Box>
                     </Box>
 
-                    {/* USERNAME */}
+                    {/* USERNAME / STUDENT ID */}
                     <Box
                         sx={{
-                            p: 2,
+                            p: 1.8,
                             borderRadius: 2.5,
                             border: "1px solid",
                             borderColor: copiedMap["username"] ? "#16a34a" : "grey.300",
@@ -179,18 +242,18 @@ export default function StudentCreatedModal({ open, onClose, student }) {
                             variant="caption"
                             color="text.secondary"
                             fontWeight={700}
-                            sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.5 }}
+                            sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.3, fontSize: "0.7rem" }}
                         >
-                            Username
+                            Student ID / Username
                         </Typography>
                         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
-                            <Typography variant="body1" fontWeight={700} sx={{ fontFamily: "monospace", color: "primary.main" }}>
+                            <Typography variant="body1" fontWeight={800} sx={{ fontFamily: "monospace", color: "#0f172a" }}>
                                 {usernameVal || "N/A"}
                             </Typography>
-                            <Tooltip title={copiedMap["username"] ? "Copied with title!" : "Copy Username"}>
+                            <Tooltip title={copiedMap["username"] ? "Copied!" : "Copy Student ID"}>
                                 <IconButton
                                     size="small"
-                                    onClick={() => handleCopyIndividual("Username", usernameVal, "username")}
+                                    onClick={() => handleCopyIndividual("Student ID", usernameVal, "username")}
                                     sx={{
                                         color: copiedMap["username"] ? "#16a34a" : "text.secondary",
                                         bgcolor: copiedMap["username"] ? "#dcfce7" : "grey.200",
@@ -208,7 +271,7 @@ export default function StudentCreatedModal({ open, onClose, student }) {
                     {/* TEMPORARY PASSWORD */}
                     <Box
                         sx={{
-                            p: 2,
+                            p: 1.8,
                             borderRadius: 2.5,
                             border: "1px solid",
                             borderColor: copiedMap["password"] ? "#16a34a" : "#f59e0b",
@@ -220,15 +283,15 @@ export default function StudentCreatedModal({ open, onClose, student }) {
                             variant="caption"
                             color={copiedMap["password"] ? "success.main" : "#b45309"}
                             fontWeight={700}
-                            sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.5 }}
+                            sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 0.3, fontSize: "0.7rem" }}
                         >
                             Temporary Password
                         </Typography>
                         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
-                            <Typography variant="body1" fontWeight={700} sx={{ fontFamily: "monospace", color: copiedMap["password"] ? "#15803d" : "#b45309" }}>
+                            <Typography variant="body1" fontWeight={800} sx={{ fontFamily: "monospace", color: copiedMap["password"] ? "#15803d" : "#b45309" }}>
                                 {tempPasswordVal || "N/A"}
                             </Typography>
-                            <Tooltip title={copiedMap["password"] ? "Copied with title!" : "Copy Temporary Password"}>
+                            <Tooltip title={copiedMap["password"] ? "Copied!" : "Copy Temporary Password"}>
                                 <IconButton
                                     size="small"
                                     onClick={() => handleCopyIndividual("Temporary Password", tempPasswordVal, "password")}
@@ -245,10 +308,72 @@ export default function StudentCreatedModal({ open, onClose, student }) {
                             </Tooltip>
                         </Box>
                     </Box>
+
+                    {/* ACTIVATION LINK */}
+                    <Box
+                        sx={{
+                            p: 1.8,
+                            borderRadius: 2.5,
+                            border: "1px solid",
+                            borderColor: copiedMap["link"] ? "#16a34a" : "#3b82f6",
+                            bgcolor: copiedMap["link"] ? "#f0fdf4" : "#eff6ff",
+                            transition: "all 0.2s ease-in-out",
+                        }}
+                    >
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.3 }}>
+                            <Typography
+                                variant="caption"
+                                color={copiedMap["link"] ? "success.main" : "#1d4ed8"}
+                                fontWeight={700}
+                                sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontSize: "0.7rem" }}
+                            >
+                                Direct Profile Activation Link
+                            </Typography>
+                            <Chip label="One-Click Setup" size="small" sx={{ height: 16, fontSize: "0.6rem", fontWeight: 800, bgcolor: "#dbeafe", color: "#1d4ed8" }} />
+                        </Box>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                            <Typography variant="caption" fontWeight={600} sx={{ wordBreak: "break-all", color: "#1e40af", fontFamily: "monospace" }}>
+                                {activationLink}
+                            </Typography>
+                            <Stack direction="row" spacing={0.5}>
+                                <Tooltip title={copiedMap["link"] ? "Copied!" : "Copy Activation Link"}>
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => handleCopyIndividual("Activation Link", activationLink, "link")}
+                                        sx={{
+                                            color: copiedMap["link"] ? "#16a34a" : "#2563eb",
+                                            bgcolor: copiedMap["link"] ? "#dcfce7" : "#dbeafe",
+                                            "&:hover": {
+                                                bgcolor: copiedMap["link"] ? "#bbf7d0" : "#bfdbfe",
+                                            },
+                                        }}
+                                    >
+                                        {copiedMap["link"] ? <Check fontSize="small" /> : <ContentCopy fontSize="small" />}
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Open Activation Page">
+                                    <IconButton
+                                        size="small"
+                                        component="a"
+                                        href={activationLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        sx={{
+                                            color: "#2563eb",
+                                            bgcolor: "#dbeafe",
+                                            "&:hover": { bgcolor: "#bfdbfe" },
+                                        }}
+                                    >
+                                        <OpenInNew fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            </Stack>
+                        </Box>
+                    </Box>
                 </Stack>
             </DialogContent>
 
-            <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, justifyContent: "space-between" }}>
+            <DialogActions sx={{ px: 3, pb: 2.5, pt: 1.5, justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
                 <Button
                     variant="outlined"
                     startIcon={copiedAll ? <Check /> : <ContentCopy />}
@@ -259,21 +384,23 @@ export default function StudentCreatedModal({ open, onClose, student }) {
                         textTransform: "none",
                         fontWeight: 700,
                         px: 2.5,
-                        py: 1,
+                        py: 0.9,
                     }}
                 >
-                    {copiedAll ? "Copied All (3)!" : "Copy All (3)"}
+                    {copiedAll ? "Copied All Details!" : "Copy All Details"}
                 </Button>
 
                 <Button
                     variant="contained"
                     onClick={onClose}
                     sx={{
+                        bgcolor: "#0f172a",
+                        "&:hover": { bgcolor: "#1e293b" },
                         borderRadius: 2,
                         textTransform: "none",
                         fontWeight: 700,
-                        px: 3,
-                        py: 1,
+                        px: 3.5,
+                        py: 0.9,
                     }}
                 >
                     Done

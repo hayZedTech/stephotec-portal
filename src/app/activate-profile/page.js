@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { errorToast, successToast } from "@/lib/toast";
@@ -55,6 +55,21 @@ export default function ActivateProfilePage() {
         admission_year: "",
     });
     const [errors, setErrors] = useState({});
+
+    const [urlUsername, setUrlUsername] = useState("");
+    const [authChecked, setAuthChecked] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const u = params.get("username");
+            if (u) setUrlUsername(u);
+        }
+        const timer = setTimeout(() => {
+            setAuthChecked(true);
+        }, 800);
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -181,59 +196,82 @@ export default function ActivateProfilePage() {
         setLoading(true);
 
         try {
-            const { confirm_password, ...submitData } = formData;
-            
-            const dataToSubmit = {
-                ...submitData,
+            const submitData = {
+                phone: formData.phone,
+                date_of_birth: formData.date_of_birth,
+                gender: formData.gender,
+                address: formData.address,
+                state_of_origin: formData.state_of_origin,
+                new_password: formData.new_password,
+                confirm_password: formData.confirm_password,
+                is_industrial_training: formData.is_industrial_training,
+                admission_year: parseInt(formData.admission_year),
                 profile_picture_url: profilePictureUrl,
-                admission_year_write: formData.admission_year,
             };
+
+            await api.put("/student/activate-profile/", submitData);
             
-            await api.put("/student/activate-profile/", dataToSubmit);
-            await refreshUser();
             successToast("Profile activated successfully!");
+            
+            if (refreshUser) {
+                await refreshUser();
+            }
+            
             router.push("/dashboard");
         } catch (error) {
-            errorToast(error, "Failed to activate profile.");
+            errorToast(error, "Failed to activate profile");
         } finally {
             setLoading(false);
         }
     };
 
     if (!user) {
-        return (
-            <Box
-                sx={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: "rgba(0, 0, 0, 0.5)",
-                    backdropFilter: "blur(2px)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 9999,
-                }}
-            >
+        if (!authChecked) {
+            return (
                 <Box
                     sx={{
-                        backgroundColor: "white",
-                        borderRadius: 3,
-                        p: 4,
+                        minHeight: "100vh",
                         display: "flex",
-                        flexDirection: "column",
                         alignItems: "center",
-                        gap: 2,
+                        justifyContent: "center",
+                        bgcolor: "#f8fafc",
                     }}
                 >
-                    <CircularProgress size={48} />
-                    <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-                        Loading...
-                    </Typography>
+                    <CircularProgress size={40} />
                 </Box>
-            </Box>
+            );
+        }
+
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-8">
+                <Paper
+                    elevation={0}
+                    sx={{
+                        width: "100%",
+                        maxWidth: 480,
+                        p: 4,
+                        borderRadius: 4,
+                        border: "1px solid",
+                        borderColor: "grey.200",
+                        textAlign: "center",
+                    }}
+                >
+                    <Typography variant="h5" fontWeight={800} mb={1}>
+                        Activate Your Student Profile
+                    </Typography>
+                    <Typography color="text.secondary" variant="body2" mb={3}>
+                        Welcome to Stephotec! Please sign in using your <strong>Student ID</strong> and <strong>Temporary Password</strong> provided in your welcome email to complete your profile activation.
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        fullWidth
+                        onClick={() => router.push(`/login${urlUsername ? `?username=${encodeURIComponent(urlUsername)}` : ""}`)}
+                        sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, py: 1.2, fontWeight: 700, borderRadius: 2 }}
+                    >
+                        Sign in to Activate Profile
+                    </Button>
+                </Paper>
+            </div>
         );
     }
 
