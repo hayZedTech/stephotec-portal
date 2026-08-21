@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
     Box,
     Button,
@@ -108,13 +108,14 @@ export default function AdminSchedulePage() {
     // Standalone Reminder Dialog State
     const [reminderOpen, setReminderOpen] = useState(false);
     const [reminderSending, setReminderSending] = useState(false);
-    const [reminderTargetType, setReminderTargetType] = useState("SCHEDULE"); // "SCHEDULE", "GROUP", "STUDENTS", "COURSE"
+    const [reminderTargetType, setReminderTargetType] = useState("GROUP"); // "GROUP", "STUDENTS", "SCHEDULE", "COURSE"
     const [reminderScheduleId, setReminderScheduleId] = useState("");
     const [reminderGroupId, setReminderGroupId] = useState("");
     const [reminderCourseId, setReminderCourseId] = useState("");
-    const [reminderStudentIds, setReminderStudentIds] = useState([]);
+    const [reminderStudentId, setReminderStudentId] = useState("");
+    const [reminderSelectedScheduleIds, setReminderSelectedScheduleIds] = useState([]);
     const [reminderCustomNote, setReminderCustomNote] = useState("");
-    const [reminderStudentSearch, setReminderStudentSearch] = useState("");
+    const [reminderSearchQuery, setReminderSearchQuery] = useState("");
 
     // Form state
     const [formData, setFormData] = useState({
@@ -158,8 +159,8 @@ export default function AdminSchedulePage() {
         if (students.length > 0 || loadingStudents) return;
         try {
             setLoadingStudents(true);
-            const studentsRes = await api.get("/admin/students/").catch(() => ({ data: { results: [] } }));
-            setStudents(studentsRes.data?.results || studentsRes.data || []);
+            const studentsRes = await api.get("/admin/students/?page_size=1000").catch(() => ({ data: { results: [] } }));
+            setStudents(studentsRes.data?.results || (Array.isArray(studentsRes.data) ? studentsRes.data : []));
         } catch (e) {
             console.error("Error loading students:", e);
         } finally {
@@ -308,42 +309,127 @@ export default function AdminSchedulePage() {
         }
     };
 
+    const matchingReminderSchedules = useMemo(() => {
+        if (reminderTargetType === "GROUP") {
+            if (!reminderGroupId) return [];
+            return schedules.filter((s) => {
+                const groupIds = (s.assigned_group_ids || []).map(String);
+                const groupDetailIds = (s.assigned_groups_details || []).map((g) => String(g.id));
+                return groupIds.includes(String(reminderGroupId)) || groupDetailIds.includes(String(reminderGroupId));
+            });
+        }
+        if (reminderTargetType === "STUDENTS") {
+            if (!reminderStudentId) return [];
+            const studentObj = students.find((st) => String(st.id) === String(reminderStudentId));
+
+            // Find this student's groups
+            const studentGroups = groups.filter((g) => (g.members || []).some((m) => String(m.id || m) === String(reminderStudentId)));
+            const studentGroupIds = studentGroups.map((g) => String(g.id));
+
+            return schedules.filter((s) => {
+                const directStudentIds = (s.assigned_student_ids || []).map(String);
+                const directDetailIds = (s.assigned_students_details || []).map((st) => String(st.id));
+                const isDirect = directStudentIds.includes(String(reminderStudentId)) || directDetailIds.includes(String(reminderStudentId));
+
+                const scheduleGroupIds = (s.assigned_group_ids || []).map(String);
+                const scheduleGroupDetailIds = (s.assigned_groups_details || []).map((g) => String(g.id));
+                const isGroup = scheduleGroupIds.some((gid) => studentGroupIds.includes(gid)) ||
+                               scheduleGroupDetailIds.some((gid) => studentGroupIds.includes(gid));
+
+                const studentCourseIds = (studentObj?.courses || []).map((c) => String(c.course?.id || c.course || c.id || c));
+                const isCourse = Boolean(s.course && studentCourseIds.includes(String(s.course)));
+
+                return isDirect || isGroup || isCourse;
+            });
+        }
+        if (reminderTargetType === "SCHEDULE") {
+            if (!reminderScheduleId) return [];
+            const sched = schedules.find((s) => String(s.id) === String(reminderScheduleId));
+            return sched ? [sched] : [];
+        }
+        if (reminderTargetType === "COURSE") {
+            if (!reminderCourseId) return [];
+            return schedules.filter((s) => String(s.course) === String(reminderCourseId));
+        }
+        return [];
+    }, [reminderTargetType, reminderGroupId, reminderStudentId, reminderScheduleId, reminderCourseId, schedules, groups]);
+
+    const filteredGroups = useMemo(() => {
+        if (!reminderSearchQuery.trim()) return groups;
+        const term = reminderSearchQuery.toLowerCase();
+        return groups.filter((g) => (g.name || "").toLowerCase().includes(term));
+    }, [groups, reminderSearchQuery]);
+
+    const filteredStudents = useMemo(() => {
+        if (!reminderSearchQuery.trim()) return students;
+        const term = reminderSearchQuery.toLowerCase();
+        return students.filter((st) => {
+            const fullName = `${st.first_name || ""} ${st.last_name || ""}`.toLowerCase();
+            const username = (st.username || "").toLowerCase();
+            const email = (st.email || "").toLowerCase();
+            return fullName.includes(term) || username.includes(term) || email.includes(term);
+        });
+    }, [students, reminderSearchQuery]);
+
+    const filteredSchedules = useMemo(() => {
+        if (!reminderSearchQuery.trim()) return schedules;
+        const term = reminderSearchQuery.toLowerCase();
+        return schedules.filter((s) => {
+            const title = (s.title || "").toLowerCase();
+            const course = (s.course_name || "").toLowerCase();
+            const instructor = (s.instructor_name || "").toLowerCase();
+            const days = (s.days_of_week || []).join(" ").toLowerCase();
+            return title.includes(term) || course.includes(term) || instructor.includes(term) || days.includes(term);
+        });
+    }, [schedules, reminderSearchQuery]);
+
+    const filteredCourses = useMemo(() => {
+        if (!reminderSearchQuery.trim()) return courses;
+        const term = reminderSearchQuery.toLowerCase();
+        return courses.filter((c) => {
+            const name = (c.name || "").toLowerCase();
+            const code = (c.code_prefix || c.code || "").toLowerCase();
+            return name.includes(term) || code.includes(term);
+        });
+    }, [courses, reminderSearchQuery]);
+
+    useEffect(() => {
+        setReminderSelectedScheduleIds(matchingReminderSchedules.map((s) => s.id));
+    }, [matchingReminderSchedules]);
+
     const handleOpenReminderModal = (preselectedScheduleId = "") => {
-        setReminderScheduleId(preselectedScheduleId || (schedules[0]?.id || ""));
-        setReminderGroupId("");
-        setReminderCourseId("");
-        setReminderStudentIds([]);
+        if (preselectedScheduleId) {
+            setReminderTargetType("SCHEDULE");
+            setReminderScheduleId(preselectedScheduleId);
+            setReminderGroupId("");
+            setReminderStudentId("");
+            setReminderCourseId("");
+        } else {
+            setReminderTargetType("GROUP");
+            setReminderGroupId(groups[0]?.id || "");
+            setReminderStudentId("");
+            setReminderScheduleId("");
+            setReminderCourseId("");
+        }
         setReminderCustomNote("");
-        setReminderTargetType(preselectedScheduleId ? "SCHEDULE" : "SCHEDULE");
+        setReminderSearchQuery("");
         setReminderOpen(true);
         loadStudents();
     };
 
     const handleSendReminder = async () => {
-        if (reminderTargetType === "SCHEDULE" && !reminderScheduleId) {
-            errorToast(null, "Please select a lecture schedule.");
-            return;
-        }
-        if (reminderTargetType === "GROUP" && !reminderGroupId) {
-            errorToast(null, "Please select a student group.");
-            return;
-        }
-        if (reminderTargetType === "COURSE" && !reminderCourseId) {
-            errorToast(null, "Please select a course.");
-            return;
-        }
-        if (reminderTargetType === "STUDENTS" && reminderStudentIds.length === 0) {
-            errorToast(null, "Please select at least one student.");
+        if (reminderSelectedScheduleIds.length === 0) {
+            errorToast(null, "Please select at least one matching lecture schedule to send.");
             return;
         }
 
         try {
             setReminderSending(true);
             const payload = {
-                schedule_id: reminderTargetType === "SCHEDULE" ? reminderScheduleId : undefined,
+                schedule_ids: reminderSelectedScheduleIds,
                 group_id: reminderTargetType === "GROUP" ? reminderGroupId : undefined,
+                student_ids: reminderTargetType === "STUDENTS" && reminderStudentId ? [reminderStudentId] : undefined,
                 course_id: reminderTargetType === "COURSE" ? reminderCourseId : undefined,
-                student_ids: reminderTargetType === "STUDENTS" ? reminderStudentIds : undefined,
                 custom_note: reminderCustomNote.trim() || undefined,
             };
 
@@ -467,7 +553,7 @@ export default function AdminSchedulePage() {
                         Schedule and manage recurring classes for student groups, individual students, or entire courses with custom per-day timings.
                     </Typography>
                 </Box>
-                <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+                <Stack direction="row" spacing={1.5} useFlexGap sx={{ flexWrap: "wrap" }}>
                     <Button
                         variant="outlined"
                         startIcon={<NotificationsActive />}
@@ -1301,7 +1387,7 @@ export default function AdminSchedulePage() {
                     <Button onClick={() => setDialogOpen(false)} sx={{ textTransform: "none", fontWeight: 600 }}>
                         Cancel
                     </Button>
-                    <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+                    <Stack direction="row" spacing={1.5} useFlexGap sx={{ flexWrap: "wrap" }}>
                         <Button
                             variant="outlined"
                             onClick={() => handleSave(false)}
@@ -1337,12 +1423,12 @@ export default function AdminSchedulePage() {
                 </DialogActions>
             </Dialog>
 
-            {/* STANDALONE SEND SCHEDULE REMINDER MODAL */}
+            {/* STANDALONE SEND SCHEDULE REMINDER MODAL WITH LIVE PREVIEW & VERIFICATION */}
             <Dialog
                 open={reminderOpen}
                 onClose={() => setReminderOpen(false)}
                 fullWidth
-                maxWidth="sm"
+                maxWidth="md"
                 slotProps={{
                     paper: {
                         sx: {
@@ -1366,7 +1452,7 @@ export default function AdminSchedulePage() {
                 <DialogContent dividers sx={{ py: 2.5 }}>
                     <Stack spacing={2.5}>
                         <Alert severity="info" sx={{ borderRadius: 2 }}>
-                            Dispatches a branded lecture timetable reminder email and student dashboard notification to selected recipients.
+                            Select a target group, student, or class to inspect their assigned schedule(s) before sending email reminders.
                         </Alert>
 
                         {/* 1. Target Type */}
@@ -1377,7 +1463,24 @@ export default function AdminSchedulePage() {
                             <ToggleButtonGroup
                                 exclusive
                                 value={reminderTargetType}
-                                onChange={(e, val) => { if (val) setReminderTargetType(val); }}
+                                onChange={(e, val) => {
+                                    if (val) {
+                                        setReminderTargetType(val);
+                                        setReminderSearchQuery("");
+                                        if (val === "GROUP" && !reminderGroupId && groups.length > 0) {
+                                            setReminderGroupId(groups[0].id);
+                                        }
+                                        if (val === "STUDENTS" && !reminderStudentId && students.length > 0) {
+                                            setReminderStudentId(students[0].id);
+                                        }
+                                        if (val === "SCHEDULE" && !reminderScheduleId && schedules.length > 0) {
+                                            setReminderScheduleId(schedules[0].id);
+                                        }
+                                        if (val === "COURSE" && !reminderCourseId && courses.length > 0) {
+                                            setReminderCourseId(courses[0].id);
+                                        }
+                                    }
+                                }}
                                 fullWidth
                                 size="small"
                                 sx={{
@@ -1393,133 +1496,310 @@ export default function AdminSchedulePage() {
                                     },
                                 }}
                             >
-                                <ToggleButton value="SCHEDULE">By Class / Schedule</ToggleButton>
                                 <ToggleButton value="GROUP">By Study Group</ToggleButton>
-                                <ToggleButton value="STUDENTS">Specific Students</ToggleButton>
+                                <ToggleButton value="STUDENTS">By Specific Student</ToggleButton>
+                                <ToggleButton value="SCHEDULE">By Class / Schedule</ToggleButton>
                                 <ToggleButton value="COURSE">By Course</ToggleButton>
                             </ToggleButtonGroup>
                         </Box>
 
-                        {/* 2. Target Specific Selection */}
-                        {reminderTargetType === "SCHEDULE" && (
-                            <TextField
-                                select
-                                label="Choose Lecture Schedule / Class *"
-                                size="small"
-                                fullWidth
-                                value={reminderScheduleId}
-                                onChange={(e) => setReminderScheduleId(e.target.value)}
-                            >
-                                {schedules.map((s) => (
-                                    <MenuItem key={s.id} value={s.id}>
-                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                            <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: s.color_tag || "#2563eb" }} />
-                                            <Typography variant="body2" fontWeight={600}>{s.title}</Typography>
-                                            <Typography variant="caption" color="text.secondary">({(s.days_of_week || []).join(", ")})</Typography>
-                                        </Box>
-                                    </MenuItem>
-                                ))}
-                            </TextField>
-                        )}
-
+                        {/* 2. Target Specific Selection with Search Bar */}
                         {reminderTargetType === "GROUP" && (
-                            <TextField
-                                select
-                                label="Choose Student Group *"
-                                size="small"
-                                fullWidth
-                                value={reminderGroupId}
-                                onChange={(e) => setReminderGroupId(e.target.value)}
-                            >
-                                {groups.map((g) => (
-                                    <MenuItem key={g.id} value={g.id}>
-                                        {g.name} ({g.members_count || g.members?.length || 0} members)
-                                    </MenuItem>
-                                ))}
-                            </TextField>
-                        )}
-
-                        {reminderTargetType === "COURSE" && (
-                            <TextField
-                                select
-                                label="Choose Course *"
-                                size="small"
-                                fullWidth
-                                value={reminderCourseId}
-                                onChange={(e) => setReminderCourseId(e.target.value)}
-                            >
-                                {courses.map((c) => (
-                                    <MenuItem key={c.id} value={c.id}>
-                                        {c.name}
-                                    </MenuItem>
-                                ))}
-                            </TextField>
+                            <Stack spacing={1.2}>
+                                <TextField
+                                    size="small"
+                                    placeholder="Search study group by name..."
+                                    fullWidth
+                                    value={reminderSearchQuery}
+                                    onChange={(e) => setReminderSearchQuery(e.target.value)}
+                                    slotProps={{
+                                        input: {
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <Search fontSize="small" sx={{ color: "text.secondary" }} />
+                                                </InputAdornment>
+                                            ),
+                                        },
+                                    }}
+                                />
+                                <TextField
+                                    select
+                                    label="Choose Study Group *"
+                                    size="small"
+                                    fullWidth
+                                    value={reminderGroupId}
+                                    onChange={(e) => setReminderGroupId(e.target.value)}
+                                >
+                                    {filteredGroups.length === 0 ? (
+                                        <MenuItem disabled value="">
+                                            No study groups match "{reminderSearchQuery}"
+                                        </MenuItem>
+                                    ) : (
+                                        filteredGroups.map((g) => (
+                                            <MenuItem key={g.id} value={g.id}>
+                                                {g.name} ({g.members_count || g.members?.length || 0} members)
+                                            </MenuItem>
+                                        ))
+                                    )}
+                                </TextField>
+                            </Stack>
                         )}
 
                         {reminderTargetType === "STUDENTS" && (
-                            <Box>
+                            <Stack spacing={1.2}>
                                 <TextField
                                     size="small"
-                                    placeholder="Filter students by name or ID..."
+                                    placeholder="Search student by name, student ID, or email..."
                                     fullWidth
-                                    value={reminderStudentSearch}
-                                    onChange={(e) => setReminderStudentSearch(e.target.value)}
-                                    slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
-                                    sx={{ mb: 1.5 }}
+                                    value={reminderSearchQuery}
+                                    onChange={(e) => setReminderSearchQuery(e.target.value)}
+                                    slotProps={{
+                                        input: {
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <Search fontSize="small" sx={{ color: "text.secondary" }} />
+                                                </InputAdornment>
+                                            ),
+                                        },
+                                    }}
                                 />
-                                <Paper variant="outlined" sx={{ maxHeight: 200, overflowY: "auto", p: 1, borderRadius: 2 }}>
-                                    {students
-                                        .filter((st) => {
-                                            if (!reminderStudentSearch) return true;
-                                            const term = reminderStudentSearch.toLowerCase();
-                                            const name = `${st.first_name || ""} ${st.last_name || ""} ${st.username || ""}`.toLowerCase();
-                                            return name.includes(term);
-                                        })
-                                        .map((st) => {
-                                            const isSelected = reminderStudentIds.includes(st.id);
-                                            return (
-                                                <Box
-                                                    key={st.id}
-                                                    onClick={() => {
-                                                        setReminderStudentIds((prev) =>
-                                                            isSelected ? prev.filter((id) => id !== st.id) : [...prev, st.id]
-                                                        );
-                                                    }}
-                                                    sx={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        justifyContent: "space-between",
-                                                        p: 0.8,
-                                                        borderRadius: 1.5,
-                                                        cursor: "pointer",
-                                                        bgcolor: isSelected ? "#eff6ff" : "transparent",
-                                                        "&:hover": { bgcolor: isSelected ? "#dbeafe" : "grey.100" },
-                                                    }}
-                                                >
-                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                                        <Checkbox checked={isSelected} size="small" />
-                                                        <Typography variant="body2" fontWeight={600}>
-                                                            {st.first_name} {st.last_name}
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            ({st.username})
-                                                        </Typography>
+                                <TextField
+                                    select
+                                    label="Choose Student *"
+                                    size="small"
+                                    fullWidth
+                                    value={reminderStudentId}
+                                    onChange={(e) => setReminderStudentId(e.target.value)}
+                                >
+                                    {filteredStudents.length === 0 ? (
+                                        <MenuItem disabled value="">
+                                            No students match "{reminderSearchQuery}"
+                                        </MenuItem>
+                                    ) : (
+                                        filteredStudents.map((st) => (
+                                            <MenuItem key={st.id} value={st.id}>
+                                                {st.first_name} {st.last_name} ({st.username})
+                                            </MenuItem>
+                                        ))
+                                    )}
+                                </TextField>
+                            </Stack>
+                        )}
+
+                        {reminderTargetType === "SCHEDULE" && (
+                            <Stack spacing={1.2}>
+                                <TextField
+                                    size="small"
+                                    placeholder="Search class schedule by title, course, or day..."
+                                    fullWidth
+                                    value={reminderSearchQuery}
+                                    onChange={(e) => setReminderSearchQuery(e.target.value)}
+                                    slotProps={{
+                                        input: {
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <Search fontSize="small" sx={{ color: "text.secondary" }} />
+                                                </InputAdornment>
+                                            ),
+                                        },
+                                    }}
+                                />
+                                <TextField
+                                    select
+                                    label="Choose Lecture Schedule / Class *"
+                                    size="small"
+                                    fullWidth
+                                    value={reminderScheduleId}
+                                    onChange={(e) => setReminderScheduleId(e.target.value)}
+                                >
+                                    {filteredSchedules.length === 0 ? (
+                                        <MenuItem disabled value="">
+                                            No lecture schedules match "{reminderSearchQuery}"
+                                        </MenuItem>
+                                    ) : (
+                                        filteredSchedules.map((s) => (
+                                            <MenuItem key={s.id} value={s.id}>
+                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                    <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: s.color_tag || "#2563eb" }} />
+                                                    <Typography variant="body2" fontWeight={600}>{s.title}</Typography>
+                                                    <Typography variant="caption" color="text.secondary">({(s.days_of_week || []).join(", ")})</Typography>
+                                                </Box>
+                                            </MenuItem>
+                                        ))
+                                    )}
+                                </TextField>
+                            </Stack>
+                        )}
+
+                        {reminderTargetType === "COURSE" && (
+                            <Stack spacing={1.2}>
+                                <TextField
+                                    size="small"
+                                    placeholder="Search course by name or code..."
+                                    fullWidth
+                                    value={reminderSearchQuery}
+                                    onChange={(e) => setReminderSearchQuery(e.target.value)}
+                                    slotProps={{
+                                        input: {
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <Search fontSize="small" sx={{ color: "text.secondary" }} />
+                                                </InputAdornment>
+                                            ),
+                                        },
+                                    }}
+                                />
+                                <TextField
+                                    select
+                                    label="Choose Course *"
+                                    size="small"
+                                    fullWidth
+                                    value={reminderCourseId}
+                                    onChange={(e) => setReminderCourseId(e.target.value)}
+                                >
+                                    {filteredCourses.length === 0 ? (
+                                        <MenuItem disabled value="">
+                                            No courses match "{reminderSearchQuery}"
+                                        </MenuItem>
+                                    ) : (
+                                        filteredCourses.map((c) => (
+                                            <MenuItem key={c.id} value={c.id}>
+                                                {c.name}
+                                            </MenuItem>
+                                        ))
+                                    )}
+                                </TextField>
+                            </Stack>
+                        )}
+
+                        {/* 3. VERIFY MATCHING SCHEDULES (LIVE PREVIEW & SELECTION) */}
+                        <Box sx={{ mt: 0.5 }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                    Matching Lecture Schedule(s) ({reminderSelectedScheduleIds.length}/{matchingReminderSchedules.length} selected)
+                                </Typography>
+                                {matchingReminderSchedules.length > 1 && (
+                                    <Stack direction="row" spacing={1}>
+                                        <Button
+                                            size="small"
+                                            onClick={() => setReminderSelectedScheduleIds(matchingReminderSchedules.map((s) => s.id))}
+                                            sx={{ fontSize: "0.7rem", p: 0, textTransform: "none", minWidth: "auto" }}
+                                        >
+                                            Select All
+                                        </Button>
+                                        <Typography variant="caption" color="grey.400">|</Typography>
+                                        <Button
+                                            size="small"
+                                            onClick={() => setReminderSelectedScheduleIds([])}
+                                            sx={{ fontSize: "0.7rem", p: 0, textTransform: "none", minWidth: "auto" }}
+                                        >
+                                            Clear All
+                                        </Button>
+                                    </Stack>
+                                )}
+                            </Box>
+
+                            {matchingReminderSchedules.length > 0 ? (
+                                <Stack spacing={1.5} sx={{ maxHeight: 260, overflowY: "auto", pr: 0.5 }}>
+                                    {matchingReminderSchedules.map((sched) => {
+                                        const isChecked = reminderSelectedScheduleIds.includes(sched.id);
+                                        const daysList = sched.days_of_week || [];
+                                        const daysStr = daysList.map((d) => d.slice(0, 3)).join(", ");
+                                        const cardColor = sched.color_tag || "#2563eb";
+
+                                        return (
+                                            <Paper
+                                                key={sched.id}
+                                                variant="outlined"
+                                                onClick={() => {
+                                                    setReminderSelectedScheduleIds((prev) =>
+                                                        isChecked ? prev.filter((id) => id !== sched.id) : [...prev, sched.id]
+                                                    );
+                                                }}
+                                                sx={{
+                                                    p: 1.5,
+                                                    borderRadius: 2,
+                                                    cursor: "pointer",
+                                                    border: isChecked ? "2px solid #2563eb" : "1px solid",
+                                                    borderColor: isChecked ? "#2563eb" : "grey.200",
+                                                    borderLeft: `5px solid ${cardColor}`,
+                                                    bgcolor: isChecked ? "#f0fdf4" : "#fafafa",
+                                                    transition: "all 0.15s ease",
+                                                    "&:hover": { borderColor: "#2563eb", bgcolor: "#f8fafc" },
+                                                }}
+                                            >
+                                                <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.2 }}>
+                                                    <Checkbox
+                                                        checked={isChecked}
+                                                        size="small"
+                                                        sx={{ p: 0.2, mt: 0.2, color: "#2563eb", "&.Mui-checked": { color: "#16a34a" } }}
+                                                    />
+                                                    <Box sx={{ flex: 1 }}>
+                                                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5, flexWrap: "wrap", gap: 0.5 }}>
+                                                            <Typography variant="subtitle2" fontWeight={800} color="#0f172a">
+                                                                {sched.title}
+                                                            </Typography>
+                                                            <Chip
+                                                                label={sched.mode || "PHYSICAL"}
+                                                                size="small"
+                                                                color={sched.mode === "ONLINE" ? "primary" : "success"}
+                                                                variant="outlined"
+                                                                sx={{ height: 18, fontSize: "0.6rem", fontWeight: 800 }}
+                                                            />
+                                                        </Box>
+
+                                                        <Stack direction="row" spacing={1.5} useFlexGap sx={{ flexWrap: "wrap", fontSize: "0.75rem", color: "text.secondary" }}>
+                                                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+                                                                <AccessTime sx={{ fontSize: 13, color: "#2563eb" }} />
+                                                                <Typography variant="caption" fontWeight={700} color="text.primary">
+                                                                    {daysStr || "Scheduled Days"}: {formatTime12(sched.start_time)} – {formatTime12(sched.end_time)}
+                                                                </Typography>
+                                                            </Box>
+
+                                                            {sched.course_name && (
+                                                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+                                                                    <School sx={{ fontSize: 13 }} />
+                                                                    <Typography variant="caption">{sched.course_name}</Typography>
+                                                                </Box>
+                                                            )}
+
+                                                            {sched.instructor_name && (
+                                                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+                                                                    <Person sx={{ fontSize: 13 }} />
+                                                                    <Typography variant="caption">{sched.instructor_name}</Typography>
+                                                                </Box>
+                                                            )}
+
+                                                            {sched.venue_or_link && (
+                                                                <Box sx={{ display: "flex", alignItems: "center", gap: 0.4 }}>
+                                                                    <LocationOn sx={{ fontSize: 13 }} />
+                                                                    <Typography variant="caption" sx={{ wordBreak: "break-all" }}>{sched.venue_or_link}</Typography>
+                                                                </Box>
+                                                            )}
+                                                        </Stack>
                                                     </Box>
                                                 </Box>
-                                            );
-                                        })}
-                                </Paper>
-                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-                                    {reminderStudentIds.length} student(s) selected
-                                </Typography>
-                            </Box>
-                        )}
+                                            </Paper>
+                                        );
+                                    })}
+                                </Stack>
+                            ) : (
+                                <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                                    <Typography variant="body2" fontWeight={700}>
+                                        No lecture schedules found for this selection!
+                                    </Typography>
+                                    <Typography variant="caption" display="block">
+                                        There are currently no timetable schedules assigned to this {reminderTargetType === "GROUP" ? "study group" : reminderTargetType === "STUDENTS" ? "student" : reminderTargetType === "COURSE" ? "course" : "selection"}. Please create or assign a schedule first.
+                                    </Typography>
+                                </Alert>
+                            )}
+                        </Box>
 
                         {/* Optional Custom Note */}
                         <TextField
-                            label="Custom Notice / Announcement Message (Optional)"
+                            label="Custom Notice / Announcement Note (Optional)"
                             multiline
-                            rows={3}
+                            rows={2.5}
                             size="small"
                             fullWidth
                             placeholder="e.g. Reminder: Tomorrow's lecture will begin at 10:30 AM in Room 4. Please bring your laptops and completed assignment."
@@ -1536,7 +1816,7 @@ export default function AdminSchedulePage() {
                         variant="contained"
                         startIcon={<Send />}
                         onClick={handleSendReminder}
-                        disabled={reminderSending}
+                        disabled={reminderSending || reminderSelectedScheduleIds.length === 0 || matchingReminderSchedules.length === 0}
                         sx={{
                             bgcolor: "#2563eb",
                             "&:hover": { bgcolor: "#1d4ed8" },
@@ -1546,7 +1826,9 @@ export default function AdminSchedulePage() {
                             px: 3,
                         }}
                     >
-                        {reminderSending ? "Dispatching Reminders..." : "Send Reminder Emails"}
+                        {reminderSending
+                            ? "Dispatching Reminders..."
+                            : `Send Reminder Emails (${reminderSelectedScheduleIds.length} Schedule${reminderSelectedScheduleIds.length === 1 ? "" : "s"})`}
                     </Button>
                 </DialogActions>
             </Dialog>
