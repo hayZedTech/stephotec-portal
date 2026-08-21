@@ -323,7 +323,7 @@ export default function AdminSchedulePage() {
             const studentObj = students.find((st) => String(st.id) === String(reminderStudentId));
 
             // Find this student's groups
-            const studentGroups = groups.filter((g) => (g.members || []).some((m) => String(m.id || m) === String(reminderStudentId)));
+            const studentGroups = groups.filter((g) => (g.members_detail || g.members || []).some((m) => String(m.id || m) === String(reminderStudentId)));
             const studentGroupIds = studentGroups.map((g) => String(g.id));
 
             return schedules.filter((s) => {
@@ -1537,7 +1537,7 @@ export default function AdminSchedulePage() {
                                     ) : (
                                         filteredGroups.map((g) => (
                                             <MenuItem key={g.id} value={g.id}>
-                                                {g.name} ({g.members_count || g.members?.length || 0} members)
+                                                {g.name} ({g.member_count ?? g.members_count ?? g.members_detail?.length ?? 0} members)
                                             </MenuItem>
                                         ))
                                     )}
