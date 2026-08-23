@@ -305,15 +305,19 @@ export default function ConcurrentScheduleModal({
 
                                                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.6 }}>
                                                         {hasGroups &&
-                                                            sched.assigned_groups_details.map((g) => (
-                                                                <Chip
-                                                                    key={g.id}
-                                                                    icon={<Workspaces sx={{ fontSize: "0.75rem !important" }} />}
-                                                                    label={`${g.name} (${g.member_count ?? g.members_count ?? g.members_detail?.length ?? 0} students)`}
-                                                                    size="small"
-                                                                    sx={{ height: 22, fontSize: "0.68rem", fontWeight: 700, bgcolor: "#f1f5f9", border: "1px solid", borderColor: "grey.300" }}
-                                                                />
-                                                            ))}
+                                                            sched.assigned_groups_details.map((g) => {
+                                                                const count = g.member_count ?? g.members_count ?? g.members_detail?.length;
+                                                                const countSuffix = count !== undefined && count !== null ? ` (${count} student${count === 1 ? "" : "s"})` : "";
+                                                                return (
+                                                                    <Chip
+                                                                        key={g.id}
+                                                                        icon={<Workspaces sx={{ fontSize: "0.75rem !important" }} />}
+                                                                        label={`${g.name}${countSuffix}`}
+                                                                        size="small"
+                                                                        sx={{ height: 22, fontSize: "0.68rem", fontWeight: 700, bgcolor: "#f1f5f9", border: "1px solid", borderColor: "grey.300" }}
+                                                                    />
+                                                                );
+                                                            })}
 
                                                         {hasDirectStudents &&
                                                             sched.assigned_students_details.map((st) => {
