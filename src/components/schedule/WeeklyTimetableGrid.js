@@ -30,12 +30,17 @@ import {
     PlayCircleFilled,
     Star,
     CheckCircle,
+    WarningAmber,
 } from "@mui/icons-material";
-import { DAYS_OF_WEEK, formatTime12 } from "@/utils/scheduleUtils";
+import { DAYS_OF_WEEK, formatTime12, getScheduleOverlaps } from "@/utils/scheduleUtils";
+import ConcurrentScheduleModal from "@/components/schedule/ConcurrentScheduleModal";
 
 export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, onEdit, onDelete }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+    // Modal state for viewing concurrent schedule clashes & enrolled students
+    const [conflictModalData, setConflictModalData] = useState(null);
 
     // Real-time ticking clock so timetable transitions the exact moment lecture ends
     const [now, setNow] = useState(() => new Date());
@@ -50,6 +55,9 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
     const DAYS_ORDER = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
     const currentDayIndex = now.getDay();
     const currentDayName = DAYS_ORDER[currentDayIndex];
+
+    // Compute overlapping schedules & time concurrency map for admin
+    const { slotOverlapMap } = useMemo(() => getScheduleOverlaps(schedules), [schedules]);
 
     // Group schedules by day with per-day timing overrides
     const getSchedulesForDay = (dayKey) => {
@@ -328,6 +336,8 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                                     activeStatus={activeScheduleInfo.activeStatus}
                                     activeScheduleId={activeScheduleInfo.activeScheduleId}
                                     slotStatusMap={activeScheduleInfo.slotStatusMap}
+                                    slotOverlapMap={slotOverlapMap}
+                                    onViewConflicts={setConflictModalData}
                                     isAdmin={isAdmin}
                                     onEdit={onEdit}
                                     onDelete={onDelete}
@@ -359,6 +369,8 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                                             activeStatus={activeScheduleInfo.activeStatus}
                                             activeScheduleId={activeScheduleInfo.activeScheduleId}
                                             slotStatusMap={activeScheduleInfo.slotStatusMap}
+                                            slotOverlapMap={slotOverlapMap}
+                                            onViewConflicts={setConflictModalData}
                                             isAdmin={isAdmin}
                                             onEdit={onEdit}
                                             onDelete={onDelete}
@@ -424,6 +436,8 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                                                     dayKey={day.key}
                                                     isCardActive={isCardActive}
                                                     cardStatus={cardStatus}
+                                                    slotOverlapMap={slotOverlapMap}
+                                                    onViewConflicts={setConflictModalData}
                                                     isAdmin={isAdmin}
                                                     onEdit={onEdit}
                                                     onDelete={onDelete}
@@ -436,6 +450,16 @@ export default function WeeklyTimetableGrid({ schedules = [], isAdmin = false, o
                         );
                     })}
                 </Box>
+            )}
+
+            {/* Concurrent Schedule / Conflicts Modal */}
+            {isAdmin && (
+                <ConcurrentScheduleModal
+                    open={Boolean(conflictModalData)}
+                    onClose={() => setConflictModalData(null)}
+                    conflictData={conflictModalData}
+                    onEditSchedule={onEdit}
+                />
             )}
         </Box>
     );
@@ -452,6 +476,8 @@ function DayColumn({
     activeStatus,
     activeScheduleId,
     slotStatusMap = {},
+    slotOverlapMap = {},
+    onViewConflicts,
     isAdmin,
     onEdit,
     onDelete,
@@ -540,6 +566,8 @@ function DayColumn({
                                 dayKey={day.key}
                                 isCardActive={isCardActive}
                                 cardStatus={cardStatus}
+                                slotOverlapMap={slotOverlapMap}
+                                onViewConflicts={onViewConflicts}
                                 isAdmin={isAdmin}
                                 onEdit={onEdit}
                                 onDelete={onDelete}
@@ -560,6 +588,8 @@ function ScheduleCard({
     dayKey,
     isCardActive = false,
     cardStatus,
+    slotOverlapMap = {},
+    onViewConflicts,
     isAdmin,
     onEdit,
     onDelete,
@@ -567,6 +597,7 @@ function ScheduleCard({
     const cardColor = sched.color_tag || "#2563eb";
     const isLive = cardStatus === "IN_PROGRESS";
     const isPassed = cardStatus === "PASSED_TODAY";
+    const overlapInfo = slotOverlapMap?.[`${dayKey}-${sched.id}`];
 
     return (
         <Card
@@ -647,6 +678,58 @@ function ScheduleCard({
                     />
                 )}
 
+                {/* Overlap / Concurrent Time Slot Red Badge for Admin */}
+                {isAdmin && overlapInfo?.hasOverlap && (
+                    <Tooltip
+                        arrow
+                        title={
+                            <Box sx={{ p: 0.6, maxWidth: 280 }}>
+                                <Typography variant="subtitle2" fontWeight={800} sx={{ color: "#fecaca", fontSize: "0.82rem" }}>
+                                    ⚠️ {overlapInfo.count} Classes Assigned at this Same Time (Click to inspect)
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: "grey.300", display: "block", mt: 0.3, mb: 0.6 }}>
+                                    {dayKey}: {overlapInfo.timeLabel}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: "grey.200", fontWeight: 700, display: "block", mb: 0.3 }}>
+                                    Other classes at this time:
+                                </Typography>
+                                {overlapInfo.overlappingSchedules.map((other, idx) => (
+                                    <Box key={idx} sx={{ fontSize: "0.75rem", borderTop: "1px solid rgba(255,255,255,0.15)", pt: 0.5, mt: 0.5 }}>
+                                        • <strong>{other.title}</strong>
+                                        <div style={{ color: "#cbd5e1", fontSize: "0.7rem" }}>Tutor: {other.instructor || "Assigned Tutor"}</div>
+                                    </Box>
+                                ))}
+                                <Typography variant="caption" sx={{ color: "#86efac", display: "block", mt: 0.8, fontStyle: "italic" }}>
+                                    ✓ Click to view full details & enrolled students
+                                </Typography>
+                            </Box>
+                        }
+                    >
+                        <Chip
+                            icon={<WarningAmber sx={{ fontSize: "0.85rem !important", color: "white !important" }} />}
+                            label={`${overlapInfo.count} at same time (Click)`}
+                            size="small"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onViewConflicts) onViewConflicts(overlapInfo);
+                            }}
+                            sx={{
+                                height: 20,
+                                fontSize: "0.62rem",
+                                fontWeight: 900,
+                                bgcolor: "#dc2626",
+                                color: "white",
+                                cursor: "pointer",
+                                boxShadow: "0 2px 6px rgba(220, 38, 38, 0.35)",
+                                "&:hover": { bgcolor: "#b91c1c", transform: "scale(1.02)" },
+                                mb: 0.8,
+                                width: "100%",
+                                justifyContent: "center",
+                            }}
+                        />
+                    </Tooltip>
+                )}
+
                 {/* Time & Duration Header */}
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 0.8, mb: 0.8 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.6, color: "text.primary" }}>
@@ -690,6 +773,7 @@ function ScheduleCard({
                         </Box>
                     )}
 
+                    {/* Target Groups */}
                     {sched.assigned_groups_details && sched.assigned_groups_details.length > 0 && (
                         <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.6 }}>
                             <Workspaces sx={{ fontSize: 13, color: "text.secondary", mt: 0.2, flexShrink: 0 }} />
@@ -700,6 +784,30 @@ function ScheduleCard({
                                         label={g.name}
                                         size="small"
                                         sx={{ height: 16, fontSize: "0.6rem", fontWeight: 700, bgcolor: "#f8fafc", border: "1px solid", borderColor: "grey.200" }}
+                                    />
+                                ))}
+                            </Box>
+                        </Box>
+                    )}
+
+                    {/* Target Direct Students (Show Full Student Names) */}
+                    {sched.assigned_students_details && sched.assigned_students_details.length > 0 && (
+                        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.6 }}>
+                            <Person sx={{ fontSize: 13, color: "text.secondary", mt: 0.2, flexShrink: 0 }} />
+                            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.4 }}>
+                                {sched.assigned_students_details.map((st) => (
+                                    <Chip
+                                        key={st.id}
+                                        label={st.full_name || `${st.first_name || ""} ${st.last_name || ""}`.trim() || st.username || st.email}
+                                        size="small"
+                                        sx={{
+                                            height: 16,
+                                            fontSize: "0.6rem",
+                                            fontWeight: 700,
+                                            bgcolor: "#eff6ff",
+                                            color: "#1d4ed8",
+                                            border: "1px solid #bfdbfe",
+                                        }}
                                     />
                                 ))}
                             </Box>

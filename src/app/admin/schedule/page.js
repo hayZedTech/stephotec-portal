@@ -64,6 +64,7 @@ import {
     Send,
     Campaign,
     CheckCircle,
+    WarningAmber,
 } from "@mui/icons-material";
 import api from "@/lib/axios";
 import { getCourses } from "@/services/courses";
@@ -77,7 +78,10 @@ import {
     COLOR_PRESETS,
     generateSlotsForDuration,
     formatTime12,
+    timeStringToMinutes,
+    getScheduleOverlaps,
 } from "@/utils/scheduleUtils";
+import ConcurrentScheduleModal from "@/components/schedule/ConcurrentScheduleModal";
 
 export default function AdminSchedulePage() {
     const [schedules, setSchedules] = useState([]);
@@ -86,6 +90,9 @@ export default function AdminSchedulePage() {
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState("GRID"); // "GRID" or "TABLE"
+
+    // Modal state for viewing concurrent schedule clashes & enrolled students
+    const [conflictModalData, setConflictModalData] = useState(null);
 
     // Filters
     const [searchTerm, setSearchTerm] = useState("");
@@ -539,6 +546,7 @@ export default function AdminSchedulePage() {
         return true;
     });
 
+    const { slotOverlapMap, totalConcurrentCount, allConflictSlots } = useMemo(() => getScheduleOverlaps(schedules), [schedules]);
     const bulkSlots = generateSlotsForDuration(bulkDuration === "CUSTOM" ? 90 : Number(bulkDuration) || 90);
 
     return (
@@ -676,9 +684,31 @@ export default function AdminSchedulePage() {
 
                     {/* View Switcher Toggle */}
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pt: 1, borderTop: "1px solid", borderColor: "grey.100", flexWrap: "wrap", gap: 1 }}>
-                        <Typography variant="body2" color="text.secondary" fontWeight={600}>
-                            Showing {filtered.length} scheduled lecture(s)
-                        </Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.2, flexWrap: "wrap" }}>
+                            <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                                Showing {filtered.length} scheduled lecture(s)
+                            </Typography>
+                            {totalConcurrentCount > 0 && (
+                                <Tooltip arrow title="Multiple classes share the same day and time slot. Click to inspect all clashes and enrolled students.">
+                                    <Chip
+                                        icon={<WarningAmber sx={{ color: "white !important", fontSize: "0.85rem !important" }} />}
+                                        label={`${totalConcurrentCount} Concurrent Time Slot${totalConcurrentCount === 1 ? "" : "s"} (Click)`}
+                                        size="small"
+                                        onClick={() => setConflictModalData({ isAllSlots: true, allConflictSlots })}
+                                        sx={{
+                                            bgcolor: "#dc2626",
+                                            color: "white",
+                                            fontWeight: 800,
+                                            fontSize: "0.68rem",
+                                            height: 22,
+                                            cursor: "pointer",
+                                            boxShadow: "0 2px 6px rgba(220, 38, 38, 0.25)",
+                                            "&:hover": { bgcolor: "#b91c1c" },
+                                        }}
+                                    />
+                                </Tooltip>
+                            )}
+                        </Box>
                         <ToggleButtonGroup
                             value={viewMode}
                             exclusive
@@ -746,24 +776,90 @@ export default function AdminSchedulePage() {
                                             </Box>
                                         </TableCell>
                                         <TableCell>
-                                            <Stack spacing={0.5}>
+                                            <Stack spacing={0.8}>
                                                 {sched.day_times && sched.day_times.length > 0 ? (
-                                                    sched.day_times.map((dt) => (
-                                                        <Box key={dt.day} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                                            <Chip label={dt.day.slice(0, 3)} size="small" sx={{ height: 18, fontSize: "0.65rem", fontWeight: 800, bgcolor: "#0f172a", color: "white" }} />
-                                                            <Typography variant="caption" fontWeight={700}>
-                                                                {formatTime12(dt.start_time)} – {formatTime12(dt.end_time)}
-                                                            </Typography>
-                                                            {dt.duration_minutes && (
-                                                                <Chip label={`${dt.duration_minutes}m`} size="small" sx={{ height: 16, fontSize: "0.6rem", fontWeight: 700 }} />
-                                                            )}
-                                                        </Box>
-                                                    ))
+                                                    sched.day_times.map((dt) => {
+                                                        const overlapInfo = slotOverlapMap?.[`${String(dt.day).toUpperCase()}-${sched.id}`];
+                                                        return (
+                                                            <Box key={dt.day} sx={{ display: "flex", alignItems: "center", gap: 0.8, flexWrap: "wrap" }}>
+                                                                <Chip label={dt.day.slice(0, 3)} size="small" sx={{ height: 18, fontSize: "0.65rem", fontWeight: 800, bgcolor: "#0f172a", color: "white" }} />
+                                                                <Typography variant="caption" fontWeight={700}>
+                                                                    {formatTime12(dt.start_time)} – {formatTime12(dt.end_time)}
+                                                                </Typography>
+                                                                {dt.duration_minutes && (
+                                                                    <Chip label={`${dt.duration_minutes}m`} size="small" sx={{ height: 16, fontSize: "0.6rem", fontWeight: 700 }} />
+                                                                )}
+                                                                {overlapInfo?.hasOverlap && (
+                                                                    <Tooltip
+                                                                        arrow
+                                                                        title={
+                                                                            <Box sx={{ p: 0.5, maxWidth: 260 }}>
+                                                                                <Typography variant="subtitle2" fontWeight={800} sx={{ color: "#fecaca", fontSize: "0.78rem" }}>
+                                                                                    ⚠️ {overlapInfo.count} Classes Assigned at this Same Time
+                                                                                </Typography>
+                                                                                <Typography variant="caption" sx={{ color: "grey.200", display: "block", mt: 0.3 }}>
+                                                                                    Concurrent classes: {overlapInfo.overlappingSchedules.map((o) => `"${o.title}" (${o.instructor || "Assigned Tutor"})`).join(", ")}
+                                                                                </Typography>
+                                                                                <Typography variant="caption" sx={{ color: "#86efac", display: "block", mt: 0.5, fontStyle: "italic" }}>
+                                                                                    ✓ Click to inspect all clashes & enrolled students
+                                                                                </Typography>
+                                                                            </Box>
+                                                                        }
+                                                                    >
+                                                                        <Chip
+                                                                            icon={<WarningAmber sx={{ fontSize: "0.75rem !important", color: "white !important" }} />}
+                                                                            label={`${overlapInfo.count} at same time (Click)`}
+                                                                            size="small"
+                                                                            onClick={() => setConflictModalData(overlapInfo)}
+                                                                            sx={{
+                                                                                height: 18,
+                                                                                fontSize: "0.6rem",
+                                                                                fontWeight: 900,
+                                                                                bgcolor: "#dc2626",
+                                                                                color: "white",
+                                                                                cursor: "pointer",
+                                                                                boxShadow: "0 2px 4px rgba(220, 38, 38, 0.3)",
+                                                                                "&:hover": { bgcolor: "#b91c1c" },
+                                                                            }}
+                                                                        />
+                                                                    </Tooltip>
+                                                                )}
+                                                            </Box>
+                                                        );
+                                                    })
                                                 ) : (
                                                     <Box>
-                                                        <Typography variant="body2" fontWeight={700}>
-                                                            {formatTime12(sched.start_time)} – {formatTime12(sched.end_time)}
-                                                        </Typography>
+                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.8, flexWrap: "wrap" }}>
+                                                            <Typography variant="body2" fontWeight={700}>
+                                                                {formatTime12(sched.start_time)} – {formatTime12(sched.end_time)}
+                                                            </Typography>
+                                                            {(sched.days_of_week || []).map((d) => {
+                                                                const overlapInfo = slotOverlapMap?.[`${String(d).toUpperCase()}-${sched.id}`];
+                                                                return overlapInfo?.hasOverlap ? (
+                                                                    <Tooltip
+                                                                        key={d}
+                                                                        arrow
+                                                                        title={`⚠️ ${overlapInfo.count} classes assigned on ${d} at this time. Click to inspect.`}
+                                                                    >
+                                                                        <Chip
+                                                                            icon={<WarningAmber sx={{ fontSize: "0.75rem !important", color: "white !important" }} />}
+                                                                            label={`${d.slice(0, 3)}: ${overlapInfo.count} at same time (Click)`}
+                                                                            size="small"
+                                                                            onClick={() => setConflictModalData(overlapInfo)}
+                                                                            sx={{
+                                                                                height: 18,
+                                                                                fontSize: "0.6rem",
+                                                                                fontWeight: 900,
+                                                                                bgcolor: "#dc2626",
+                                                                                color: "white",
+                                                                                cursor: "pointer",
+                                                                                "&:hover": { bgcolor: "#b91c1c" },
+                                                                            }}
+                                                                        />
+                                                                    </Tooltip>
+                                                                ) : null;
+                                                            })}
+                                                        </Box>
                                                         <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mt: 0.5 }}>
                                                             {(sched.days_of_week || []).map((d) => (
                                                                 <Chip key={d} label={d.slice(0, 3)} size="small" sx={{ height: 18, fontSize: "0.65rem", fontWeight: 700, bgcolor: "#f1f5f9" }} />
@@ -774,19 +870,39 @@ export default function AdminSchedulePage() {
                                             </Stack>
                                         </TableCell>
                                         <TableCell>
-                                            {sched.assigned_groups_details && sched.assigned_groups_details.length > 0 ? (
-                                                <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-                                                    {sched.assigned_groups_details.map((g) => (
-                                                        <Chip key={g.id} icon={<Workspaces sx={{ fontSize: "0.8rem !important" }} />} label={g.name} size="small" sx={{ fontWeight: 600 }} />
+                                            <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", maxWidth: 300 }}>
+                                                {sched.assigned_groups_details && sched.assigned_groups_details.length > 0 &&
+                                                    sched.assigned_groups_details.map((g) => (
+                                                        <Chip
+                                                            key={g.id}
+                                                            icon={<Workspaces sx={{ fontSize: "0.8rem !important" }} />}
+                                                            label={g.name}
+                                                            size="small"
+                                                            sx={{ fontWeight: 700, bgcolor: "#f1f5f9", height: 22, fontSize: "0.68rem" }}
+                                                        />
                                                     ))}
-                                                </Box>
-                                            ) : sched.assigned_students_details && sched.assigned_students_details.length > 0 ? (
-                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                                    {sched.assigned_students_details.length} student(s) directly assigned
-                                                </Typography>
-                                            ) : (
-                                                <Chip label="Entire Course / General" size="small" variant="outlined" />
-                                            )}
+                                                {sched.assigned_students_details && sched.assigned_students_details.length > 0 &&
+                                                    sched.assigned_students_details.map((s) => (
+                                                        <Chip
+                                                            key={s.id}
+                                                            icon={<Person sx={{ fontSize: "0.8rem !important", color: "#1d4ed8 !important" }} />}
+                                                            label={s.full_name || `${s.first_name || ""} ${s.last_name || ""}`.trim() || s.username || s.email}
+                                                            size="small"
+                                                            sx={{
+                                                                fontWeight: 700,
+                                                                bgcolor: "#eff6ff",
+                                                                color: "#1d4ed8",
+                                                                border: "1px solid #bfdbfe",
+                                                                height: 22,
+                                                                fontSize: "0.68rem",
+                                                            }}
+                                                        />
+                                                    ))}
+                                                {(!sched.assigned_groups_details || sched.assigned_groups_details.length === 0) &&
+                                                 (!sched.assigned_students_details || sched.assigned_students_details.length === 0) && (
+                                                    <Chip label="Entire Course / General" size="small" variant="outlined" sx={{ height: 22, fontSize: "0.68rem" }} />
+                                                )}
+                                            </Box>
                                         </TableCell>
                                         <TableCell>
                                             <Stack spacing={0.5}>
@@ -878,14 +994,26 @@ export default function AdminSchedulePage() {
                                     </Typography>
                                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8 }}>
                                         {sched.day_times && sched.day_times.length > 0 ? (
-                                            sched.day_times.map((dt) => (
-                                                <Box key={dt.day} sx={{ display: "flex", alignItems: "center", gap: 0.5, bgcolor: "#f8fafc", px: 1, py: 0.5, borderRadius: 1.5, border: "1px solid", borderColor: "grey.200" }}>
-                                                    <Chip label={dt.day.slice(0, 3)} size="small" sx={{ height: 18, fontSize: "0.65rem", fontWeight: 800, bgcolor: "#0f172a", color: "white" }} />
-                                                    <Typography variant="caption" fontWeight={700}>
-                                                        {formatTime12(dt.start_time)} – {formatTime12(dt.end_time)}
-                                                    </Typography>
-                                                </Box>
-                                            ))
+                                            sched.day_times.map((dt) => {
+                                                const overlapInfo = slotOverlapMap?.[`${String(dt.day).toUpperCase()}-${sched.id}`];
+                                                return (
+                                                    <Box key={dt.day} sx={{ display: "flex", alignItems: "center", gap: 0.6, bgcolor: "#f8fafc", px: 1, py: 0.5, borderRadius: 1.5, border: "1px solid", borderColor: "grey.200", flexWrap: "wrap" }}>
+                                                        <Chip label={dt.day.slice(0, 3)} size="small" sx={{ height: 18, fontSize: "0.65rem", fontWeight: 800, bgcolor: "#0f172a", color: "white" }} />
+                                                        <Typography variant="caption" fontWeight={700}>
+                                                            {formatTime12(dt.start_time)} – {formatTime12(dt.end_time)}
+                                                        </Typography>
+                                                        {overlapInfo?.hasOverlap && (
+                                                            <Chip
+                                                                icon={<WarningAmber sx={{ fontSize: "0.75rem !important", color: "white !important" }} />}
+                                                                label={`${overlapInfo.count} at same time (Click)`}
+                                                                size="small"
+                                                                onClick={() => setConflictModalData(overlapInfo)}
+                                                                sx={{ height: 18, fontSize: "0.6rem", fontWeight: 900, bgcolor: "#dc2626", color: "white", cursor: "pointer", "&:hover": { bgcolor: "#b91c1c" } }}
+                                                            />
+                                                        )}
+                                                    </Box>
+                                                );
+                                            })
                                         ) : (
                                             <Typography variant="caption" fontWeight={700}>
                                                 {formatTime12(sched.start_time)} – {formatTime12(sched.end_time)} · {(sched.days_of_week || []).map((d) => d.slice(0, 3)).join(", ")}
@@ -893,6 +1021,29 @@ export default function AdminSchedulePage() {
                                         )}
                                     </Box>
                                 </Box>
+
+                                {/* Target Groups / Students */}
+                                {((sched.assigned_groups_details && sched.assigned_groups_details.length > 0) || (sched.assigned_students_details && sched.assigned_students_details.length > 0)) && (
+                                    <Box sx={{ mb: 1.5 }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" mb={0.4}>
+                                            Target:
+                                        </Typography>
+                                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                                            {sched.assigned_groups_details?.map((g) => (
+                                                <Chip key={g.id} icon={<Workspaces sx={{ fontSize: "0.75rem !important" }} />} label={g.name} size="small" sx={{ fontWeight: 700, height: 20, fontSize: "0.65rem", bgcolor: "#f1f5f9" }} />
+                                            ))}
+                                            {sched.assigned_students_details?.map((s) => (
+                                                <Chip
+                                                    key={s.id}
+                                                    icon={<Person sx={{ fontSize: "0.75rem !important", color: "#1d4ed8 !important" }} />}
+                                                    label={s.full_name || `${s.first_name || ""} ${s.last_name || ""}`.trim() || s.username || s.email}
+                                                    size="small"
+                                                    sx={{ fontWeight: 700, height: 20, fontSize: "0.65rem", bgcolor: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                )}
 
                                 {sched.instructor_name && (
                                     <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
@@ -1043,7 +1194,14 @@ export default function AdminSchedulePage() {
                                             const val = typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value;
                                             setFormData((p) => ({ ...p, assigned_student_ids: val }));
                                         }}
-                                        renderValue={(selected) => `${selected.length} individual student(s) directly assigned`}
+                                        renderValue={(selected) => {
+                                            if (!selected || selected.length === 0) return "Select individual students";
+                                            const selectedObjs = students.filter((s) => selected.includes(s.id));
+                                            if (selectedObjs.length <= 2) {
+                                                return selectedObjs.map((s) => `${s.first_name || ""} ${s.last_name || ""}`.trim() || s.email).join(", ");
+                                            }
+                                            return `${selectedObjs.length} students selected (${selectedObjs.slice(0, 2).map((s) => s.first_name).join(", ")} +${selectedObjs.length - 2} more)`;
+                                        }}
                                     >
                                         <Box sx={{ p: 1, position: "sticky", top: 0, bgcolor: "background.paper", zIndex: 2, borderBottom: "1px solid", borderColor: "divider" }}>
                                             <TextField
@@ -1079,6 +1237,34 @@ export default function AdminSchedulePage() {
                                         </Box>
                                     </Select>
                                 </FormControl>
+
+                                {/* Selected Student Name Chips Preview */}
+                                {formData.assigned_student_ids.length > 0 && (
+                                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, mt: 0.5 }}>
+                                        {students
+                                            .filter((s) => formData.assigned_student_ids.includes(s.id))
+                                            .map((s) => (
+                                                <Chip
+                                                    key={s.id}
+                                                    icon={<Person sx={{ fontSize: "0.85rem !important", color: "#1d4ed8 !important" }} />}
+                                                    label={`${s.first_name || ""} ${s.last_name || ""}`.trim() || s.username || s.email}
+                                                    size="small"
+                                                    onDelete={() => {
+                                                        setFormData((p) => ({
+                                                            ...p,
+                                                            assigned_student_ids: p.assigned_student_ids.filter((id) => id !== s.id),
+                                                        }));
+                                                    }}
+                                                    sx={{
+                                                        fontWeight: 700,
+                                                        bgcolor: "#eff6ff",
+                                                        color: "#1d4ed8",
+                                                        border: "1px solid #bfdbfe",
+                                                    }}
+                                                />
+                                            ))}
+                                    </Box>
+                                )}
                             </Stack>
                         </Box>
 
@@ -1296,6 +1482,71 @@ export default function AdminSchedulePage() {
                                                     slotProps={{ inputLabel: { shrink: true } }}
                                                 />
                                             </Stack>
+
+                                            {/* Real-time Overlap Notice for this Day & Time */}
+                                            {(() => {
+                                                const existingClashes = schedules.filter((s) => {
+                                                    if (editingSchedule && s.id === editingSchedule.id) return false;
+                                                    const dayTimes = (s.day_times && Array.isArray(s.day_times) && s.day_times.length > 0)
+                                                        ? s.day_times
+                                                        : (s.days_of_week || []).map((d) => ({
+                                                            day: d,
+                                                            start_time: s.start_time || "10:30:00",
+                                                            end_time: s.end_time || "12:00:00",
+                                                        }));
+                                                    return dayTimes.some((otherDt) => {
+                                                        if (String(otherDt.day).toUpperCase() !== String(dt.day).toUpperCase()) return false;
+                                                        const oSt = timeStringToMinutes(otherDt.start_time);
+                                                        const oEt = timeStringToMinutes(otherDt.end_time);
+                                                        const curSt = timeStringToMinutes(dt.start_time);
+                                                        const curEt = timeStringToMinutes(dt.end_time);
+                                                        return curSt < oEt && oSt < curEt;
+                                                    });
+                                                });
+
+                                                if (existingClashes.length === 0) return null;
+
+                                                return (
+                                                    <Box
+                                                        sx={{
+                                                            display: "flex",
+                                                            alignItems: "flex-start",
+                                                            gap: 1,
+                                                            mt: 1.5,
+                                                            bgcolor: "#fef2f2",
+                                                            border: "1px solid #fecaca",
+                                                            p: 1.2,
+                                                            borderRadius: 2,
+                                                            flexWrap: "wrap",
+                                                        }}
+                                                    >
+                                                        <Chip
+                                                            icon={<WarningAmber sx={{ fontSize: "0.85rem !important", color: "white !important" }} />}
+                                                            label={`${existingClashes.length + 1} at same time`}
+                                                            size="small"
+                                                            sx={{
+                                                                height: 20,
+                                                                fontSize: "0.62rem",
+                                                                fontWeight: 900,
+                                                                bgcolor: "#dc2626",
+                                                                color: "white",
+                                                                flexShrink: 0,
+                                                            }}
+                                                        />
+                                                        <Box sx={{ flex: 1 }}>
+                                                            <Typography variant="caption" color="#991b1b" fontWeight={700} display="block">
+                                                                Notice: {existingClashes.length} other {existingClashes.length === 1 ? "class is" : "classes are"} scheduled on {dayObj.label} at this time:
+                                                            </Typography>
+                                                            <Typography variant="caption" color="#7f1d1d" display="block" sx={{ mt: 0.2 }}>
+                                                                {existingClashes.map((c) => `• "${c.title}" (Tutor: ${c.instructor_name || "Assigned Tutor"})`).join("  ")}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="#166534" fontWeight={700} display="block" sx={{ mt: 0.3, fontStyle: "italic" }}>
+                                                                ✓ Allowed since Stephotec has multiple tutors.
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                );
+                                            })()}
                                         </Paper>
                                     );
                                 })}
@@ -1832,6 +2083,14 @@ export default function AdminSchedulePage() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Concurrent Schedule & Clashes Breakdown Modal */}
+            <ConcurrentScheduleModal
+                open={Boolean(conflictModalData)}
+                onClose={() => setConflictModalData(null)}
+                conflictData={conflictModalData}
+                onEditSchedule={openEdit}
+            />
         </Box>
     );
 }

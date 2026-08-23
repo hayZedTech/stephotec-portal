@@ -114,3 +114,135 @@ export function generateSlotsForDuration(durationMinutes = 90) {
 
     return slots;
 }
+
+/**
+ * Calculates schedule concurrency / overlapping times for a list of schedules.
+ * Returns a mapping keyed by `${dayKey}-${scheduleId}` and summary stats.
+ */
+export function getScheduleOverlaps(schedules = []) {
+    const occurrences = [];
+
+    schedules.forEach((s) => {
+        if (!s || s.is_active === false) return;
+
+        const dayTimes = (s.day_times && Array.isArray(s.day_times) && s.day_times.length > 0)
+            ? s.day_times
+            : (s.days_of_week || []).map((d) => ({
+                day: d,
+                start_time: s.start_time || "10:30:00",
+                end_time: s.end_time || "12:00:00",
+                duration_minutes: s.duration_minutes || 90,
+            }));
+
+        dayTimes.forEach((dt) => {
+            const dayKey = String(dt.day).toUpperCase();
+            const st = String(dt.start_time || s.start_time || "10:30:00").slice(0, 8);
+            const et = String(dt.end_time || s.end_time || "12:00:00").slice(0, 8);
+
+            const startMinutes = timeStringToMinutes(st);
+            const endMinutes = timeStringToMinutes(et);
+
+            occurrences.push({
+                schedule: s,
+                scheduleId: s.id,
+                title: s.title || "Untitled Class",
+                instructor: s.instructor_name || "Assigned Tutor",
+                venue: s.venue_or_link || "",
+                courseName: s.course_name || "",
+                dayKey,
+                startMinutes,
+                endMinutes,
+                startStr: st,
+                endStr: et,
+                timeLabel: `${formatTime12(st)} – ${formatTime12(et)}`,
+            });
+        });
+    });
+
+    const slotOverlapMap = {};
+    let totalConcurrentCount = 0;
+    const processedSlotKeys = new Set();
+    const allConflictSlots = [];
+
+    occurrences.forEach((occA) => {
+        const overlaps = occurrences.filter((occB) => {
+            if (occB.dayKey !== occA.dayKey) return false;
+            // Overlapping time range: startA < endB && startB < endA
+            return occA.startMinutes < occB.endMinutes && occB.startMinutes < occA.endMinutes;
+        });
+
+        const count = overlaps.length;
+        const otherSchedules = overlaps.filter((o) => o.scheduleId !== occA.scheduleId);
+
+        const uniqueSchedulesMap = new Map();
+        overlaps.forEach((o) => {
+            if (!uniqueSchedulesMap.has(o.scheduleId)) {
+                uniqueSchedulesMap.set(o.scheduleId, o.schedule);
+            }
+        });
+        const allUniqueSchedules = Array.from(uniqueSchedulesMap.values());
+
+        // Check for double-booked students across these concurrent schedules
+        const studentScheduleCount = {};
+        const studentObjectMap = {};
+
+        allUniqueSchedules.forEach((s) => {
+            (s.assigned_students_details || []).forEach((st) => {
+                const sid = String(st.id);
+                studentScheduleCount[sid] = (studentScheduleCount[sid] || 0) + 1;
+                studentObjectMap[sid] = st;
+            });
+            (s.assigned_groups_details || []).forEach((g) => {
+                (g.members_detail || []).forEach((st) => {
+                    const sid = String(st.id);
+                    studentScheduleCount[sid] = (studentScheduleCount[sid] || 0) + 1;
+                    if (!studentObjectMap[sid]) studentObjectMap[sid] = st;
+                });
+            });
+        });
+
+        const clashingStudents = Object.keys(studentScheduleCount)
+            .filter((id) => studentScheduleCount[id] > 1)
+            .map((id) => ({
+                ...studentObjectMap[id],
+                enrolledCount: studentScheduleCount[id],
+            }));
+
+        const key = `${occA.dayKey}-${occA.scheduleId}`;
+        slotOverlapMap[key] = {
+            count,
+            hasOverlap: count >= 2,
+            overlappingSchedules: otherSchedules,
+            schedules: allUniqueSchedules,
+            allSchedules: allUniqueSchedules,
+            clashingStudents,
+            dayKey: occA.dayKey,
+            timeLabel: occA.timeLabel,
+            scheduleTitle: occA.title,
+            start_time: occA.startStr,
+            end_time: occA.endStr,
+        };
+
+        if (count >= 2) {
+            totalConcurrentCount++;
+            const slotIdentifier = `${occA.dayKey}_${allUniqueSchedules.map(s => s.id).sort().join("-")}`;
+            if (!processedSlotKeys.has(slotIdentifier)) {
+                processedSlotKeys.add(slotIdentifier);
+                allConflictSlots.push({
+                    dayKey: occA.dayKey,
+                    timeLabel: occA.timeLabel,
+                    start_time: occA.startStr,
+                    end_time: occA.endStr,
+                    schedules: allUniqueSchedules,
+                    clashingStudents,
+                });
+            }
+        }
+    });
+
+    return {
+        slotOverlapMap,
+        totalConcurrentCount: allConflictSlots.length,
+        allConflictSlots,
+    };
+}
