@@ -116,6 +116,28 @@ export function generateSlotsForDuration(durationMinutes = 90) {
 }
 
 /**
+ * Returns a human-friendly target label for a schedule (e.g. "Group: Batch A", "Student: John Doe", etc.)
+ */
+export function getScheduleTargetLabel(s) {
+    if (!s) return "Entire Course";
+    const groupNames = (s.assigned_groups_details || []).map((g) => g.name).filter(Boolean);
+    const studentNames = (s.assigned_students_details || []).map(
+        (st) => st.full_name || `${st.first_name || ""} ${st.last_name || ""}`.trim() || st.username || st.email
+    ).filter(Boolean);
+
+    if (groupNames.length > 0 && studentNames.length > 0) {
+        return `Group: ${groupNames.join(", ")} · Student: ${studentNames.join(", ")}`;
+    }
+    if (groupNames.length > 0) {
+        return `Group: ${groupNames.join(", ")}`;
+    }
+    if (studentNames.length > 0) {
+        return `Student: ${studentNames.join(", ")}`;
+    }
+    return s.course_name ? `Course: ${s.course_name}` : "Entire Course";
+}
+
+/**
  * Calculates schedule concurrency / overlapping times for a list of schedules.
  * Returns a mapping keyed by `${dayKey}-${scheduleId}` and summary stats.
  */
@@ -147,6 +169,7 @@ export function getScheduleOverlaps(schedules = []) {
                 scheduleId: s.id,
                 title: s.title || "Untitled Class",
                 instructor: s.instructor_name || "Assigned Tutor",
+                targetLabel: getScheduleTargetLabel(s),
                 venue: s.venue_or_link || "",
                 courseName: s.course_name || "",
                 dayKey,

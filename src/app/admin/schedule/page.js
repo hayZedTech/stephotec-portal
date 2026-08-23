@@ -80,6 +80,7 @@ import {
     formatTime12,
     timeStringToMinutes,
     getScheduleOverlaps,
+    getScheduleTargetLabel,
 } from "@/utils/scheduleUtils";
 import ConcurrentScheduleModal from "@/components/schedule/ConcurrentScheduleModal";
 
@@ -798,7 +799,7 @@ export default function AdminSchedulePage() {
                                                                                     ⚠️ {overlapInfo.count} Classes Assigned at this Same Time
                                                                                 </Typography>
                                                                                 <Typography variant="caption" sx={{ color: "grey.200", display: "block", mt: 0.3 }}>
-                                                                                    Concurrent classes: {overlapInfo.overlappingSchedules.map((o) => `"${o.title}" (${o.instructor || "Assigned Tutor"})`).join(", ")}
+                                                                                    Concurrent classes: {overlapInfo.overlappingSchedules.map((o) => `"${o.title}" (${o.targetLabel || getScheduleTargetLabel(o.schedule)})`).join(", ")}
                                                                                 </Typography>
                                                                                 <Typography variant="caption" sx={{ color: "#86efac", display: "block", mt: 0.5, fontStyle: "italic" }}>
                                                                                     ✓ Click to inspect all clashes & enrolled students
@@ -1538,7 +1539,7 @@ export default function AdminSchedulePage() {
                                                                 Notice: {existingClashes.length} other {existingClashes.length === 1 ? "class is" : "classes are"} scheduled on {dayObj.label} at this time:
                                                             </Typography>
                                                             <Typography variant="caption" color="#7f1d1d" display="block" sx={{ mt: 0.2 }}>
-                                                                {existingClashes.map((c) => `• "${c.title}" (Tutor: ${c.instructor_name || "Assigned Tutor"})`).join("  ")}
+                                                                {existingClashes.map((c) => `• "${c.title}" (${getScheduleTargetLabel(c)})`).join("  ")}
                                                             </Typography>
                                                             <Typography variant="caption" color="#166534" fontWeight={700} display="block" sx={{ mt: 0.3, fontStyle: "italic" }}>
                                                                 ✓ Allowed since Stephotec has multiple tutors.

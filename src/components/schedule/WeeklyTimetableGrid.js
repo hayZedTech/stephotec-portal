@@ -696,7 +696,7 @@ function ScheduleCard({
                                 {overlapInfo.overlappingSchedules.map((other, idx) => (
                                     <Box key={idx} sx={{ fontSize: "0.75rem", borderTop: "1px solid rgba(255,255,255,0.15)", pt: 0.5, mt: 0.5 }}>
                                         • <strong>{other.title}</strong>
-                                        <div style={{ color: "#cbd5e1", fontSize: "0.7rem" }}>Tutor: {other.instructor || "Assigned Tutor"}</div>
+                                        <div style={{ color: "#cbd5e1", fontSize: "0.7rem" }}>Target: {other.targetLabel || "Entire Course"}</div>
                                     </Box>
                                 ))}
                                 <Typography variant="caption" sx={{ color: "#86efac", display: "block", mt: 0.8, fontStyle: "italic" }}>
