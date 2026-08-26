@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import api from "@/lib/axios";
 import { errorToast, successToast } from "@/lib/toast";
+import { downloadFileWithRealName } from "@/utils/fileDownloader";
 import {
     Box,
     Typography,
@@ -543,7 +544,13 @@ export default function LearningPage() {
                                                 </CardContent>
                                                 <Box sx={{ p: 2, pt: 0 }}>
                                                     {pStatus === "COMPLETED" ? (
-                                                        <Button fullWidth variant="contained" color="success" startIcon={<Download />} href={handout.file} target="_blank" rel="noopener noreferrer">
+                                                        <Button
+                                                            fullWidth
+                                                            variant="contained"
+                                                            color="success"
+                                                            startIcon={<Download />}
+                                                            onClick={() => downloadFileWithRealName(handout.file, `${handout.title || "handout"}.pdf`)}
+                                                        >
                                                             Download Handout
                                                         </Button>
                                                     ) : pStatus === "PENDING" ? (
@@ -663,7 +670,12 @@ export default function LearningPage() {
                                                 <Typography variant="body2" color="text.secondary">{b.description}</Typography>
                                             </CardContent>
                                             <Box sx={{ p: 2, pt: 0 }}>
-                                                <Button fullWidth variant="outlined" startIcon={<Download />} href={b.file} target="_blank" rel="noopener noreferrer">
+                                                <Button
+                                                    fullWidth
+                                                    variant="outlined"
+                                                    startIcon={<Download />}
+                                                    onClick={() => downloadFileWithRealName(b.file, `${b.title || "brochure"}.pdf`)}
+                                                >
                                                     Download Brochure
                                                 </Button>
                                             </Box>
@@ -700,15 +712,10 @@ export default function LearningPage() {
                                         const handleDownloadAll = (e) => {
                                             e.preventDefault();
                                             if (hasMultipleFiles) {
-                                                m.files.forEach(f => {
-                                                    const link = document.createElement('a');
-                                                    link.href = f.url;
-                                                    link.target = "_blank";
-                                                    link.download = f.name;
-                                                    link.rel = "noopener noreferrer";
-                                                    document.body.appendChild(link);
-                                                    link.click();
-                                                    document.body.removeChild(link);
+                                                m.files.forEach((f, index) => {
+                                                    setTimeout(() => {
+                                                        downloadFileWithRealName(f.url, f.name);
+                                                    }, index * 400);
                                                 });
                                             }
                                         };
@@ -745,13 +752,9 @@ export default function LearningPage() {
                                                                     </Typography>
                                                                 )}
                                                                 <IconButton
-                                                                    component="a"
-                                                                    href={file.url}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    download
                                                                     size="small"
                                                                     sx={{ color: "primary.main", ml: 1 }}
+                                                                    onClick={() => downloadFileWithRealName(file.url, file.name)}
                                                                 >
                                                                     <Download fontSize="small" />
                                                                 </IconButton>
@@ -769,13 +772,9 @@ export default function LearningPage() {
                                                                 </Typography>
                                                             )}
                                                             <IconButton
-                                                                component="a"
-                                                                href={m.file}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                download
                                                                 size="small"
                                                                 sx={{ color: "primary.main", ml: 1 }}
+                                                                onClick={() => downloadFileWithRealName(m.file, m.file_name || `${m.title || "class_material"}.zip`)}
                                                             >
                                                                 <Download fontSize="small" />
                                                             </IconButton>
@@ -799,11 +798,7 @@ export default function LearningPage() {
                                                         fullWidth
                                                         variant="contained"
                                                         startIcon={<Download />}
-                                                        component="a"
-                                                        href={m.file}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        download
+                                                        onClick={() => downloadFileWithRealName(m.file, m.file_name || `${m.title || "class_material"}.zip`)}
                                                         sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, textTransform: "none", fontWeight: 700, borderRadius: 2 }}
                                                     >
                                                         Download Class File

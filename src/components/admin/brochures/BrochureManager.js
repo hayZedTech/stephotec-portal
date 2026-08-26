@@ -34,6 +34,7 @@ import { getCourses } from "@/services/courses";
 import api from "@/lib/axios";
 import { errorToast, successToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
+import { downloadFileWithRealName } from "@/utils/fileDownloader";
 
 export default function BrochureManager() {
     const theme = useTheme();
@@ -523,9 +524,7 @@ export default function BrochureManager() {
                                         <Button
                                             variant="outlined"
                                             startIcon={<Download />}
-                                            href={viewingBrochure.file}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                            onClick={() => downloadFileWithRealName(viewingBrochure.file, `${viewingBrochure.title || "brochure"}.pdf`)}
                                             size="small"
                                         >
                                             Download Brochure

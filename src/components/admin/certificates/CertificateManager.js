@@ -38,6 +38,7 @@ import api from "@/lib/axios";
 import { getCourses } from "@/services/courses";
 import { successToast, errorToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
+import { downloadFileWithRealName } from "@/utils/fileDownloader";
 import CertificateModal from "@/components/common/CertificateModal";
 import { WorkspacePremium } from "@mui/icons-material";
 
@@ -870,19 +871,15 @@ export default function CertificateManager() {
                                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
                                         <Typography
                                             variant="body2"
-                                            component="a"
-                                            href={viewingCert.file}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            sx={{ color: "primary.main", textDecoration: "none", flex: 1, wordBreak: "break-all" }}
+                                            component="button"
+                                            onClick={() => downloadFileWithRealName(viewingCert.file, `${viewingCert.student_name || "certificate"}_${viewingCert.certificate_number || "cert"}.${viewingCert.file.split(".").pop() || "pdf"}`)}
+                                            sx={{ color: "primary.main", textDecoration: "underline", flex: 1, wordBreak: "break-all", background: "none", border: "none", p: 0, textAlign: "left", cursor: "pointer", fontSize: "0.875rem" }}
                                         >
-                                            {viewingCert.file.split("/").pop()}
+                                            {`${viewingCert.student_name || "Certificate"} - ${viewingCert.title || "Document"}`}
                                         </Typography>
                                         <IconButton
                                             size="small"
-                                            href={viewingCert.file}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                            onClick={() => downloadFileWithRealName(viewingCert.file, `${viewingCert.student_name || "certificate"}_${viewingCert.certificate_number || "cert"}.${viewingCert.file.split(".").pop() || "pdf"}`)}
                                         >
                                             <Download fontSize="small" />
                                         </IconButton>

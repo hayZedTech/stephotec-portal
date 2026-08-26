@@ -38,6 +38,7 @@ import api from "@/lib/axios";
 import { getCourses } from "@/services/courses";
 import { successToast, errorToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
+import { downloadFileWithRealName } from "@/utils/fileDownloader";
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -1085,19 +1086,15 @@ export default function AssignmentManager() {
                                             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
                                                 <Typography
                                                     variant="body2"
-                                                    component="a"
-                                                    href={viewingItem.data.file}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    sx={{ color: "primary.main", textDecoration: "none", flex: 1, wordBreak: "break-all" }}
+                                                    component="button"
+                                                    onClick={() => downloadFileWithRealName(viewingItem.data.file, `${viewingItem.data.title || "assignment"}_file.${viewingItem.data.file.split(".").pop() || "pdf"}`)}
+                                                    sx={{ color: "primary.main", textDecoration: "underline", flex: 1, wordBreak: "break-all", background: "none", border: "none", p: 0, textAlign: "left", cursor: "pointer", fontSize: "0.875rem" }}
                                                 >
-                                                    {viewingItem.data.file.split("/").pop()}
+                                                    {viewingItem.data.title || "Assignment File"}
                                                 </Typography>
                                                 <IconButton
                                                     size="small"
-                                                    href={viewingItem.data.file}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
+                                                    onClick={() => downloadFileWithRealName(viewingItem.data.file, `${viewingItem.data.title || "assignment"}_file.${viewingItem.data.file.split(".").pop() || "pdf"}`)}
                                                 >
                                                     <Download fontSize="small" />
                                                 </IconButton>
@@ -1160,19 +1157,15 @@ export default function AssignmentManager() {
                                             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
                                                 <Typography
                                                     variant="body2"
-                                                    component="a"
-                                                    href={viewingItem.data.file}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    sx={{ color: "primary.main", textDecoration: "none", flex: 1, wordBreak: "break-all" }}
+                                                    component="button"
+                                                    onClick={() => downloadFileWithRealName(viewingItem.data.file, `${viewingItem.data.student_name || "student"}_${viewingItem.data.assignment_title || "submission"}.${viewingItem.data.file.split(".").pop() || "pdf"}`)}
+                                                    sx={{ color: "primary.main", textDecoration: "underline", flex: 1, wordBreak: "break-all", background: "none", border: "none", p: 0, textAlign: "left", cursor: "pointer", fontSize: "0.875rem" }}
                                                 >
-                                                    {viewingItem.data.file.split("/").pop()}
+                                                    {`${viewingItem.data.student_name || "Student"} - ${viewingItem.data.assignment_title || "Submission File"}`}
                                                 </Typography>
                                                 <IconButton
                                                     size="small"
-                                                    href={viewingItem.data.file}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
+                                                    onClick={() => downloadFileWithRealName(viewingItem.data.file, `${viewingItem.data.student_name || "student"}_${viewingItem.data.assignment_title || "submission"}.${viewingItem.data.file.split(".").pop() || "pdf"}`)}
                                                 >
                                                     <Download fontSize="small" />
                                                 </IconButton>

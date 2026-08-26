@@ -50,6 +50,7 @@ import api from "@/lib/axios";
 import { getStudents } from "@/services/students";
 import { successToast, errorToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
+import { downloadFileWithRealName } from "@/utils/fileDownloader";
 
 export default function ClassFileManager() {
     const theme = useTheme();
@@ -427,13 +428,9 @@ export default function ClassFileManager() {
                                             </Typography>
                                             <Stack direction="row" spacing={1}>
                                                 <IconButton
-                                                    component="a"
-                                                    href={m.file}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    download
                                                     size="small"
                                                     sx={{ color: "primary.main" }}
+                                                    onClick={() => downloadFileWithRealName(m.file, m.file_name || `${m.title || "class_material"}.zip`)}
                                                 >
                                                     <Download fontSize="small" />
                                                 </IconButton>
@@ -872,15 +869,11 @@ export default function ClassFileManager() {
                                                         </Box>
                                                     </Box>
                                                     <Button
-                                                        component="a"
-                                                        href={file.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        download
                                                         size="small"
                                                         variant="contained"
                                                         color="primary"
                                                         startIcon={<Download />}
+                                                        onClick={() => downloadFileWithRealName(file.url, file.name)}
                                                         sx={{ textTransform: "none" }}
                                                     >
                                                         Download
@@ -897,15 +890,11 @@ export default function ClassFileManager() {
                                                     </Box>
                                                 </Box>
                                                 <Button
-                                                    component="a"
-                                                    href={viewingMaterial.file}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    download
                                                     size="small"
                                                     variant="contained"
                                                     color="primary"
                                                     startIcon={<Download />}
+                                                    onClick={() => downloadFileWithRealName(viewingMaterial.file, viewingMaterial.file_name || `${viewingMaterial.title || "class_material"}.zip`)}
                                                     sx={{ textTransform: "none" }}
                                                 >
                                                     Download

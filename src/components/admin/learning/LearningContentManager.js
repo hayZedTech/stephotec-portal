@@ -39,6 +39,7 @@ import { getCourses } from "@/services/courses";
 import api from "@/lib/axios";
 import { errorToast, successToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
+import { downloadFileWithRealName } from "@/utils/fileDownloader";
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -1012,19 +1013,15 @@ export default function LearningContentManager() {
                                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
                                         <Typography
                                             variant="body2"
-                                            component="a"
-                                            href={viewingContent.file}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            sx={{ color: "primary.main", textDecoration: "none", flex: 1, wordBreak: "break-all" }}
+                                            component="button"
+                                            onClick={() => downloadFileWithRealName(viewingContent.file, `${viewingContent.title || "learning_content"}.${viewingContent.file.split(".").pop() || "pdf"}`)}
+                                            sx={{ color: "primary.main", textDecoration: "underline", flex: 1, wordBreak: "break-all", background: "none", border: "none", p: 0, textAlign: "left", cursor: "pointer", fontSize: "0.875rem" }}
                                         >
-                                            {viewingContent.file.split("/").pop()}
+                                            {viewingContent.title || "Content File"}
                                         </Typography>
                                         <IconButton
                                             size="small"
-                                            href={viewingContent.file}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                            onClick={() => downloadFileWithRealName(viewingContent.file, `${viewingContent.title || "learning_content"}.${viewingContent.file.split(".").pop() || "pdf"}`)}
                                         >
                                             <Download fontSize="small" />
                                         </IconButton>
