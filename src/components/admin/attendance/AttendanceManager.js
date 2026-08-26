@@ -483,7 +483,7 @@ export default function AttendanceManager() {
                                                         {record.student_name || record.student_username}
                                                     </Typography>
                                                     <Typography variant="caption" color="text.secondary">
-                                                        {record.enrollment_id} · {record.course_name}
+                                                        {record.student_username || record.enrollment_id} · {record.course_name}
                                                     </Typography>
                                                     <Box sx={{ mt: 0.5 }}>
                                                         <Typography variant="caption" fontWeight={600} color="#d97706">
@@ -641,7 +641,7 @@ export default function AttendanceManager() {
                                                             {record.student_name || record.student_username}
                                                         </Typography>
                                                         <Typography variant="caption" color="text.secondary" display="block">
-                                                            {record.enrollment_id}
+                                                            {record.student_username || record.enrollment_id}
                                                         </Typography>
                                                     </Box>
                                                 </Box>
@@ -760,8 +760,8 @@ export default function AttendanceManager() {
                                                             <Typography variant="body2" fontWeight={600}>
                                                                 {record.student_name || record.student_username}
                                                             </Typography>
-                                                            <Typography variant="caption" color="text.secondary">
-                                                                {record.enrollment_id}
+                                                            <Typography variant="caption" color="text.secondary" display="block">
+                                                                {record.student_username || record.enrollment_id}
                                                             </Typography>
                                                         </Box>
                                                     </Box>
