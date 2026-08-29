@@ -596,7 +596,7 @@ export default function AdminNotificationsPage() {
                             {/* Send Form */}
                             <Box>
                                 <Typography variant="subtitle1" fontWeight={700} mb={2}>Send Notification</Typography>
-                                <form onSubmit={handleSubmit(onSubmit)}>
+                                <form onSubmit={(e) => { e.preventDefault(); handleSendNotification(false); }}>
                                     <Stack spacing={2.5}>
                                         <Controller
                                             name="title"
