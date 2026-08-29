@@ -341,7 +341,21 @@ export default function NotificationsPage() {
                                         <Typography fontWeight={600} sx={{ mb: 0.5, fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                                             {notification.title}
                                         </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                            sx={{
+                                                mb: 1,
+                                                fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                                                display: "-webkit-box",
+                                                WebkitLineClamp: 2,
+                                                WebkitBoxOrient: "vertical",
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                wordBreak: "break-word",
+                                                lineHeight: 1.5,
+                                            }}
+                                        >
                                             {notification.message}
                                         </Typography>
 
