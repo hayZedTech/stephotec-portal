@@ -86,7 +86,7 @@ export function AuthProvider({ children }) {
         }
 
         initAuth();
-    }, [pathname]);
+    }, []);
 
     useEffect(() => {
         const handleAppResume = async () => {

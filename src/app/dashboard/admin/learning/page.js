@@ -17,12 +17,33 @@ import {
     MenuBook,
     FolderZip,
 } from "@mui/icons-material";
-import LearningContentManager from "@/components/admin/learning/LearningContentManager";
-import AttendanceManager from "@/components/admin/attendance/AttendanceManager";
-import CertificateManager from "@/components/admin/certificates/CertificateManager";
-import HandoutManager from "@/components/admin/handouts/HandoutManager";
-import BrochureManager from "@/components/admin/brochures/BrochureManager";
-import ClassFileManager from "@/components/admin/class_files/ClassFileManager";
+import dynamic from "next/dynamic";
+
+const LoadingTabFallback = () => (
+    <Box sx={{ py: 6, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+        <CircularProgress size={36} />
+        <Typography variant="body2" color="text.secondary">Loading tab content...</Typography>
+    </Box>
+);
+
+const LearningContentManager = dynamic(() => import("@/components/admin/learning/LearningContentManager"), {
+    loading: () => <LoadingTabFallback />,
+});
+const AttendanceManager = dynamic(() => import("@/components/admin/attendance/AttendanceManager"), {
+    loading: () => <LoadingTabFallback />,
+});
+const CertificateManager = dynamic(() => import("@/components/admin/certificates/CertificateManager"), {
+    loading: () => <LoadingTabFallback />,
+});
+const HandoutManager = dynamic(() => import("@/components/admin/handouts/HandoutManager"), {
+    loading: () => <LoadingTabFallback />,
+});
+const BrochureManager = dynamic(() => import("@/components/admin/brochures/BrochureManager"), {
+    loading: () => <LoadingTabFallback />,
+});
+const ClassFileManager = dynamic(() => import("@/components/admin/class_files/ClassFileManager"), {
+    loading: () => <LoadingTabFallback />,
+});
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props;

@@ -58,6 +58,7 @@ export default function ClassFileManager() {
 
     const [materials, setMaterials] = useState([]);
     const [filteredMaterials, setFilteredMaterials] = useState([]);
+    const [selectedIds, setSelectedIds] = useState(new Set());
     const [groups, setGroups] = useState([]);
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -292,6 +293,61 @@ export default function ClassFileManager() {
         );
     };
 
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedIds(new Set(filteredMaterials.map((item) => item.id)));
+        } else {
+            setSelectedIds(new Set());
+        }
+    };
+
+    const handleSelectItem = (id) => {
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedIds(newSelected);
+    };
+
+    const handleBulkDelete = () => {
+        if (selectedIds.size === 0) {
+            errorToast(null, "No items selected");
+            return;
+        }
+
+        confirmAction(
+            `Are you sure you want to delete ${selectedIds.size} selected class material(s)? Students will no longer see or download them from their student portal.`,
+            async () => {
+                const idsToDelete = Array.from(selectedIds);
+                try {
+                    try {
+                        await api.post("/learning/class-materials/bulk-delete/", {
+                            ids: idsToDelete,
+                        });
+                    } catch {
+                        // Fallback to sequential deletion if endpoint not matched
+                        await Promise.all(
+                            idsToDelete.map((id) =>
+                                api.delete(`/learning/class-materials/${id}/`)
+                            )
+                        );
+                    }
+                    successToast(`${idsToDelete.length} class material(s) deleted successfully.`);
+                    setSelectedIds(new Set());
+                    setMaterials((prev) => prev.filter((m) => !selectedIds.has(m.id)));
+                } catch (error) {
+                    errorToast(error, "Failed to delete selected class materials");
+                }
+            },
+            null,
+            "Delete",
+            "Cancel",
+            true
+        );
+    };
+
     return (
         <Box className="space-y-6">
             {/* SEARCH & CONTROLS HEADER */}
@@ -354,6 +410,59 @@ export default function ClassFileManager() {
                 </Stack>
             </Paper>
 
+            {/* SELECTION / BULK ACTION TOOLBAR */}
+            {selectedIds.size > 0 && (
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: 1.5,
+                        px: 2.5,
+                        borderRadius: 2,
+                        bgcolor: "#fef2f2",
+                        border: "1px solid #fecaca",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 2,
+                        flexWrap: "wrap",
+                    }}
+                >
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: "#991b1b" }}>
+                        {selectedIds.size} class file(s) selected
+                    </Typography>
+                    <Stack direction="row" spacing={1}>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => setSelectedIds(new Set())}
+                            sx={{
+                                color: "#991b1b",
+                                borderColor: "#fca5a5",
+                                "&:hover": { borderColor: "#ef4444", bgcolor: "#fee2e2" },
+                                textTransform: "none",
+                                fontWeight: 600,
+                            }}
+                        >
+                            Clear Selection
+                        </Button>
+                        <Button
+                            variant="contained"
+                            size="small"
+                            color="error"
+                            startIcon={<Delete fontSize="small" />}
+                            onClick={handleBulkDelete}
+                            sx={{
+                                fontWeight: 700,
+                                textTransform: "none",
+                                borderRadius: 1.5,
+                            }}
+                        >
+                            Delete Selected ({selectedIds.size})
+                        </Button>
+                    </Stack>
+                </Paper>
+            )}
+
             {/* MATERIALS LIST / GRID */}
             <Paper elevation={0} sx={{ borderRadius: 3, border: "1px solid #e2e8f0", overflow: "hidden" }}>
                 {loading ? (
@@ -381,14 +490,30 @@ export default function ClassFileManager() {
                 ) : isMobile ? (
                     <Stack spacing={2} sx={{ p: 2 }}>
                         {filteredMaterials.map((m) => (
-                            <Card key={m.id} sx={{ borderRadius: 3, border: "1px solid #e2e8f0" }}>
+                            <Card
+                                key={m.id}
+                                sx={{
+                                    borderRadius: 3,
+                                    border: "1px solid #e2e8f0",
+                                    bgcolor: selectedIds.has(m.id) ? "#fffbeb" : "background.paper",
+                                }}
+                            >
                                 <CardContent sx={{ p: 2.5 }}>
                                     <Stack spacing={1.5}>
-                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                            <Folder sx={{ color: "#d97706" }} />
-                                            <Typography variant="h6" fontWeight={700} sx={{ fontSize: "1rem" }}>
-                                                {m.title}
-                                            </Typography>
+                                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                <Checkbox
+                                                    size="small"
+                                                    checked={selectedIds.has(m.id)}
+                                                    onChange={() => handleSelectItem(m.id)}
+                                                    color="primary"
+                                                    sx={{ p: 0.5 }}
+                                                />
+                                                <Folder sx={{ color: "#d97706" }} />
+                                                <Typography variant="h6" fontWeight={700} sx={{ fontSize: "1rem" }}>
+                                                    {m.title}
+                                                </Typography>
+                                            </Box>
                                         </Box>
 
                                         {m.description && (
@@ -453,6 +578,20 @@ export default function ClassFileManager() {
                         <Table sx={{ minWidth: 650 }}>
                             <TableHead sx={{ bgcolor: "#f8fafc" }}>
                                 <TableRow>
+                                    <TableCell padding="checkbox" sx={{ bgcolor: "#f8fafc" }}>
+                                        <Checkbox
+                                            indeterminate={
+                                                selectedIds.size > 0 &&
+                                                selectedIds.size < filteredMaterials.length
+                                            }
+                                            checked={
+                                                filteredMaterials.length > 0 &&
+                                                selectedIds.size === filteredMaterials.length
+                                            }
+                                            onChange={handleSelectAll}
+                                            color="primary"
+                                        />
+                                    </TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Class Material Title</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>File Details</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Assigned Recipients</TableCell>
@@ -462,7 +601,21 @@ export default function ClassFileManager() {
                             </TableHead>
                             <TableBody>
                                 {filteredMaterials.map((m) => (
-                                    <TableRow key={m.id} hover>
+                                    <TableRow
+                                        key={m.id}
+                                        hover
+                                        selected={selectedIds.has(m.id)}
+                                        sx={{
+                                            bgcolor: selectedIds.has(m.id) ? "rgba(245, 158, 11, 0.08) !important" : "inherit",
+                                        }}
+                                    >
+                                        <TableCell padding="checkbox">
+                                            <Checkbox
+                                                checked={selectedIds.has(m.id)}
+                                                onChange={() => handleSelectItem(m.id)}
+                                                color="primary"
+                                            />
+                                        </TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>
                                             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                                                 <Folder sx={{ color: "#d97706" }} />

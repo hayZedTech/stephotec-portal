@@ -1,4 +1,5 @@
 import api from "@/lib/axios";
+import { invalidateCache } from "@/utils/cache";
 
 const normalizeListResponse = (data) => {
     if (Array.isArray(data)) {
@@ -42,6 +43,7 @@ export const getStudent = async (id) => {
 
 export const createStudent = async (payload) => {
     const { data } = await api.post("/admin/students/", payload);
+    invalidateCache("admin_dashboard");
     return normalizeStudent(data);
 };
 
@@ -50,7 +52,7 @@ export const updateStudent = async (id, payload) => {
         `/admin/students/${id}/`,
         payload
     );
-
+    invalidateCache("admin_dashboard");
     return normalizeStudent(data);
 };
 
@@ -58,7 +60,7 @@ export const deleteStudent = async (id) => {
     const { data } = await api.delete(
         `/admin/students/${id}/`
     );
-
+    invalidateCache("admin_dashboard");
     return data;
 };
 
@@ -69,7 +71,7 @@ export const bulkDeleteStudents = async (ids) => {
             ids,
         }
     );
-
+    invalidateCache("admin_dashboard");
     return data;
 };
 
@@ -83,6 +85,6 @@ export const toggleIndustrialTraining = async (
             is_industrial_training: value,
         }
     );
-
+    invalidateCache("admin_dashboard");
     return normalizeStudent(data);
 };
