@@ -56,10 +56,12 @@ import {
     Tune as TuneIcon,
     People as PeopleIcon,
     CalendarMonth as CalendarMonthIcon,
+    Lock as LockIcon,
 } from "@mui/icons-material";
 import api from "@/lib/axios";
 import { successToast, errorToast, infoToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
+import { useAuth } from "@/providers/AuthProvider";
 
 const EMAIL_NOTIFICATION_ACTIONS = [
     {
@@ -171,7 +173,7 @@ const emptyAccount = {
     is_active: true,
 };
 
-function BankAccountsManager() {
+function BankAccountsManager({ isSuperUser = true }) {
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -195,12 +197,14 @@ function BankAccountsManager() {
     useEffect(() => { loadAccounts(); }, []);
 
     const openCreate = () => {
+        if (!isSuperUser) return;
         setEditingId(null);
         setFormData(emptyAccount);
         setDialogOpen(true);
     };
 
     const openEdit = (account) => {
+        if (!isSuperUser) return;
         setEditingId(account.id);
         setFormData({
             bank_name: account.bank_name,
@@ -225,6 +229,10 @@ function BankAccountsManager() {
     };
 
     const handleSave = async () => {
+        if (!isSuperUser) {
+            errorToast(null, "Only super admin users can modify bank accounts.");
+            return;
+        }
         if (!formData.bank_name || !formData.account_name || !formData.account_number) {
             errorToast(null, "Bank Name, Account Name, and Account Number are required.");
             return;
@@ -248,6 +256,10 @@ function BankAccountsManager() {
     };
 
     const handleDelete = async (account) => {
+        if (!isSuperUser) {
+            errorToast(null, "Only super admin users can delete bank accounts.");
+            return;
+        }
         const confirmed = await confirmAction(
             `Delete "${account.bank_name} — ${account.account_name}"? Students will no longer see this account.`
         );
@@ -262,6 +274,7 @@ function BankAccountsManager() {
     };
 
     const handleToggleActive = async (account) => {
+        if (!isSuperUser) return;
         try {
             await api.patch(`/payments/bank-accounts/${account.id}/`, {
                 is_active: !account.is_active,
@@ -279,14 +292,16 @@ function BankAccountsManager() {
                     <AccountBalance sx={{ color: "primary.main" }} />
                     <Typography variant="h6" fontWeight={600}>School Bank Accounts</Typography>
                 </Box>
-                <Button
-                    variant="contained"
-                    startIcon={<Add />}
-                    size="small"
-                    onClick={openCreate}
-                >
-                    Add Account
-                </Button>
+                {isSuperUser && (
+                    <Button
+                        variant="contained"
+                        startIcon={<Add />}
+                        size="small"
+                        onClick={openCreate}
+                    >
+                        Add Account
+                    </Button>
+                )}
             </Box>
             <Typography variant="body2" color="text.secondary" mb={2}>
                 These accounts will be shown to students whenever they need to make a payment (e.g. handouts, course fees).
@@ -344,30 +359,34 @@ function BankAccountsManager() {
                                         </Typography>
                                     </TableCell>
                                     <TableCell>
-                                        <Tooltip title={account.is_active ? "Click to deactivate" : "Click to activate"}>
+                                        <Tooltip title={!isSuperUser ? "Read-only" : account.is_active ? "Click to deactivate" : "Click to activate"}>
                                             <Chip
                                                 icon={account.is_active ? <CheckCircle sx={{ fontSize: 14 }} /> : <Cancel sx={{ fontSize: 14 }} />}
                                                 label={account.is_active ? "Active" : "Inactive"}
                                                 color={account.is_active ? "success" : "default"}
                                                 size="small"
-                                                onClick={() => handleToggleActive(account)}
-                                                sx={{ cursor: "pointer" }}
+                                                onClick={isSuperUser ? () => handleToggleActive(account) : undefined}
+                                                sx={{ cursor: isSuperUser ? "pointer" : "default" }}
                                             />
                                         </Tooltip>
                                     </TableCell>
                                     <TableCell align="right">
-                                        <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
-                                            <Tooltip title="Edit">
-                                                <IconButton size="small" onClick={() => openEdit(account)} sx={{ color: "primary.main" }}>
-                                                    <Edit fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Delete">
-                                                <IconButton size="small" onClick={() => handleDelete(account)} sx={{ color: "error.main" }}>
-                                                    <Delete fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </Box>
+                                        {isSuperUser ? (
+                                            <Box sx={{ display: "flex", gap: 0.5, justifyContent: "flex-end" }}>
+                                                <Tooltip title="Edit">
+                                                    <IconButton size="small" onClick={() => openEdit(account)} sx={{ color: "primary.main" }}>
+                                                        <Edit fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Delete">
+                                                    <IconButton size="small" onClick={() => handleDelete(account)} sx={{ color: "error.main" }}>
+                                                        <Delete fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </Box>
+                                        ) : (
+                                            <Chip label="Read Only" size="small" variant="outlined" sx={{ fontSize: "0.7rem", color: "text.secondary" }} />
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -472,6 +491,9 @@ const DEFAULT_SETTINGS = {
 };
 
 export default function SettingsPage() {
+    const { user } = useAuth();
+    const isSuperUser = Boolean(user?.is_superuser);
+
     const [activeTab, setActiveTab] = useState(0);
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [saving, setSaving] = useState(false);
@@ -503,6 +525,7 @@ export default function SettingsPage() {
     }, []);
 
     const handleToggle = (key) => {
+        if (!isSuperUser) return;
         setSettings((prev) => ({
             ...prev,
             [key]: !prev[key],
@@ -510,6 +533,7 @@ export default function SettingsPage() {
     };
 
     const handleSetAllEmails = (enable) => {
+        if (!isSuperUser) return;
         const message = enable
             ? "Are you sure you want to enable all email notifications?"
             : "Are you sure you want to disable all email notifications?";
@@ -540,6 +564,7 @@ export default function SettingsPage() {
     };
 
     const handleReset = () => {
+        if (!isSuperUser) return;
         confirmAction(
             "Are you sure you want to reset all settings to defaults?",
             () => {
@@ -554,6 +579,10 @@ export default function SettingsPage() {
     };
 
     const handleSave = async () => {
+        if (!isSuperUser) {
+            errorToast(null, "Only administrators with superuser status can modify system settings.");
+            return;
+        }
         try {
             setSaving(true);
             console.log("Settings page: saving settings to API =", settings);
@@ -580,6 +609,32 @@ export default function SettingsPage() {
                     Manage school bank accounts, email triggers, student workflows, and system preferences.
                 </Typography>
             </div>
+
+            {!isSuperUser && (
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: 2,
+                        borderRadius: 3,
+                        bgcolor: "#fffbeb",
+                        border: "1px solid #fef08a",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1.5,
+                        color: "#92400e",
+                    }}
+                >
+                    <LockIcon sx={{ color: "#d97706" }} />
+                    <Box>
+                        <Typography variant="subtitle2" fontWeight={700}>
+                            Read-Only Access Mode
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: "#b45309" }}>
+                            You are viewing system settings in read-only mode. Only administrators with <strong>Superuser status</strong> can modify system settings, toggle email triggers, or manage school bank accounts.
+                        </Typography>
+                    </Box>
+                </Paper>
+            )}
 
             {/* Navigation Tabs Header */}
             <Paper
@@ -648,7 +703,7 @@ export default function SettingsPage() {
                     elevation={0}
                     sx={{ borderRadius: 4, border: "1px solid", borderColor: "grey.200", p: { xs: 2.5, sm: 4 } }}
                 >
-                    <BankAccountsManager />
+                    <BankAccountsManager isSuperUser={isSuperUser} />
                 </Paper>
             )}
 
@@ -678,6 +733,7 @@ export default function SettingsPage() {
                                 <Button
                                     size="small"
                                     variant="outlined"
+                                    disabled={!isSuperUser}
                                     onClick={() => handleSetAllEmails(true)}
                                     startIcon={<CheckIcon fontSize="small" />}
                                     sx={{ textTransform: "none", fontSize: "0.75rem", borderRadius: 2 }}
@@ -688,6 +744,7 @@ export default function SettingsPage() {
                                     size="small"
                                     variant="outlined"
                                     color="inherit"
+                                    disabled={!isSuperUser}
                                     onClick={() => handleSetAllEmails(false)}
                                     startIcon={<CloseIcon fontSize="small" />}
                                     sx={{ textTransform: "none", fontSize: "0.75rem", borderRadius: 2 }}
@@ -723,6 +780,7 @@ export default function SettingsPage() {
                             </Box>
                             <Switch
                                 checked={settings.emailNotifications}
+                                disabled={!isSuperUser}
                                 onChange={() => handleToggle("emailNotifications")}
                                 color="primary"
                             />
@@ -806,7 +864,9 @@ export default function SettingsPage() {
 
                                                     <Tooltip
                                                         title={
-                                                            !settings.emailNotifications
+                                                            !isSuperUser
+                                                                ? "Read-only: Only Super Admin can change settings"
+                                                                : !settings.emailNotifications
                                                                 ? "Master email switch is turned off"
                                                                 : isChecked
                                                                 ? "Click to disable this email"
@@ -817,7 +877,7 @@ export default function SettingsPage() {
                                                             <Switch
                                                                 size="small"
                                                                 checked={isChecked}
-                                                                disabled={!settings.emailNotifications}
+                                                                disabled={!isSuperUser || !settings.emailNotifications}
                                                                 onChange={() => handleToggle(item.key)}
                                                                 color="primary"
                                                             />
@@ -834,22 +894,28 @@ export default function SettingsPage() {
                         <Divider />
 
                         {/* ACTION BUTTONS */}
-                        <div className="flex justify-end gap-3">
-                            <Button
-                                variant="outlined"
-                                onClick={handleReset}
-                            >
-                                Reset
-                            </Button>
+                        {isSuperUser ? (
+                            <div className="flex justify-end gap-3">
+                                <Button
+                                    variant="outlined"
+                                    onClick={handleReset}
+                                >
+                                    Reset
+                                </Button>
 
-                            <Button
-                                variant="contained"
-                                onClick={handleSave}
-                                disabled={saving}
-                            >
-                                {saving ? "Saving..." : "Save Changes"}
-                            </Button>
-                        </div>
+                                <Button
+                                    variant="contained"
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                >
+                                    {saving ? "Saving..." : "Save Changes"}
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex justify-end">
+                                <Chip label="Read-Only Mode — Only Super Admins can save changes" variant="outlined" size="small" />
+                            </div>
+                        )}
                     </div>
                 </Paper>
             )}
@@ -888,6 +954,7 @@ export default function SettingsPage() {
                                     </Box>
                                     <Switch
                                         checked={settings.autoApproveStudents}
+                                        disabled={!isSuperUser}
                                         onChange={() => handleToggle("autoApproveStudents")}
                                         color="primary"
                                     />
@@ -904,6 +971,7 @@ export default function SettingsPage() {
                                     </Box>
                                     <Switch
                                         checked={settings.allowIdCardDownload}
+                                        disabled={!isSuperUser}
                                         onChange={() => handleToggle("allowIdCardDownload")}
                                         color="primary"
                                     />
@@ -914,22 +982,28 @@ export default function SettingsPage() {
                         <Divider />
 
                         {/* ACTION BUTTONS */}
-                        <div className="flex justify-end gap-3">
-                            <Button
-                                variant="outlined"
-                                onClick={handleReset}
-                            >
-                                Reset
-                            </Button>
+                        {isSuperUser ? (
+                            <div className="flex justify-end gap-3">
+                                <Button
+                                    variant="outlined"
+                                    onClick={handleReset}
+                                >
+                                    Reset
+                                </Button>
 
-                            <Button
-                                variant="contained"
-                                onClick={handleSave}
-                                disabled={saving}
-                            >
-                                {saving ? "Saving..." : "Save Changes"}
-                            </Button>
-                        </div>
+                                <Button
+                                    variant="contained"
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                >
+                                    {saving ? "Saving..." : "Save Changes"}
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex justify-end">
+                                <Chip label="Read-Only Mode — Only Super Admins can save changes" variant="outlined" size="small" />
+                            </div>
+                        )}
                     </div>
                 </Paper>
             )}
@@ -968,6 +1042,7 @@ export default function SettingsPage() {
                                     </Box>
                                     <Switch
                                         checked={settings.maintenanceMode}
+                                        disabled={!isSuperUser}
                                         onChange={() => handleToggle("maintenanceMode")}
                                         color="error"
                                     />
@@ -984,6 +1059,7 @@ export default function SettingsPage() {
                                     </Box>
                                     <Switch
                                         checked={settings.allowNewRegistrations}
+                                        disabled={!isSuperUser}
                                         onChange={() => handleToggle("allowNewRegistrations")}
                                         color="primary"
                                     />
@@ -994,22 +1070,28 @@ export default function SettingsPage() {
                         <Divider />
 
                         {/* ACTION BUTTONS */}
-                        <div className="flex justify-end gap-3">
-                            <Button
-                                variant="outlined"
-                                onClick={handleReset}
-                            >
-                                Reset
-                            </Button>
+                        {isSuperUser ? (
+                            <div className="flex justify-end gap-3">
+                                <Button
+                                    variant="outlined"
+                                    onClick={handleReset}
+                                >
+                                    Reset
+                                </Button>
 
-                            <Button
-                                variant="contained"
-                                onClick={handleSave}
-                                disabled={saving}
-                            >
-                                {saving ? "Saving..." : "Save Changes"}
-                            </Button>
-                        </div>
+                                <Button
+                                    variant="contained"
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                >
+                                    {saving ? "Saving..." : "Save Changes"}
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex justify-end">
+                                <Chip label="Read-Only Mode — Only Super Admins can save changes" variant="outlined" size="small" />
+                            </div>
+                        )}
                     </div>
                 </Paper>
             )}

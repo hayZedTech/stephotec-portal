@@ -52,6 +52,8 @@ import {
     FolderShared,
     WorkspacePremium,
     Schedule,
+    Email,
+    MarkEmailRead,
 } from "@mui/icons-material";
 import { IconButton as MuiIconButton, Tooltip as MuiTooltip } from "@mui/material";
 
@@ -324,20 +326,47 @@ export default function AdminNotificationsPage() {
         } catch { }
     }
 
-    async function onSubmit(values) {
-        try {
-            const payload = { title: values.title, message: values.message, type: values.type, target_type: values.target_type };
-            if (values.target_type === "SPECIFIC") payload.student_ids = selectedStudents;
-            else if (values.target_type === "COURSE") payload.course_ids = selectedCourses;
-            await api.post("/notifications/", payload);
-            successToast("Notification sent successfully!");
-            reset();
-            setSelectedStudents([]);
-            setSelectedCourses([]);
-            loadNotifications();
-        } catch (error) {
-            errorToast(error, "Failed to send notification");
-        }
+    const [sendingType, setSendingType] = useState(null); // "NOTIF_ONLY" | "NOTIF_EMAIL"
+
+    async function handleSendNotification(sendEmail = false) {
+        handleSubmit(async (values) => {
+            if (values.target_type === "SPECIFIC" && selectedStudents.length === 0) {
+                errorToast(null, "Please select at least one student.");
+                return;
+            }
+            if (values.target_type === "COURSE" && selectedCourses.length === 0) {
+                errorToast(null, "Please select at least one course.");
+                return;
+            }
+
+            setSendingType(sendEmail ? "NOTIF_EMAIL" : "NOTIF_ONLY");
+            try {
+                const payload = {
+                    title: values.title,
+                    message: values.message,
+                    type: values.type,
+                    target_type: values.target_type,
+                    send_email: Boolean(sendEmail),
+                };
+                if (values.target_type === "SPECIFIC") payload.student_ids = selectedStudents;
+                else if (values.target_type === "COURSE") payload.course_ids = selectedCourses;
+
+                await api.post("/notifications/", payload);
+                if (sendEmail) {
+                    successToast("Notification and emails sent successfully!");
+                } else {
+                    successToast("Platform notification sent successfully!");
+                }
+                reset();
+                setSelectedStudents([]);
+                setSelectedCourses([]);
+                loadNotifications();
+            } catch (error) {
+                errorToast(error, sendEmail ? "Failed to send notification and emails" : "Failed to send notification");
+            } finally {
+                setSendingType(null);
+            }
+        })();
     }
 
     const toggleStudent = (id) => setSelectedStudents((prev) => prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]);
@@ -638,9 +667,55 @@ export default function AdminNotificationsPage() {
                                                 )}
                                             </Box>
                                         )}
-                                        <Button type="submit" variant="contained" startIcon={<Send />} disabled={isSubmitting} size="small">
-                                            {isSubmitting ? "Sending..." : "Send Notification"}
-                                        </Button>
+                                        
+                                        <Box sx={{ pt: 1, display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 2 }}>
+                                            <Button
+                                                type="button"
+                                                variant="contained"
+                                                startIcon={sendingType === "NOTIF_ONLY" ? <CircularProgress size={16} color="inherit" /> : <Send />}
+                                                disabled={isSubmitting || sendingType !== null}
+                                                onClick={() => handleSendNotification(false)}
+                                                sx={{
+                                                    bgcolor: "#0f172a",
+                                                    "&:hover": { bgcolor: "#1e293b" },
+                                                    fontWeight: 700,
+                                                    textTransform: "none",
+                                                    borderRadius: 2,
+                                                    py: 1.1,
+                                                    px: 2.5,
+                                                }}
+                                            >
+                                                {sendingType === "NOTIF_ONLY" ? "Sending..." : "Send Notification (Portal Only)"}
+                                            </Button>
+
+                                            <Button
+                                                type="button"
+                                                variant="contained"
+                                                startIcon={sendingType === "NOTIF_EMAIL" ? <CircularProgress size={16} color="inherit" /> : <Email />}
+                                                disabled={isSubmitting || sendingType !== null}
+                                                onClick={() => {
+                                                    confirmAction(
+                                                        "Send this announcement as both an in-app portal notification AND a direct email to all selected recipients?",
+                                                        () => handleSendNotification(true),
+                                                        null,
+                                                        "Yes, Send Notification & Email",
+                                                        "Cancel",
+                                                        false
+                                                    );
+                                                }}
+                                                sx={{
+                                                    bgcolor: "#2563eb",
+                                                    "&:hover": { bgcolor: "#1d4ed8" },
+                                                    fontWeight: 700,
+                                                    textTransform: "none",
+                                                    borderRadius: 2,
+                                                    py: 1.1,
+                                                    px: 2.5,
+                                                }}
+                                            >
+                                                {sendingType === "NOTIF_EMAIL" ? "Sending..." : "Send Notification & Real Email"}
+                                            </Button>
+                                        </Box>
                                     </Stack>
                                 </form>
                             </Box>
@@ -695,6 +770,7 @@ export default function AdminNotificationsPage() {
                                              <TableRow>
                                                  <TableCell sx={{ fontWeight: 700 }}>Title</TableCell>
                                                  <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
+                                                 <TableCell sx={{ fontWeight: 700 }}>Channel</TableCell>
                                                  <TableCell sx={{ fontWeight: 700 }}>Target</TableCell>
                                                  <TableCell sx={{ fontWeight: 700 }}>Recipients</TableCell>
                                                  <TableCell sx={{ fontWeight: 700 }}>Sent At</TableCell>
@@ -707,6 +783,13 @@ export default function AdminNotificationsPage() {
                                                      <TableCell sx={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.title}</TableCell>
                                                      <TableCell>
                                                          <Chip label={n.type} size="small" color={n.type === "SUCCESS" ? "success" : n.type === "WARNING" ? "warning" : n.type === "ERROR" ? "error" : "info"} variant="outlined" />
+                                                     </TableCell>
+                                                     <TableCell>
+                                                         {n.send_email ? (
+                                                             <Chip icon={<Email sx={{ fontSize: "13px !important" }} />} label="Portal + Email" size="small" color="primary" sx={{ height: 22, fontSize: "0.72rem" }} />
+                                                         ) : (
+                                                             <Chip label="Portal Only" size="small" variant="outlined" sx={{ height: 22, fontSize: "0.72rem", color: "text.secondary" }} />
+                                                         )}
                                                      </TableCell>
                                                      <TableCell>{n.target_type}</TableCell>
                                                      <TableCell>{n.recipient_count}</TableCell>

@@ -8,10 +8,11 @@ import {
     Avatar, Divider, LinearProgress, Tooltip, Tabs, Tab,
     Card, CardContent, Stack, useMediaQuery, useTheme, Select, MenuItem,
 } from "@mui/material";
-import { Visibility, Edit, Search, Payment, Close, FilterList, History, Add, Delete, Refresh } from "@mui/icons-material";
+import { Visibility, Edit, Search, Payment, Close, FilterList, History, Add, Delete, Refresh, Lock as LockIcon } from "@mui/icons-material";
 import api from "@/lib/axios";
 import { successToast, errorToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
+import { useAuth } from "@/providers/AuthProvider";
 
 const STATUS_META = {
     PAID:    { color: "success", text: "#16a34a", bg: "#f0fdf4" },
@@ -199,6 +200,9 @@ function CourseTabs({ courses, value, onChange }) {
 }
 
 export default function AdminPaymentsPage() {
+    const { user } = useAuth();
+    const isSuperUser = Boolean(user?.is_superuser);
+
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -251,6 +255,7 @@ export default function AdminPaymentsPage() {
     function openView(student) { setViewStudent(student); setViewTab(0); }
 
     function openEdit(student) {
+        if (!isSuperUser) return;
         setEditStudent(student);
         setEditTab(0);
         const forms = {};
@@ -274,6 +279,10 @@ export default function AdminPaymentsPage() {
     }
 
     async function handleTopUp(paymentId) {
+        if (!isSuperUser) {
+            errorToast(null, "Only super admin users can record payments.");
+            return;
+        }
         const form = topUpForms[paymentId];
         if (!form?.amount) return;
         setTopping(true);
@@ -293,6 +302,10 @@ export default function AdminPaymentsPage() {
     }
 
     async function handleUpdateFee(paymentId) {
+        if (!isSuperUser) {
+            errorToast(null, "Only super admin users can update course fees.");
+            return;
+        }
         const form = topUpForms[paymentId];
         if (!form?.course_fee) return;
         setTopping(true);
@@ -323,6 +336,10 @@ export default function AdminPaymentsPage() {
     }
 
     async function handleAddEntry() {
+        if (!isSuperUser) {
+            errorToast(null, "Only super admin users can record payments.");
+            return;
+        }
         if (!addForm.amount) return;
         setAddSaving(true);
         try {
@@ -343,6 +360,10 @@ export default function AdminPaymentsPage() {
     }
 
     async function handleDeleteEntry(entryId) {
+        if (!isSuperUser) {
+            errorToast(null, "Only super admin users can delete payment entries.");
+            return;
+        }
         confirmAction(
             "Delete this payment entry? This will recalculate the total amount paid.",
             async () => {
@@ -357,7 +378,7 @@ export default function AdminPaymentsPage() {
             null,
             "Delete",
             "Cancel",
-            true,
+            true
         );
     }
 
@@ -418,9 +439,11 @@ export default function AdminPaymentsPage() {
                                 <Tooltip title="View details">
                                     <IconButton size="small" onClick={() => openView(s)}><Visibility fontSize="small" /></IconButton>
                                 </Tooltip>
-                                <Tooltip title="Edit payments">
-                                    <IconButton size="small" onClick={() => openEdit(s)}><Edit fontSize="small" /></IconButton>
-                                </Tooltip>
+                                {isSuperUser && (
+                                    <Tooltip title="Edit payments">
+                                        <IconButton size="small" onClick={() => openEdit(s)}><Edit fontSize="small" /></IconButton>
+                                    </Tooltip>
+                                )}
                             </Box>
                         </CardContent>
                     </Card>
@@ -437,6 +460,32 @@ export default function AdminPaymentsPage() {
                 <Typography variant="h4" fontWeight={700} sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}>Student Payments</Typography>
                 <Typography color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>Track and manage course fee payments for all students.</Typography>
             </Box>
+
+            {!isSuperUser && (
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: 2,
+                        borderRadius: 3,
+                        bgcolor: "#fffbeb",
+                        border: "1px solid #fef08a",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1.5,
+                        color: "#92400e",
+                    }}
+                >
+                    <LockIcon sx={{ color: "#d97706" }} />
+                    <Box>
+                        <Typography variant="subtitle2" fontWeight={700}>
+                            Read-Only Access Mode
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: "#b45309" }}>
+                            You are viewing payments in read-only mode. Only administrators with <strong>Superuser status</strong> can record payments, update course fees, or delete payment entries.
+                        </Typography>
+                    </Box>
+                </Paper>
+            )}
 
             {/* Table / Cards */}
             <Paper elevation={0} sx={{ borderRadius: { xs: 2, sm: 4 }, border: "1px solid", borderColor: "grey.200", overflow: "hidden" }}>
@@ -536,9 +585,11 @@ export default function AdminPaymentsPage() {
                                                 <Tooltip title="View details">
                                                     <IconButton size="small" onClick={() => openView(s)}><Visibility fontSize="small" /></IconButton>
                                                 </Tooltip>
-                                                <Tooltip title="Edit payments">
-                                                    <IconButton size="small" onClick={() => openEdit(s)}><Edit fontSize="small" /></IconButton>
-                                                </Tooltip>
+                                                {isSuperUser && (
+                                                    <Tooltip title="Edit payments">
+                                                        <IconButton size="small" onClick={() => openEdit(s)}><Edit fontSize="small" /></IconButton>
+                                                    </Tooltip>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     );
@@ -634,41 +685,43 @@ export default function AdminPaymentsPage() {
                         </DialogTitle>
                         <Divider />
                         <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
-                            <Box sx={{ mb: 3, p: { xs: 1.5, sm: 2 }, bgcolor: "#f8fafc", borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
-                                <Typography variant="body2" fontWeight={700} sx={{ mb: 1.5 }}>Record New Payment</Typography>
-                                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                                    <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
+                            {isSuperUser && (
+                                <Box sx={{ mb: 3, p: { xs: 1.5, sm: 2 }, bgcolor: "#f8fafc", borderRadius: 2, border: "1px solid", borderColor: "grey.200" }}>
+                                    <Typography variant="body2" fontWeight={700} sx={{ mb: 1.5 }}>Record New Payment</Typography>
+                                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                                        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
+                                            <TextField
+                                                label="Amount (₦)"
+                                                type="number"
+                                                size="small"
+                                                value={addForm.amount}
+                                                onChange={(e) => setAddForm((p) => ({ ...p, amount: e.target.value }))}
+                                                slotProps={{ input: { startAdornment: <InputAdornment position="start">₦</InputAdornment> } }}
+                                            />
+                                        </Box>
                                         <TextField
-                                            label="Amount (₦)"
-                                            type="number"
+                                            label="Note (optional)"
                                             size="small"
-                                            value={addForm.amount}
-                                            onChange={(e) => setAddForm((p) => ({ ...p, amount: e.target.value }))}
-                                            slotProps={{ input: { startAdornment: <InputAdornment position="start">₦</InputAdornment> } }}
+                                            fullWidth
+                                            multiline
+                                            rows={2}
+                                            value={addForm.note}
+                                            onChange={(e) => setAddForm((p) => ({ ...p, note: e.target.value }))}
+                                            placeholder="Additional details..."
                                         />
+                                        <Button
+                                            variant="contained"
+                                            size="small"
+                                            startIcon={addSaving ? <CircularProgress size={14} color="inherit" /> : <Add />}
+                                            onClick={handleAddEntry}
+                                            disabled={addSaving || !addForm.amount}
+                                            sx={{ alignSelf: "flex-end" }}
+                                        >
+                                            {addSaving ? "Saving..." : "Add Entry"}
+                                        </Button>
                                     </Box>
-                                    <TextField
-                                        label="Note (optional)"
-                                        size="small"
-                                        fullWidth
-                                        multiline
-                                        rows={2}
-                                        value={addForm.note}
-                                        onChange={(e) => setAddForm((p) => ({ ...p, note: e.target.value }))}
-                                        placeholder="Additional details..."
-                                    />
-                                    <Button
-                                        variant="contained"
-                                        size="small"
-                                        startIcon={addSaving ? <CircularProgress size={14} color="inherit" /> : <Add />}
-                                        onClick={handleAddEntry}
-                                        disabled={addSaving || !addForm.amount}
-                                        sx={{ alignSelf: "flex-end" }}
-                                    >
-                                        {addSaving ? "Saving..." : "Add Entry"}
-                                    </Button>
                                 </Box>
-                            </Box>
+                            )}
 
                             <Typography variant="body2" fontWeight={700} sx={{ mb: 1.5 }}>
                                 {historyLoading ? "Loading..." : `${historyEntries.length} payment${historyEntries.length !== 1 ? "s" : ""} recorded`}
@@ -696,11 +749,13 @@ export default function AdminPaymentsPage() {
                                                         {entry.recorded_by_name && ` · by ${entry.recorded_by_name}`}
                                                     </Typography>
                                                 </Box>
-                                                <Tooltip title="Delete entry">
-                                                    <IconButton size="small" color="error" onClick={() => handleDeleteEntry(entry.id)}>
-                                                        <Delete fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
+                                                {isSuperUser && (
+                                                    <Tooltip title="Delete entry">
+                                                        <IconButton size="small" color="error" onClick={() => handleDeleteEntry(entry.id)}>
+                                                            <Delete fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                )}
                                             </Box>
                                         </Box>
                                     ))}
