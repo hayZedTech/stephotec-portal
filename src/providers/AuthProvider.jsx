@@ -33,6 +33,17 @@ const isPublicRoute = (path) => {
     return PUBLIC_ROUTES.some((route) => path === route || path.startsWith(`${route}/`) || path.startsWith(`${route}?`));
 };
 
+function decodeTokenPayload(token) {
+    if (!token) return null;
+    try {
+        const parts = token.split(".");
+        if (parts.length < 2) return null;
+        return JSON.parse(atob(parts[1]));
+    } catch {
+        return null;
+    }
+}
+
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -52,6 +63,71 @@ export function AuthProvider({ children }) {
     const resetInactivityTimer = () => {
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         inactivityTimerRef.current = setTimeout(forceLogout, INACTIVITY_TIMEOUT);
+    };
+
+    const refreshUser = async () => {
+        try {
+            const storedUser = getUser();
+            const token = getAccessToken();
+            if (!storedUser || !token) return;
+
+            if (storedUser.role === "ADMIN") {
+                const response = await api.get("/admin/profile/");
+                const d = response.data;
+                const tokenPayload = decodeTokenPayload(token);
+                const isSuperUserFlag = Boolean(d.is_superuser ?? tokenPayload?.is_superuser ?? storedUser.is_superuser ?? storedUser.isSuperUser);
+
+                const userData = {
+                    ...storedUser,
+                    firstName: d.first_name || storedUser.firstName,
+                    lastName: d.last_name || storedUser.lastName,
+                    phone: d.phone || storedUser.phone,
+                    additionalPhone: d.additional_phone || storedUser.additionalPhone,
+                    bio: d.bio || storedUser.bio,
+                    address: d.address || storedUser.address,
+                    jobTitle: d.job_title || storedUser.jobTitle,
+                    profilePictureUrl: d.profile_picture_url || storedUser.profilePictureUrl,
+                    is_superuser: isSuperUserFlag,
+                    isSuperUser: isSuperUserFlag,
+                };
+
+                saveSession({ access: token, refresh: getRefreshToken(), user: userData });
+                setUser(userData);
+                return;
+            }
+
+            if (storedUser.role === "STUDENT") {
+                const response = await api.get("/student/profile/");
+                const d = response.data;
+
+                const userData = {
+                    id: d.id,
+                    username: d.username,
+                    email: d.email,
+                    role: d.role,
+                    status: d.status,
+                    isProfileComplete: d.is_profile_complete,
+                    isIndustrialTraining: d.is_industrial_training,
+                    admissionYear: d.admission_year,
+                    firstName: d.first_name,
+                    lastName: d.last_name,
+                    phone: d.phone,
+                    additionalPhone: d.additional_phone,
+                    dateOfBirth: d.date_of_birth,
+                    gender: d.gender,
+                    address: d.address,
+                    stateOfOrigin: d.state_of_origin,
+                    bio: d.bio,
+                    profilePictureUrl: d.profile_picture_url,
+                    courses: d.courses || [],
+                };
+
+                saveSession({ access: token, refresh: getRefreshToken(), user: userData });
+                setUser(userData);
+            }
+        } catch (error) {
+            console.error("Failed to refresh user data", error);
+        }
     };
 
     useEffect(() => {
@@ -74,7 +150,34 @@ export function AuthProvider({ children }) {
                     await ensureValidAccessToken();
                 }
 
+                const currentAccess = getAccessToken();
+                const tokenPayload = decodeTokenPayload(currentAccess) || decodeTokenPayload(refreshToken);
+                if (tokenPayload?.is_superuser !== undefined) {
+                    storedUser.is_superuser = Boolean(tokenPayload.is_superuser);
+                    storedUser.isSuperUser = Boolean(tokenPayload.is_superuser);
+                }
+
                 setUser(storedUser);
+
+                // If user is ADMIN, refresh profile in background to fetch latest permissions
+                if (storedUser.role === "ADMIN") {
+                    api.get("/admin/profile/").then((res) => {
+                        const d = res.data;
+                        const isSuperUserFlag = Boolean(d.is_superuser ?? tokenPayload?.is_superuser ?? storedUser.is_superuser);
+                        const updatedUserData = {
+                            ...storedUser,
+                            firstName: d.first_name || storedUser.firstName,
+                            lastName: d.last_name || storedUser.lastName,
+                            phone: d.phone || storedUser.phone,
+                            jobTitle: d.job_title || storedUser.jobTitle,
+                            profilePictureUrl: d.profile_picture_url || storedUser.profilePictureUrl,
+                            is_superuser: isSuperUserFlag,
+                            isSuperUser: isSuperUserFlag,
+                        };
+                        saveSession({ access: getAccessToken(), refresh: getRefreshToken(), user: updatedUserData });
+                        setUser(updatedUserData);
+                    }).catch(() => {});
+                }
             } catch {
                 clearSession();
                 if (!isPublicRoute(pathname)) {
@@ -106,6 +209,13 @@ export function AuthProvider({ children }) {
 
             try {
                 await ensureValidAccessToken();
+                const currentAccess = getAccessToken();
+                const tokenPayload = decodeTokenPayload(currentAccess) || decodeTokenPayload(refreshToken);
+                if (tokenPayload?.is_superuser !== undefined) {
+                    storedUser.is_superuser = Boolean(tokenPayload.is_superuser);
+                    storedUser.isSuperUser = Boolean(tokenPayload.is_superuser);
+                    setUser({ ...storedUser });
+                }
             } catch {
                 if (!isPublicRoute(pathname)) {
                     forceLogout();
@@ -138,6 +248,8 @@ export function AuthProvider({ children }) {
 
     const login = async (credentials) => {
         const data = await loginUser(credentials);
+        const tokenPayload = decodeTokenPayload(data.access) || decodeTokenPayload(data.refresh);
+        const isSuperUserFlag = Boolean(data.is_superuser ?? tokenPayload?.is_superuser);
 
         const userData = {
             id: data.user_id,
@@ -145,6 +257,10 @@ export function AuthProvider({ children }) {
             email: data.email,
             role: data.role,
             status: data.status,
+            is_superuser: isSuperUserFlag,
+            isSuperUser: isSuperUserFlag,
+            is_staff: Boolean(data.is_staff),
+            jobTitle: data.job_title,
             isProfileComplete: data.is_profile_complete,
             isIndustrialTraining: data.is_industrial_training,
             admissionYear: data.admission_year,
@@ -186,44 +302,6 @@ export function AuthProvider({ children }) {
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         successToast("Signed out successfully.");
         router.push("/login");
-    };
-
-    const refreshUser = async () => {
-        try {
-            const storedUser = getUser();
-            const token = getAccessToken();
-            if (!storedUser || !token || storedUser.role !== "STUDENT") return;
-
-            const response = await api.get("/student/profile/");
-            const d = response.data;
-
-            const userData = {
-                id: d.id,
-                username: d.username,
-                email: d.email,
-                role: d.role,
-                status: d.status,
-                isProfileComplete: d.is_profile_complete,
-                isIndustrialTraining: d.is_industrial_training,
-                admissionYear: d.admission_year,
-                firstName: d.first_name,
-                lastName: d.last_name,
-                phone: d.phone,
-                additionalPhone: d.additional_phone,
-                dateOfBirth: d.date_of_birth,
-                gender: d.gender,
-                address: d.address,
-                stateOfOrigin: d.state_of_origin,
-                bio: d.bio,
-                profilePictureUrl: d.profile_picture_url,
-                courses: d.courses || [],
-            };
-
-            saveSession({ access: token, refresh: getRefreshToken(), user: userData });
-            setUser(userData);
-        } catch (error) {
-            console.error("Failed to refresh user data", error);
-        }
     };
 
     return (

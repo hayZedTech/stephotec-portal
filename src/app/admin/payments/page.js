@@ -200,8 +200,8 @@ function CourseTabs({ courses, value, onChange }) {
 }
 
 export default function AdminPaymentsPage() {
-    const { user } = useAuth();
-    const isSuperUser = Boolean(user?.is_superuser);
+    const { user, refreshUser } = useAuth();
+    const isSuperUser = Boolean(user?.is_superuser || user?.isSuperUser);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -221,6 +221,12 @@ export default function AdminPaymentsPage() {
     const [historyLoading, setHistoryLoading] = useState(false);
     const [addForm, setAddForm] = useState({ amount: "", note: "" });
     const [addSaving, setAddSaving] = useState(false);
+
+    useEffect(() => {
+        if (refreshUser) {
+            refreshUser();
+        }
+    }, []);
 
     const load = useCallback(async (syncStudentId) => {
         try {

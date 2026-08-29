@@ -55,8 +55,14 @@ const DEFAULT_STAFF_TITLE_OPTIONS = [
 ];
 
 export default function AdminStaffPage() {
-    const { user } = useAuth();
-    const isSuperuser = Boolean(user?.is_superuser);
+    const { user, refreshUser } = useAuth();
+    const isSuperuser = Boolean(user?.is_superuser || user?.isSuperUser);
+
+    useEffect(() => {
+        if (refreshUser) {
+            refreshUser();
+        }
+    }, []);
 
     const [staffList, setStaffList] = useState([]);
     const [titleOptions, setTitleOptions] = useState(DEFAULT_STAFF_TITLE_OPTIONS);

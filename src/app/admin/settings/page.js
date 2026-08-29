@@ -491,12 +491,18 @@ const DEFAULT_SETTINGS = {
 };
 
 export default function SettingsPage() {
-    const { user } = useAuth();
-    const isSuperUser = Boolean(user?.is_superuser);
+    const { user, refreshUser } = useAuth();
+    const isSuperUser = Boolean(user?.is_superuser || user?.isSuperUser);
 
     const [activeTab, setActiveTab] = useState(0);
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        if (refreshUser) {
+            refreshUser();
+        }
+    }, []);
 
     useEffect(() => {
         const fetchSettings = async () => {
