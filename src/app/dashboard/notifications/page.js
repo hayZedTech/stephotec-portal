@@ -15,6 +15,10 @@ import {
     Stack,
     IconButton,
     Tooltip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from "@mui/material";
 import {
     Info,
@@ -33,6 +37,8 @@ import {
     Person,
     WorkspacePremium,
     Schedule,
+    Visibility,
+    Close,
 } from "@mui/icons-material";
 import { getStudentNotifications, markNotificationAsRead } from "@/services/notifications";
 import { useNotifications } from "@/providers/NotificationsProvider";
@@ -125,6 +131,7 @@ export default function NotificationsPage() {
     const { decrementUnreadCount, setUnreadCount } = useNotifications();
     const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState([]);
+    const [viewingNotification, setViewingNotification] = useState(null);
     const [markingAsReadId, setMarkingAsReadId] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
     const [markingAll, setMarkingAll] = useState(false);
@@ -387,18 +394,31 @@ export default function NotificationsPage() {
                                             )}
                                         </Box>
                                     </Box>
-                                    {/* DELETE BUTTON */}
-                                    <Tooltip title="Delete notification">
-                                        <IconButton
-                                            size="small"
-                                            color="error"
-                                            onClick={() => handleDelete(notification.id)}
-                                            disabled={deletingId === notification.id}
-                                            sx={{ flexShrink: 0, mt: 0.5 }}
-                                        >
-                                            {deletingId === notification.id ? <CircularProgress size={16} /> : <Delete fontSize="small" />}
-                                        </IconButton>
-                                    </Tooltip>
+                                    {/* ACTIONS */}
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0, mt: 0.5 }}>
+                                        <Tooltip title="View full details">
+                                            <IconButton
+                                                size="small"
+                                                color="primary"
+                                                onClick={() => {
+                                                    setViewingNotification(notification);
+                                                    if (!notification.is_read) handleMarkAsRead(notification.id);
+                                                }}
+                                            >
+                                                <Visibility fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Delete notification">
+                                            <IconButton
+                                                size="small"
+                                                color="error"
+                                                onClick={() => handleDelete(notification.id)}
+                                                disabled={deletingId === notification.id}
+                                            >
+                                                {deletingId === notification.id ? <CircularProgress size={16} /> : <Delete fontSize="small" />}
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Box>
                                 </ListItem>
                                 {index < filtered.length - 1 && <Divider />}
                             </Box>
@@ -412,6 +432,121 @@ export default function NotificationsPage() {
                     </Box>
                 )}
             </Paper>
+
+            {/* NOTIFICATION DETAILS DIALOG */}
+            <Dialog
+                open={!!viewingNotification}
+                onClose={() => setViewingNotification(null)}
+                maxWidth="sm"
+                fullWidth
+                slotProps={{ paper: { sx: { borderRadius: 3, m: 2 } } }}
+            >
+                {viewingNotification && (
+                    <>
+                        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", pb: 1.5, pt: 2.5, px: 3 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                {getIcon(viewingNotification.type)}
+                                <Box>
+                                    <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.2 }}>
+                                        {viewingNotification.title}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {new Date(viewingNotification.created_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                            <IconButton size="small" onClick={() => setViewingNotification(null)}>
+                                <Close />
+                            </IconButton>
+                        </DialogTitle>
+                        <Divider />
+                        <DialogContent sx={{ py: 2.5, px: 3 }}>
+                            <Stack spacing={2.5}>
+                                <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                                    <Chip
+                                        label={viewingNotification.type}
+                                        color={getTypeColor(viewingNotification.type)}
+                                        variant="outlined"
+                                        size="small"
+                                        sx={{ fontWeight: 700, fontSize: "0.72rem" }}
+                                    />
+                                    <Chip
+                                        label={viewingNotification.is_read ? "Read" : "Unread"}
+                                        color={viewingNotification.is_read ? "success" : "default"}
+                                        variant={viewingNotification.is_read ? "outlined" : "filled"}
+                                        size="small"
+                                        sx={{ fontWeight: 700, fontSize: "0.72rem" }}
+                                    />
+                                </Box>
+
+                                <Paper
+                                    elevation={0}
+                                    sx={{
+                                        p: 2,
+                                        borderRadius: 2,
+                                        bgcolor: "grey.50",
+                                        border: "1px solid",
+                                        borderColor: "grey.200",
+                                    }}
+                                >
+                                    <Typography variant="subtitle2" color="text.secondary" fontWeight={700} sx={{ mb: 1, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: 0.5 }}>
+                                        Notification Message
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, color: "slate.900" }}>
+                                        {viewingNotification.message}
+                                    </Typography>
+                                </Paper>
+
+                                {(() => {
+                                    const actionMeta = getStudentActionMeta(viewingNotification);
+                                    if (!actionMeta) return null;
+                                    return (
+                                        <Box sx={{ pt: 0.5 }}>
+                                            <Button
+                                                fullWidth
+                                                variant="contained"
+                                                color={actionMeta.color}
+                                                startIcon={actionMeta.icon}
+                                                endIcon={<ArrowForward sx={{ fontSize: 16 }} />}
+                                                onClick={() => {
+                                                    const url = actionMeta.url;
+                                                    setViewingNotification(null);
+                                                    router.push(url);
+                                                }}
+                                                sx={{ textTransform: "none", py: 1.2, borderRadius: 2, fontWeight: 700 }}
+                                            >
+                                                {actionMeta.label}
+                                            </Button>
+                                        </Box>
+                                    );
+                                })()}
+                            </Stack>
+                        </DialogContent>
+                        <Divider />
+                        <DialogActions sx={{ px: 3, py: 2, display: "flex", justifyContent: "space-between" }}>
+                            <Button
+                                size="small"
+                                color="error"
+                                startIcon={<Delete />}
+                                onClick={() => {
+                                    const id = viewingNotification.id;
+                                    setViewingNotification(null);
+                                    handleDelete(id);
+                                }}
+                            >
+                                Delete
+                            </Button>
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={() => setViewingNotification(null)}
+                            >
+                                Close
+                            </Button>
+                        </DialogActions>
+                    </>
+                )}
+            </Dialog>
         </div>
     );
 }

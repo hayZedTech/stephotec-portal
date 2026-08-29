@@ -54,6 +54,7 @@ import {
     Schedule,
     Email,
     MarkEmailRead,
+    Close,
 } from "@mui/icons-material";
 import { IconButton as MuiIconButton, Tooltip as MuiTooltip } from "@mui/material";
 
@@ -142,6 +143,7 @@ export default function AdminNotificationsPage() {
     const [showCourseDialog, setShowCourseDialog] = useState(false);
     const [showHistoryDialog, setShowHistoryDialog] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState(null);
+    const [viewingAlert, setViewingAlert] = useState(null);
     const [notificationRecipients, setNotificationRecipients] = useState([]);
     const [loadingRecipients, setLoadingRecipients] = useState(false);
     const [loadingNotificationId, setLoadingNotificationId] = useState(null);
@@ -565,24 +567,38 @@ export default function AdminNotificationsPage() {
                                                  </Box>
                                              </Box>
 
-                                              {/* Actions Column (Delete on top, Mark read below with comfortable spacing) */}
-                                              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1.5, flexShrink: 0 }}>
-                                                  <MuiTooltip title="Delete alert">
-                                                      <MuiIconButton size="small" color="error" onClick={() => handleDeleteAlert(alert.id)} disabled={deletingAlertId === alert.id}>
-                                                          {deletingAlertId === alert.id ? <CircularProgress size={16} /> : <Delete fontSize="small" />}
-                                                      </MuiIconButton>
-                                                  </MuiTooltip>
-                                                  {!alert.is_read && (
-                                                      <Button
-                                                          size="small"
-                                                          variant="text"
-                                                          onClick={() => handleMarkAlertRead(alert.id)}
-                                                          sx={{ color: "#7c3aed", fontSize: "0.75rem", textTransform: "none", p: 0, minWidth: "auto", whiteSpace: "nowrap", mt: 0.5 }}
-                                                      >
-                                                          Mark read
-                                                      </Button>
-                                                  )}
-                                              </Box>
+                                             {/* Actions Column (View + Delete with Mark read below) */}
+                                             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1, flexShrink: 0 }}>
+                                                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                                     <MuiTooltip title="View alert details">
+                                                         <MuiIconButton
+                                                             size="small"
+                                                             color="primary"
+                                                             onClick={() => {
+                                                                 setViewingAlert(alert);
+                                                                 if (!alert.is_read) handleMarkAlertRead(alert.id);
+                                                             }}
+                                                         >
+                                                             <Visibility fontSize="small" />
+                                                         </MuiIconButton>
+                                                     </MuiTooltip>
+                                                     <MuiTooltip title="Delete alert">
+                                                         <MuiIconButton size="small" color="error" onClick={() => handleDeleteAlert(alert.id)} disabled={deletingAlertId === alert.id}>
+                                                             {deletingAlertId === alert.id ? <CircularProgress size={16} /> : <Delete fontSize="small" />}
+                                                         </MuiIconButton>
+                                                     </MuiTooltip>
+                                                 </Box>
+                                                 {!alert.is_read && (
+                                                     <Button
+                                                         size="small"
+                                                         variant="text"
+                                                         onClick={() => handleMarkAlertRead(alert.id)}
+                                                         sx={{ color: "#7c3aed", fontSize: "0.75rem", textTransform: "none", p: 0, minWidth: "auto", whiteSpace: "nowrap", mt: 0.25 }}
+                                                     >
+                                                         Mark read
+                                                     </Button>
+                                                 )}
+                                             </Box>
                                          </Box>
                                      ))}
                                 </Stack>
@@ -877,31 +893,178 @@ export default function AdminNotificationsPage() {
                 <DialogActions><Button onClick={() => setShowCourseDialog(false)}>Done</Button></DialogActions>
             </Dialog>
 
+            {/* INCOMING ALERT DETAILS DIALOG */}
+            <Dialog
+                open={!!viewingAlert}
+                onClose={() => setViewingAlert(null)}
+                maxWidth="sm"
+                fullWidth
+                slotProps={{ paper: { sx: { borderRadius: 3, m: 2 } } }}
+            >
+                {viewingAlert && (
+                    <>
+                        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", pb: 1.5, pt: 2.5, px: 3 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                                <Avatar sx={{ bgcolor: "#7c3aed", width: 42, height: 42, fontWeight: 700, fontSize: 16 }}>
+                                    {viewingAlert.triggered_by_name?.charAt(0) || viewingAlert.triggered_by_username?.charAt(0) || "S"}
+                                </Avatar>
+                                <Box>
+                                    <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.2 }}>
+                                        {viewingAlert.title}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {viewingAlert.triggered_by_name ? `${viewingAlert.triggered_by_name} (${viewingAlert.triggered_by_username})` : viewingAlert.triggered_by_username || "System Notification"}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                            <MuiIconButton size="small" onClick={() => setViewingAlert(null)}>
+                                <Close />
+                            </MuiIconButton>
+                        </DialogTitle>
+                        <Divider />
+                        <DialogContent sx={{ py: 2.5, px: 3 }}>
+                            <Stack spacing={2.5}>
+                                <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                                    <Chip
+                                        label={viewingAlert.alert_type || "ALERT"}
+                                        size="small"
+                                        color="primary"
+                                        variant="outlined"
+                                        sx={{ fontWeight: 700, fontSize: "0.72rem" }}
+                                    />
+                                    <Chip
+                                        label={viewingAlert.is_read ? "Read" : "Unread"}
+                                        size="small"
+                                        color={viewingAlert.is_read ? "default" : "secondary"}
+                                        variant={viewingAlert.is_read ? "outlined" : "filled"}
+                                        sx={{ fontWeight: 700, fontSize: "0.72rem" }}
+                                    />
+                                    <Typography variant="caption" color="text.disabled" sx={{ ml: "auto" }}>
+                                        {new Date(viewingAlert.created_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                                    </Typography>
+                                </Box>
+
+                                <Paper
+                                    elevation={0}
+                                    sx={{
+                                        p: 2,
+                                        borderRadius: 2,
+                                        bgcolor: "grey.50",
+                                        border: "1px solid",
+                                        borderColor: "grey.200",
+                                    }}
+                                >
+                                    <Typography variant="subtitle2" color="text.secondary" fontWeight={700} sx={{ mb: 1, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: 0.5 }}>
+                                        Full Message
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, color: "slate.900" }}>
+                                        {viewingAlert.message}
+                                    </Typography>
+                                </Paper>
+
+                                {(() => {
+                                    const actionMeta = getAlertActionMeta(viewingAlert);
+                                    if (!actionMeta) return null;
+                                    return (
+                                        <Box sx={{ pt: 0.5 }}>
+                                            <Button
+                                                fullWidth
+                                                variant="contained"
+                                                color={actionMeta.color}
+                                                startIcon={actionMeta.icon}
+                                                endIcon={<ArrowForward sx={{ fontSize: 16 }} />}
+                                                onClick={() => {
+                                                    const url = actionMeta.url;
+                                                    setViewingAlert(null);
+                                                    router.push(url);
+                                                }}
+                                                sx={{ textTransform: "none", py: 1.2, borderRadius: 2, fontWeight: 700 }}
+                                            >
+                                                {actionMeta.label}
+                                            </Button>
+                                        </Box>
+                                    );
+                                })()}
+                            </Stack>
+                        </DialogContent>
+                        <Divider />
+                        <DialogActions sx={{ px: 3, py: 2, display: "flex", justifyContent: "space-between" }}>
+                            <Button
+                                size="small"
+                                color="error"
+                                startIcon={<Delete />}
+                                onClick={() => {
+                                    const id = viewingAlert.id;
+                                    setViewingAlert(null);
+                                    handleDeleteAlert(id);
+                                }}
+                            >
+                                Delete
+                            </Button>
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={() => setViewingAlert(null)}
+                            >
+                                Close
+                            </Button>
+                        </DialogActions>
+                    </>
+                )}
+            </Dialog>
+
             {/* HISTORY DIALOG */}
             <Dialog open={showHistoryDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setShowHistoryDialog(false); }} maxWidth="md" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, m: 2, maxHeight: "85vh" } } }}>
-                <DialogTitle>Notification Details</DialogTitle>
-                <DialogContent sx={{ overflowY: "auto" }}>
+                <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", pb: 1.5, pt: 2.5, px: 3 }}>
+                    <Typography variant="h6" fontWeight={700}>Notification Details</Typography>
+                    <MuiIconButton size="small" onClick={() => setShowHistoryDialog(false)}>
+                        <Close />
+                    </MuiIconButton>
+                </DialogTitle>
+                <Divider />
+                <DialogContent sx={{ overflowY: "auto", px: 3, py: 2.5 }}>
                     {selectedNotification && (
-                        <Stack spacing={2} sx={{ pt: 1 }}>
+                        <Stack spacing={2.5}>
+                            <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                                <Chip
+                                    label={selectedNotification.type}
+                                    size="small"
+                                    color={selectedNotification.type === "SUCCESS" ? "success" : selectedNotification.type === "WARNING" ? "warning" : selectedNotification.type === "ERROR" ? "error" : "info"}
+                                    variant="outlined"
+                                    sx={{ fontWeight: 700 }}
+                                />
+                                {selectedNotification.send_email ? (
+                                    <Chip icon={<Email sx={{ fontSize: "13px !important" }} />} label="Portal + Real Email" size="small" color="primary" sx={{ height: 24, fontSize: "0.75rem", fontWeight: 700 }} />
+                                ) : (
+                                    <Chip label="Portal Only" size="small" variant="outlined" sx={{ height: 24, fontSize: "0.75rem", color: "text.secondary" }} />
+                                )}
+                                <Chip label={`Target: ${selectedNotification.target_type}`} size="small" variant="outlined" />
+                                <Typography variant="caption" color="text.disabled" sx={{ ml: "auto" }}>
+                                    Sent: {new Date(selectedNotification.created_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                                </Typography>
+                            </Box>
+
                             <Box>
                                 <Typography variant="subtitle2" fontWeight={700} mb={0.5}>Title</Typography>
-                                <Typography>{selectedNotification.title}</Typography>
+                                <Typography variant="body1" fontWeight={600} color="slate.900">{selectedNotification.title}</Typography>
                             </Box>
-                            <Box>
-                                <Typography variant="subtitle2" fontWeight={700} mb={0.5}>Message</Typography>
-                                <Typography sx={{ wordBreak: "break-word" }}>{selectedNotification.message}</Typography>
-                            </Box>
-                            <Box>
-                                <Typography variant="subtitle2" fontWeight={700} mb={0.5}>Target</Typography>
-                                <Typography>{selectedNotification.target_type}</Typography>
-                            </Box>
+
+                            <Paper elevation={0} sx={{ p: 2, borderRadius: 2, bgcolor: "grey.50", border: "1px solid", borderColor: "grey.200" }}>
+                                <Typography variant="subtitle2" color="text.secondary" fontWeight={700} sx={{ mb: 1, textTransform: "uppercase", fontSize: "0.7rem", letterSpacing: 0.5 }}>
+                                    Message
+                                </Typography>
+                                <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, color: "slate.900" }}>
+                                    {selectedNotification.message}
+                                </Typography>
+                            </Paper>
+
                             <Box>
                                 <Typography variant="subtitle2" fontWeight={700} mb={1}>Recipients ({notificationRecipients.length})</Typography>
                                 {loadingRecipients ? (
-                                    <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={24} /></Box>
+                                    <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}><CircularProgress size={24} /></Box>
                                 ) : notificationRecipients.length > 0 ? (
-                                    <TableContainer>
-                                        <Table size="small">
+                                    <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2, maxHeight: 260 }}>
+                                        <Table size="small" stickyHeader>
                                             <TableHead>
                                                 <TableRow sx={{ bgcolor: "grey.100" }}>
                                                     <TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
@@ -923,13 +1086,14 @@ export default function AdminNotificationsPage() {
                                         </Table>
                                     </TableContainer>
                                 ) : (
-                                    <Typography color="text.secondary">No recipients found.</Typography>
+                                    <Typography color="text.secondary" variant="body2">No recipients found.</Typography>
                                 )}
                             </Box>
                         </Stack>
                     )}
                 </DialogContent>
-                <DialogActions>
+                <Divider />
+                <DialogActions sx={{ px: 3, py: 2 }}>
                     <Button onClick={() => setShowHistoryDialog(false)} variant="contained" size="small">Close</Button>
                 </DialogActions>
             </Dialog>
