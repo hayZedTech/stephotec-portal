@@ -221,8 +221,8 @@ export default function AdminDashboard() {
                                         {student.email}
                                     </p>
 
-                                    <p className="mt-1 text-xs text-blue-600">
-                                        {student.courses?.[0]?.course?.name || "No Course"}
+                                    <p className="mt-1 text-xs font-semibold text-blue-600">
+                                        {student.course_name || student.courses?.[0]?.course?.name || "No Course"}
                                     </p>
 
                                 </div>
