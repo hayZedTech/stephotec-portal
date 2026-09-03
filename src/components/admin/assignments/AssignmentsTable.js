@@ -17,8 +17,9 @@ export default function AssignmentsTable({
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
     const getCourseName = (courseId) => {
+        if (!courseId) return "General / Multi-Course";
         const c = courses.find((c) => c.id === courseId);
-        return c ? c.name : "Unknown Course";
+        return c ? c.name : "General / Multi-Course";
     };
 
     const columns = [
