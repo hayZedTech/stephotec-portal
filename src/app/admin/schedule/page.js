@@ -81,6 +81,7 @@ import {
     timeStringToMinutes,
     getScheduleOverlaps,
     getScheduleTargetLabel,
+    matchesScheduleSearch,
 } from "@/utils/scheduleUtils";
 import ConcurrentScheduleModal from "@/components/schedule/ConcurrentScheduleModal";
 
@@ -108,6 +109,7 @@ export default function AdminSchedulePage() {
     const [savingType, setSavingType] = useState(null); // "SAVE_ONLY" or "SAVE_EMAIL"
     const [groupsSelectOpen, setGroupsSelectOpen] = useState(false);
     const [studentsSelectOpen, setStudentsSelectOpen] = useState(false);
+    const [groupSearchTerm, setGroupSearchTerm] = useState("");
     const [studentSearchTerm, setStudentSearchTerm] = useState("");
     const [bulkDuration, setBulkDuration] = useState(90);
 
@@ -201,6 +203,7 @@ export default function AdminSchedulePage() {
             is_active: true,
         });
         setBulkDuration(90);
+        setGroupSearchTerm("");
         setStudentSearchTerm("");
         setDialogOpen(true);
         loadStudents();
@@ -242,6 +245,7 @@ export default function AdminSchedulePage() {
             is_active: sched.is_active !== false,
         });
         setBulkDuration(initialDayTimes[0]?.duration_minutes || 90);
+        setGroupSearchTerm("");
         setStudentSearchTerm("");
         setDialogOpen(true);
         loadStudents();
@@ -401,6 +405,29 @@ export default function AdminSchedulePage() {
         });
     }, [courses, reminderSearchQuery]);
 
+    // Filtered options for schedule create/edit modal target dropdowns
+    const modalFilteredGroups = useMemo(() => {
+        if (!groupSearchTerm.trim()) return groups;
+        const term = groupSearchTerm.toLowerCase();
+        return groups.filter((g) => {
+            const name = (g.name || "").toLowerCase();
+            const courseName = (g.course_name || "").toLowerCase();
+            const courseCode = (g.course_code || "").toLowerCase();
+            return name.includes(term) || courseName.includes(term) || courseCode.includes(term);
+        });
+    }, [groups, groupSearchTerm]);
+
+    const modalFilteredStudents = useMemo(() => {
+        if (!studentSearchTerm.trim()) return students;
+        const term = studentSearchTerm.toLowerCase();
+        return students.filter((s) => {
+            const fullName = `${s.first_name || ""} ${s.last_name || ""}`.toLowerCase();
+            const email = (s.email || "").toLowerCase();
+            const username = (s.username || "").toLowerCase();
+            return fullName.includes(term) || email.includes(term) || username.includes(term);
+        });
+    }, [students, studentSearchTerm]);
+
     useEffect(() => {
         setReminderSelectedScheduleIds(matchingReminderSchedules.map((s) => s.id));
     }, [matchingReminderSchedules]);
@@ -525,27 +552,23 @@ export default function AdminSchedulePage() {
         successToast(`Applied ${slot.label} to all picked days!`);
     };
 
-    // Filtered schedules
-    const filtered = schedules.filter((s) => {
-        const matchesSearch =
-            !searchTerm ||
-            s.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            s.instructor_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            s.venue_or_link?.toLowerCase().includes(searchTerm.toLowerCase());
+    // Filtered schedules across Class / Title, Days & Per-Day Timings, Target (Groups / Students), Mode & Venue, Instructor
+    const filtered = useMemo(() => {
+        return schedules.filter((s) => {
+            if (!matchesScheduleSearch(s, searchTerm)) return false;
 
-        if (!matchesSearch) return false;
+            if (filterDay) {
+                const inDays = (s.days_of_week || []).map((d) => String(d).toUpperCase()).includes(filterDay.toUpperCase());
+                const inDayTimes = (s.day_times || []).some((dt) => String(dt.day).toUpperCase() === filterDay.toUpperCase());
+                if (!inDays && !inDayTimes) return false;
+            }
 
-        if (filterDay) {
-            const inDays = (s.days_of_week || []).map((d) => String(d).toUpperCase()).includes(filterDay.toUpperCase());
-            const inDayTimes = (s.day_times || []).some((dt) => String(dt.day).toUpperCase() === filterDay.toUpperCase());
-            if (!inDays && !inDayTimes) return false;
-        }
+            if (filterCourse && String(s.course) !== String(filterCourse)) return false;
+            if (filterMode && s.mode !== filterMode) return false;
 
-        if (filterCourse && String(s.course) !== String(filterCourse)) return false;
-        if (filterMode && s.mode !== filterMode) return false;
-
-        return true;
-    });
+            return true;
+        });
+    }, [schedules, searchTerm, filterDay, filterCourse, filterMode]);
 
     const { slotOverlapMap, totalConcurrentCount, allConflictSlots } = useMemo(() => getScheduleOverlaps(schedules), [schedules]);
     const bulkSlots = generateSlotsForDuration(bulkDuration === "CUSTOM" ? 90 : Number(bulkDuration) || 90);
@@ -636,10 +659,31 @@ export default function AdminSchedulePage() {
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ alignItems: "center" }}>
                         <TextField
                             size="small"
-                            placeholder="Search class title, instructor, venue..."
+                            placeholder="Search class / title, days & timings, target, mode & venue, instructor..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
+                            slotProps={{
+                                input: {
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <Search fontSize="small" />
+                                        </InputAdornment>
+                                    ),
+                                    endAdornment: searchTerm ? (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setSearchTerm("")}
+                                                edge="end"
+                                                aria-label="clear search"
+                                                sx={{ p: 0.5 }}
+                                            >
+                                                <Close fontSize="small" />
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ) : null,
+                                },
+                            }}
                             sx={{ flex: 1 }}
                         />
                         <TextField
@@ -736,14 +780,31 @@ export default function AdminSchedulePage() {
                 <Paper sx={{ p: 8, textAlign: "center", borderRadius: 3 }}>
                     <CalendarMonth sx={{ fontSize: 56, color: "text.disabled", mb: 1.5 }} />
                     <Typography variant="h6" fontWeight={700} color="text.secondary">
-                        No lecture schedules found
+                        {searchTerm || filterDay || filterCourse || filterMode ? "No matching lecture schedules" : "No lecture schedules found"}
                     </Typography>
                     <Typography variant="body2" color="text.disabled" sx={{ mb: 2 }}>
-                        Create your first lecture timetable to help students track their daily classes.
+                        {searchTerm || filterDay || filterCourse || filterMode
+                            ? "No schedules match your current search or filter criteria. Try adjusting your search keywords or clearing filters."
+                            : "Create your first lecture timetable to help students track their daily classes."}
                     </Typography>
-                    <Button variant="contained" startIcon={<Add />} onClick={openCreate} sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, fontWeight: 700 }}>
-                        Schedule Class
-                    </Button>
+                    {searchTerm || filterDay || filterCourse || filterMode ? (
+                        <Button
+                            variant="outlined"
+                            onClick={() => {
+                                setSearchTerm("");
+                                setFilterDay("");
+                                setFilterCourse("");
+                                setFilterMode("");
+                            }}
+                            sx={{ fontWeight: 700 }}
+                        >
+                            Reset Search & Filters
+                        </Button>
+                    ) : (
+                        <Button variant="contained" startIcon={<Add />} onClick={openCreate} sx={{ bgcolor: "#0f172a", "&:hover": { bgcolor: "#1e293b" }, fontWeight: 700 }}>
+                            Schedule Class
+                        </Button>
+                    )}
                 </Paper>
             ) : viewMode === "GRID" ? (
                 <WeeklyTimetableGrid schedules={filtered} isAdmin={true} onEdit={openEdit} onDelete={handleDelete} />
@@ -1145,6 +1206,7 @@ export default function AdminSchedulePage() {
                                         open={groupsSelectOpen}
                                         onOpen={() => setGroupsSelectOpen(true)}
                                         onClose={() => setGroupsSelectOpen(false)}
+                                        MenuProps={{ autoFocus: false }}
                                         onChange={(e) => {
                                             const val = typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value;
                                             setFormData((p) => ({ ...p, assigned_group_ids: val }));
@@ -1161,12 +1223,59 @@ export default function AdminSchedulePage() {
                                             );
                                         }}
                                     >
-                                        {groups.map((g) => (
-                                            <MenuItem key={g.id} value={g.id}>
-                                                <Checkbox checked={formData.assigned_group_ids.includes(g.id)} size="small" />
-                                                <Typography variant="body2">{g.name} ({g.course_name || "General"})</Typography>
+                                        <Box
+                                            sx={{ p: 1, position: "sticky", top: 0, bgcolor: "background.paper", zIndex: 2, borderBottom: "1px solid", borderColor: "divider" }}
+                                            onKeyDown={(e) => e.stopPropagation()}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <TextField
+                                                size="small"
+                                                fullWidth
+                                                placeholder="Search student group name, course..."
+                                                value={groupSearchTerm}
+                                                onChange={(e) => setGroupSearchTerm(e.target.value)}
+                                                onKeyDown={(e) => e.stopPropagation()}
+                                                slotProps={{
+                                                    input: {
+                                                        startAdornment: (
+                                                            <InputAdornment position="start">
+                                                                <Search fontSize="small" />
+                                                            </InputAdornment>
+                                                        ),
+                                                        endAdornment: groupSearchTerm ? (
+                                                            <InputAdornment position="end">
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setGroupSearchTerm("");
+                                                                    }}
+                                                                    edge="end"
+                                                                    sx={{ p: 0.5 }}
+                                                                    aria-label="clear group search"
+                                                                >
+                                                                    <Close fontSize="small" />
+                                                                </IconButton>
+                                                            </InputAdornment>
+                                                        ) : null,
+                                                    },
+                                                }}
+                                            />
+                                        </Box>
+                                        {modalFilteredGroups.length === 0 ? (
+                                            <MenuItem disabled value="">
+                                                <Typography variant="body2" color="text.secondary">
+                                                    No study groups match &quot;{groupSearchTerm}&quot;
+                                                </Typography>
                                             </MenuItem>
-                                        ))}
+                                        ) : (
+                                            modalFilteredGroups.map((g) => (
+                                                <MenuItem key={g.id} value={g.id}>
+                                                    <Checkbox checked={formData.assigned_group_ids.includes(g.id)} size="small" />
+                                                    <Typography variant="body2">{g.name} ({g.course_name || "General"})</Typography>
+                                                </MenuItem>
+                                            ))
+                                        )}
                                         <Box sx={{ p: 1, position: "sticky", bottom: 0, bgcolor: "background.paper", borderTop: "1px solid", borderColor: "divider", zIndex: 2 }}>
                                             <Button
                                                 fullWidth
@@ -1191,6 +1300,7 @@ export default function AdminSchedulePage() {
                                         open={studentsSelectOpen}
                                         onOpen={() => setStudentsSelectOpen(true)}
                                         onClose={() => setStudentsSelectOpen(false)}
+                                        MenuProps={{ autoFocus: false }}
                                         onChange={(e) => {
                                             const val = typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value;
                                             setFormData((p) => ({ ...p, assigned_student_ids: val }));
@@ -1204,7 +1314,11 @@ export default function AdminSchedulePage() {
                                             return `${selectedObjs.length} students selected (${selectedObjs.slice(0, 2).map((s) => s.first_name).join(", ")} +${selectedObjs.length - 2} more)`;
                                         }}
                                     >
-                                        <Box sx={{ p: 1, position: "sticky", top: 0, bgcolor: "background.paper", zIndex: 2, borderBottom: "1px solid", borderColor: "divider" }}>
+                                        <Box
+                                            sx={{ p: 1, position: "sticky", top: 0, bgcolor: "background.paper", zIndex: 2, borderBottom: "1px solid", borderColor: "divider" }}
+                                            onKeyDown={(e) => e.stopPropagation()}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
                                             <TextField
                                                 size="small"
                                                 fullWidth
@@ -1212,12 +1326,41 @@ export default function AdminSchedulePage() {
                                                 value={studentSearchTerm}
                                                 onChange={(e) => setStudentSearchTerm(e.target.value)}
                                                 onKeyDown={(e) => e.stopPropagation()}
-                                                slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> } }}
+                                                slotProps={{
+                                                    input: {
+                                                        startAdornment: (
+                                                            <InputAdornment position="start">
+                                                                <Search fontSize="small" />
+                                                            </InputAdornment>
+                                                        ),
+                                                        endAdornment: studentSearchTerm ? (
+                                                            <InputAdornment position="end">
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setStudentSearchTerm("");
+                                                                    }}
+                                                                    edge="end"
+                                                                    sx={{ p: 0.5 }}
+                                                                    aria-label="clear student search"
+                                                                >
+                                                                    <Close fontSize="small" />
+                                                                </IconButton>
+                                                            </InputAdornment>
+                                                        ) : null,
+                                                    },
+                                                }}
                                             />
                                         </Box>
-                                        {students
-                                            .filter((s) => !studentSearchTerm || `${s.first_name} ${s.last_name} ${s.email} ${s.username}`.toLowerCase().includes(studentSearchTerm.toLowerCase()))
-                                            .map((s) => (
+                                        {modalFilteredStudents.length === 0 ? (
+                                            <MenuItem disabled value="">
+                                                <Typography variant="body2" color="text.secondary">
+                                                    No students match &quot;{studentSearchTerm}&quot;
+                                                </Typography>
+                                            </MenuItem>
+                                        ) : (
+                                            modalFilteredStudents.map((s) => (
                                                 <MenuItem key={s.id} value={s.id}>
                                                     <Checkbox checked={formData.assigned_student_ids.includes(s.id)} size="small" />
                                                     <Box>
@@ -1225,7 +1368,8 @@ export default function AdminSchedulePage() {
                                                         <Typography variant="caption" color="text.secondary">{s.email}</Typography>
                                                     </Box>
                                                 </MenuItem>
-                                            ))}
+                                            ))
+                                        )}
                                         <Box sx={{ p: 1, position: "sticky", bottom: 0, bgcolor: "background.paper", borderTop: "1px solid", borderColor: "divider", zIndex: 2 }}>
                                             <Button
                                                 fullWidth
@@ -1784,7 +1928,7 @@ export default function AdminSchedulePage() {
                                 >
                                     {filteredGroups.length === 0 ? (
                                         <MenuItem disabled value="">
-                                            No study groups match "{reminderSearchQuery}"
+                                            No study groups match &quot;{reminderSearchQuery}&quot;
                                         </MenuItem>
                                     ) : (
                                         filteredGroups.map((g) => (
@@ -1801,7 +1945,7 @@ export default function AdminSchedulePage() {
                             <Stack spacing={1.2}>
                                 <TextField
                                     size="small"
-                                    placeholder="Search student by name, student ID, or email..."
+                                    placeholder="Search student by name, username, or email..."
                                     fullWidth
                                     value={reminderSearchQuery}
                                     onChange={(e) => setReminderSearchQuery(e.target.value)}
@@ -1825,7 +1969,7 @@ export default function AdminSchedulePage() {
                                 >
                                     {filteredStudents.length === 0 ? (
                                         <MenuItem disabled value="">
-                                            No students match "{reminderSearchQuery}"
+                                            No students match &quot;{reminderSearchQuery}&quot;
                                         </MenuItem>
                                     ) : (
                                         filteredStudents.map((st) => (
@@ -1866,7 +2010,7 @@ export default function AdminSchedulePage() {
                                 >
                                     {filteredSchedules.length === 0 ? (
                                         <MenuItem disabled value="">
-                                            No lecture schedules match "{reminderSearchQuery}"
+                                            No lecture schedules match &quot;{reminderSearchQuery}&quot;
                                         </MenuItem>
                                     ) : (
                                         filteredSchedules.map((s) => (
@@ -1911,7 +2055,7 @@ export default function AdminSchedulePage() {
                                 >
                                     {filteredCourses.length === 0 ? (
                                         <MenuItem disabled value="">
-                                            No courses match "{reminderSearchQuery}"
+                                            No courses match &quot;{reminderSearchQuery}&quot;
                                         </MenuItem>
                                     ) : (
                                         filteredCourses.map((c) => (
