@@ -87,14 +87,61 @@ export default function ClassFileManager() {
     const [studentSelectOpen, setStudentSelectOpen] = useState(false);
     const [groupSearch, setGroupSearch] = useState("");
     const [studentSearch, setStudentSearch] = useState("");
+    const [loadingRecipients, setLoadingRecipients] = useState(false);
+    const [isSearchingGroup, setIsSearchingGroup] = useState(false);
+    const [isSearchingStudent, setIsSearchingStudent] = useState(false);
+    const searchGroupTimeoutRef = useRef(null);
+    const searchStudentTimeoutRef = useRef(null);
 
-    useEffect(() => {
-        loadData();
-    }, []);
+    const handleGroupSearchChange = (e) => {
+        const val = e.target.value;
+        setGroupSearch(val);
+        if (searchGroupTimeoutRef.current) clearTimeout(searchGroupTimeoutRef.current);
+        if (val) {
+            setIsSearchingGroup(true);
+            searchGroupTimeoutRef.current = setTimeout(() => {
+                setIsSearchingGroup(false);
+            }, 200);
+        } else {
+            setIsSearchingGroup(false);
+        }
+    };
 
-    useEffect(() => {
-        filterClassMaterials();
-    }, [materials, search, recipientFilter]);
+    const handleStudentSearchChange = (e) => {
+        const val = e.target.value;
+        setStudentSearch(val);
+        if (searchStudentTimeoutRef.current) clearTimeout(searchStudentTimeoutRef.current);
+        if (val) {
+            setIsSearchingStudent(true);
+            searchStudentTimeoutRef.current = setTimeout(() => {
+                setIsSearchingStudent(false);
+            }, 200);
+        } else {
+            setIsSearchingStudent(false);
+        }
+    };
+
+    const loadRecipients = async () => {
+        setLoadingRecipients(true);
+        try {
+            const [groupsRes, studentsData] = await Promise.allSettled([
+                api.get("/admin/groups/"),
+                getStudents(),
+            ]);
+            if (groupsRes.status === "fulfilled") {
+                const grps = Array.isArray(groupsRes.value.data)
+                    ? groupsRes.value.data
+                    : groupsRes.value.data?.results || [];
+                setGroups(grps);
+            }
+            if (studentsData.status === "fulfilled") {
+                const stds = Array.isArray(studentsData.value) ? studentsData.value : [];
+                setStudents(stds);
+            }
+        } finally {
+            setLoadingRecipients(false);
+        }
+    };
 
     const loadData = async () => {
         setLoading(true);
@@ -113,21 +160,7 @@ export default function ClassFileManager() {
         }
 
         // Load auxiliary data (groups/students) in background for dialogs
-        Promise.allSettled([
-            api.get("/admin/groups/"),
-            getStudents(),
-        ]).then(([groupsRes, studentsData]) => {
-            if (groupsRes.status === "fulfilled") {
-                const grps = Array.isArray(groupsRes.value.data)
-                    ? groupsRes.value.data
-                    : groupsRes.value.data?.results || [];
-                setGroups(grps);
-            }
-            if (studentsData.status === "fulfilled") {
-                const stds = Array.isArray(studentsData.value) ? studentsData.value : [];
-                setStudents(stds);
-            }
-        });
+        loadRecipients();
     };
 
     const filterClassMaterials = () => {
@@ -152,6 +185,18 @@ export default function ClassFileManager() {
         setFilteredMaterials(filtered);
     };
 
+    useEffect(() => {
+        loadData();
+        return () => {
+            if (searchGroupTimeoutRef.current) clearTimeout(searchGroupTimeoutRef.current);
+            if (searchStudentTimeoutRef.current) clearTimeout(searchStudentTimeoutRef.current);
+        };
+    }, []);
+
+    useEffect(() => {
+        filterClassMaterials();
+    }, [materials, search, recipientFilter]);
+
     const handleOpenDialog = () => {
         setEditingMaterial(null);
         setSelectedFiles([]);
@@ -162,12 +207,18 @@ export default function ClassFileManager() {
             assigned_group_ids: [],
             assigned_student_ids: [],
         });
+        if (groups.length === 0 || students.length === 0) {
+            loadRecipients();
+        }
         setOpenDialog(true);
     };
 
     const handleEdit = (material) => {
         setEditingMaterial(material);
         setSelectedFiles([]);
+        if (groups.length === 0 || students.length === 0) {
+            loadRecipients();
+        }
         
         // Handle files (fallback for legacy single file)
         let existingFiles = [];
@@ -856,19 +907,41 @@ export default function ClassFileManager() {
                                             placeholder="Search groups..."
                                             fullWidth
                                             value={groupSearch}
-                                            onChange={(e) => setGroupSearch(e.target.value)}
+                                            onChange={handleGroupSearchChange}
                                             onKeyDown={(e) => e.stopPropagation()}
                                             onClick={(e) => e.stopPropagation()}
+                                            slotProps={{
+                                                input: {
+                                                    startAdornment: (
+                                                        <InputAdornment position="start">
+                                                            <Search fontSize="small" sx={{ color: "text.secondary" }} />
+                                                        </InputAdornment>
+                                                    ),
+                                                    endAdornment: (loadingRecipients || isSearchingGroup) ? (
+                                                        <InputAdornment position="end">
+                                                            <CircularProgress size={16} sx={{ color: "#d97706" }} />
+                                                        </InputAdornment>
+                                                    ) : null,
+                                                },
+                                            }}
                                         />
                                     </ListSubheader>
-                                    {groups.filter(g => g.name.toLowerCase().includes(groupSearch.toLowerCase())).map((g) => (
-                                        <MenuItem key={g.id} value={g.id}>
-                                            <Checkbox checked={formData.assigned_group_ids.includes(g.id)} />
-                                            <ListItemText primary={g.name} />
+                                    {(loadingRecipients || isSearchingGroup) ? (
+                                        <MenuItem disabled key="loading-groups" sx={{ justifyContent: "center", py: 2 }}>
+                                            <CircularProgress size={18} sx={{ color: "#d97706", mr: 1.5 }} />
+                                            <Typography variant="body2" color="text.secondary">
+                                                {loadingRecipients ? "Loading groups..." : "Searching groups..."}
+                                            </Typography>
                                         </MenuItem>
-                                    ))}
-                                    {groups.filter(g => g.name.toLowerCase().includes(groupSearch.toLowerCase())).length === 0 && (
-                                        <MenuItem disabled>No groups found</MenuItem>
+                                    ) : groups.filter(g => g.name.toLowerCase().includes(groupSearch.toLowerCase())).length === 0 ? (
+                                        <MenuItem disabled key="no-groups">No groups found</MenuItem>
+                                    ) : (
+                                        groups.filter(g => g.name.toLowerCase().includes(groupSearch.toLowerCase())).map((g) => (
+                                            <MenuItem key={g.id} value={g.id}>
+                                                <Checkbox checked={formData.assigned_group_ids.includes(g.id)} />
+                                                <ListItemText primary={g.name} />
+                                            </MenuItem>
+                                        ))
                                     )}
                                     <Box sx={{ p: 1, position: 'sticky', bottom: 0, bgcolor: 'background.paper', zIndex: 2, borderTop: '1px solid #e2e8f0' }}>
                                         <Button 
@@ -926,28 +999,50 @@ export default function ClassFileManager() {
                                             placeholder="Search students..."
                                             fullWidth
                                             value={studentSearch}
-                                            onChange={(e) => setStudentSearch(e.target.value)}
+                                            onChange={handleStudentSearchChange}
                                             onKeyDown={(e) => e.stopPropagation()}
                                             onClick={(e) => e.stopPropagation()}
+                                            slotProps={{
+                                                input: {
+                                                    startAdornment: (
+                                                        <InputAdornment position="start">
+                                                            <Search fontSize="small" sx={{ color: "text.secondary" }} />
+                                                        </InputAdornment>
+                                                    ),
+                                                    endAdornment: (loadingRecipients || isSearchingStudent) ? (
+                                                        <InputAdornment position="end">
+                                                            <CircularProgress size={16} sx={{ color: "#0f172a" }} />
+                                                        </InputAdornment>
+                                                    ) : null,
+                                                },
+                                            }}
                                         />
                                     </ListSubheader>
-                                    {students.filter(s => {
+                                    {(loadingRecipients || isSearchingStudent) ? (
+                                        <MenuItem disabled key="loading-students" sx={{ justifyContent: "center", py: 2 }}>
+                                            <CircularProgress size={18} sx={{ color: "#0f172a", mr: 1.5 }} />
+                                            <Typography variant="body2" color="text.secondary">
+                                                {loadingRecipients ? "Loading students..." : "Searching students..."}
+                                            </Typography>
+                                        </MenuItem>
+                                    ) : students.filter(s => {
                                         const n = s.first_name ? `${s.first_name} ${s.last_name}` : (s.full_name || s.username);
                                         return n.toLowerCase().includes(studentSearch.toLowerCase());
-                                    }).map((s) => {
-                                        const sName = s.first_name ? `${s.first_name} ${s.last_name}` : (s.full_name || s.username);
-                                        return (
-                                            <MenuItem key={s.id} value={s.id}>
-                                                <Checkbox checked={formData.assigned_student_ids.includes(s.id)} />
-                                                <ListItemText primary={`${sName} (${s.username})`} />
-                                            </MenuItem>
-                                        );
-                                    })}
-                                    {students.filter(s => {
-                                        const n = s.first_name ? `${s.first_name} ${s.last_name}` : (s.full_name || s.username);
-                                        return n.toLowerCase().includes(studentSearch.toLowerCase());
-                                    }).length === 0 && (
-                                        <MenuItem disabled>No students found</MenuItem>
+                                    }).length === 0 ? (
+                                        <MenuItem disabled key="no-students">No students found</MenuItem>
+                                    ) : (
+                                        students.filter(s => {
+                                            const n = s.first_name ? `${s.first_name} ${s.last_name}` : (s.full_name || s.username);
+                                            return n.toLowerCase().includes(studentSearch.toLowerCase());
+                                        }).map((s) => {
+                                            const sName = s.first_name ? `${s.first_name} ${s.last_name}` : (s.full_name || s.username);
+                                            return (
+                                                <MenuItem key={s.id} value={s.id}>
+                                                    <Checkbox checked={formData.assigned_student_ids.includes(s.id)} />
+                                                    <ListItemText primary={`${sName} (${s.username})`} />
+                                                </MenuItem>
+                                            );
+                                        })
                                     )}
                                     <Box sx={{ p: 1, position: 'sticky', bottom: 0, bgcolor: 'background.paper', zIndex: 2, borderTop: '1px solid #e2e8f0' }}>
                                         <Button 
