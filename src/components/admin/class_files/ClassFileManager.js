@@ -52,6 +52,20 @@ import { successToast, errorToast } from "@/lib/toast";
 import { confirmAction } from "@/utils/confirmAction";
 import { downloadFileWithRealName } from "@/utils/fileDownloader";
 
+export const parseFileList = (files) => {
+    if (!files) return [];
+    if (Array.isArray(files)) return files;
+    if (typeof files === "string") {
+        try {
+            const parsed = JSON.parse(files);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+};
+
 export default function ClassFileManager() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -222,8 +236,9 @@ export default function ClassFileManager() {
         
         // Handle files (fallback for legacy single file)
         let existingFiles = [];
-        if (material.files && material.files.length > 0) {
-            existingFiles = material.files;
+        const parsedFiles = parseFileList(material.files);
+        if (parsedFiles.length > 0) {
+            existingFiles = parsedFiles;
         } else if (material.file) {
             existingFiles = [{ url: material.file, name: material.file_name, size: material.file_size }];
         }
@@ -684,19 +699,26 @@ export default function ClassFileManager() {
                                         </TableCell>
 
                                         <TableCell>
-                                            <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-                                                <InsertDriveFile fontSize="small" sx={{ color: "grey.500" }} />
-                                                <Typography variant="caption" fontWeight={600}>
-                                                    {m.files && m.files.length > 0 
-                                                        ? `${m.files.length} File(s)` 
-                                                        : (m.file_name || "Class Code / Folder")}
-                                                </Typography>
-                                            </Stack>
-                                            {m.files && m.files.length > 0 ? null : m.file_size && (
-                                                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                                                    {m.file_size}
-                                                </Typography>
-                                            )}
+                                            {(() => {
+                                                const materialFiles = parseFileList(m.files);
+                                                return (
+                                                    <>
+                                                        <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
+                                                            <InsertDriveFile fontSize="small" sx={{ color: "grey.500" }} />
+                                                            <Typography variant="caption" fontWeight={600}>
+                                                                {materialFiles.length > 0 
+                                                                    ? `${materialFiles.length} File(s)` 
+                                                                    : (m.file_name || "Class Code / Folder")}
+                                                            </Typography>
+                                                        </Stack>
+                                                        {materialFiles.length === 0 && m.file_size && (
+                                                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                                                                {m.file_size}
+                                                            </Typography>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
                                         </TableCell>
 
                                         <TableCell>
@@ -1106,51 +1128,58 @@ export default function ClassFileManager() {
                                         Attached Files
                                     </Typography>
                                     <Stack spacing={1}>
-                                        {viewingMaterial.files && viewingMaterial.files.length > 0 ? (
-                                            viewingMaterial.files.map((file, index) => (
-                                                <Paper key={index} variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                                        <InsertDriveFile color="action" />
-                                                        <Box>
-                                                            <Typography variant="body2" fontWeight={600}>{file.name}</Typography>
-                                                            <Typography variant="caption" color="text.secondary">{file.size}</Typography>
+                                        {(() => {
+                                            const viewingFiles = parseFileList(viewingMaterial.files);
+                                            if (viewingFiles.length > 0) {
+                                                return viewingFiles.map((file, index) => (
+                                                    <Paper key={index} variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                            <InsertDriveFile color="action" />
+                                                            <Box>
+                                                                <Typography variant="body2" fontWeight={600}>{file.name}</Typography>
+                                                                <Typography variant="caption" color="text.secondary">{file.size}</Typography>
+                                                            </Box>
                                                         </Box>
-                                                    </Box>
-                                                    <Button
-                                                        size="small"
-                                                        variant="contained"
-                                                        color="primary"
-                                                        startIcon={<Download />}
-                                                        onClick={() => downloadFileWithRealName(file.url, file.name)}
-                                                        sx={{ textTransform: "none" }}
-                                                    >
-                                                        Download
-                                                    </Button>
-                                                </Paper>
-                                            ))
-                                        ) : viewingMaterial.file ? (
-                                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                                    <InsertDriveFile color="action" />
-                                                    <Box>
-                                                        <Typography variant="body2" fontWeight={600}>{viewingMaterial.file_name || "File"}</Typography>
-                                                        <Typography variant="caption" color="text.secondary">{viewingMaterial.file_size}</Typography>
-                                                    </Box>
-                                                </Box>
-                                                <Button
-                                                    size="small"
-                                                    variant="contained"
-                                                    color="primary"
-                                                    startIcon={<Download />}
-                                                    onClick={() => downloadFileWithRealName(viewingMaterial.file, viewingMaterial.file_name || `${viewingMaterial.title || "class_material"}.zip`)}
-                                                    sx={{ textTransform: "none" }}
-                                                >
-                                                    Download
-                                                </Button>
-                                            </Paper>
-                                        ) : (
-                                            <Typography variant="body2" color="text.secondary">No files attached.</Typography>
-                                        )}
+                                                        <Button
+                                                            size="small"
+                                                            variant="contained"
+                                                            color="primary"
+                                                            startIcon={<Download />}
+                                                            onClick={() => downloadFileWithRealName(file.url, file.name)}
+                                                            sx={{ textTransform: "none" }}
+                                                        >
+                                                            Download
+                                                        </Button>
+                                                    </Paper>
+                                                ));
+                                            }
+                                            if (viewingMaterial.file) {
+                                                return (
+                                                    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                            <InsertDriveFile color="action" />
+                                                            <Box>
+                                                                <Typography variant="body2" fontWeight={600}>{viewingMaterial.file_name || "File"}</Typography>
+                                                                <Typography variant="caption" color="text.secondary">{viewingMaterial.file_size}</Typography>
+                                                            </Box>
+                                                        </Box>
+                                                        <Button
+                                                            size="small"
+                                                            variant="contained"
+                                                            color="primary"
+                                                            startIcon={<Download />}
+                                                            onClick={() => downloadFileWithRealName(viewingMaterial.file, viewingMaterial.file_name || `${viewingMaterial.title || "class_material"}.zip`)}
+                                                            sx={{ textTransform: "none" }}
+                                                        >
+                                                            Download
+                                                        </Button>
+                                                    </Paper>
+                                                );
+                                            }
+                                            return (
+                                                <Typography variant="body2" color="text.secondary">No files attached.</Typography>
+                                            );
+                                        })()}
                                     </Stack>
                                 </Box>
 

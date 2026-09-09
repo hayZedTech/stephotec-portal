@@ -54,6 +54,20 @@ import {
 import CertificateModal from "@/components/common/CertificateModal";
 import QuizPlayerModal from "@/components/quizzes/QuizPlayerModal";
 
+const parseFileList = (files) => {
+    if (!files) return [];
+    if (Array.isArray(files)) return files;
+    if (typeof files === "string") {
+        try {
+            const parsed = JSON.parse(files);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+};
+
 function TabPanel(props) {
     const { children, value, index, ...other } = props;
     return (
@@ -707,12 +721,13 @@ export default function LearningPage() {
                             {filteredClassMaterials.length > 0 ? (
                                 <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: 3 }}>
                                     {filteredClassMaterials.map((m) => {
-                                        const hasMultipleFiles = m.files && m.files.length > 0;
+                                        const materialFiles = parseFileList(m.files);
+                                        const hasMultipleFiles = materialFiles.length > 0;
                                         
                                         const handleDownloadAll = (e) => {
                                             e.preventDefault();
                                             if (hasMultipleFiles) {
-                                                m.files.forEach((f, index) => {
+                                                materialFiles.forEach((f, index) => {
                                                     setTimeout(() => {
                                                         downloadFileWithRealName(f.url, f.name);
                                                     }, index * 400);
@@ -740,7 +755,7 @@ export default function LearningPage() {
                                                 
                                                 <Stack spacing={1}>
                                                     {hasMultipleFiles ? (
-                                                        m.files.map((file, idx) => (
+                                                        materialFiles.map((file, idx) => (
                                                             <Stack key={idx} direction="row" spacing={1} sx={{ alignItems: "center", bgcolor: "#f8fafc", p: 1.5, borderRadius: 2 }}>
                                                                 <InsertDriveFile fontSize="small" sx={{ color: "grey.600" }} />
                                                                 <Typography variant="caption" fontWeight={600} color="slate.800" noWrap sx={{ flex: 1 }}>
