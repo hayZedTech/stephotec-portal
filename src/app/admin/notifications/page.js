@@ -55,6 +55,7 @@ import {
     Email,
     MarkEmailRead,
     Close,
+    Groups,
 } from "@mui/icons-material";
 import { IconButton as MuiIconButton, Tooltip as MuiTooltip } from "@mui/material";
 
@@ -130,6 +131,14 @@ function getAlertActionMeta(alert) {
     return null;
 }
 
+function formatTargetType(target) {
+    if (target === "ALL" || target === "ALL_STUDENTS") return "All Students";
+    if (target === "SPECIFIC") return "Specific Students";
+    if (target === "COURSE") return "By Course";
+    if (target === "GROUP") return "By Group";
+    return target || "N/A";
+}
+
 export default function AdminNotificationsPage() {
     const router = useRouter();
     const [tab, setTab] = useState(0);
@@ -137,10 +146,13 @@ export default function AdminNotificationsPage() {
     const [notifications, setNotifications] = useState([]);
     const [students, setStudents] = useState([]);
     const [courses, setCourses] = useState([]);
+    const [groups, setGroups] = useState([]);
     const [selectedStudents, setSelectedStudents] = useState([]);
     const [selectedCourses, setSelectedCourses] = useState([]);
+    const [selectedGroups, setSelectedGroups] = useState([]);
     const [showStudentDialog, setShowStudentDialog] = useState(false);
     const [showCourseDialog, setShowCourseDialog] = useState(false);
+    const [showGroupDialog, setShowGroupDialog] = useState(false);
     const [showHistoryDialog, setShowHistoryDialog] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState(null);
     const [viewingAlert, setViewingAlert] = useState(null);
@@ -160,6 +172,7 @@ export default function AdminNotificationsPage() {
     const [outgoingFilterTarget, setOutgoingFilterTarget] = useState("ALL");
     const [studentSearch, setStudentSearch] = useState("");
     const [courseSearch, setCourseSearch] = useState("");
+    const [groupSearch, setGroupSearch] = useState("");
 
     const filteredAlerts = alerts.filter((alert) => {
         const matchesSearch = !incomingSearch || 
@@ -181,7 +194,9 @@ export default function AdminNotificationsPage() {
             (n.message && n.message.toLowerCase().includes(outgoingSearch.toLowerCase()));
 
         const matchesType = outgoingFilterType === "ALL" || n.type === outgoingFilterType;
-        const matchesTarget = outgoingFilterTarget === "ALL" || n.target_type === outgoingFilterTarget;
+        const matchesTarget = outgoingFilterTarget === "ALL" ||
+            n.target_type === outgoingFilterTarget ||
+            (outgoingFilterTarget === "ALL_STUDENTS" && (n.target_type === "ALL" || n.target_type === "ALL_STUDENTS"));
 
         return matchesSearch && matchesType && matchesTarget;
     });
@@ -201,6 +216,14 @@ export default function AdminNotificationsPage() {
             (c.code_prefix && c.code_prefix.toLowerCase().includes(term));
     });
 
+    const filteredGroupsList = groups.filter((g) => {
+        const term = groupSearch.toLowerCase();
+        return !groupSearch ||
+            (g.name && g.name.toLowerCase().includes(term)) ||
+            (g.description && g.description.toLowerCase().includes(term)) ||
+            (g.course_name && g.course_name.toLowerCase().includes(term));
+    });
+
     const { control, handleSubmit, reset, watch, formState: { isSubmitting } } = useForm({
         defaultValues: { title: "", message: "", type: "INFO", target_type: "ALL" },
     });
@@ -211,7 +234,7 @@ export default function AdminNotificationsPage() {
     async function loadInitialData() {
         try {
             setLoading(true);
-            await Promise.all([loadNotifications(), loadStudents(), loadCourses(), loadAlerts()]);
+            await Promise.all([loadNotifications(), loadStudents(), loadCourses(), loadGroups(), loadAlerts()]);
         } finally {
             setLoading(false);
         }
@@ -328,6 +351,13 @@ export default function AdminNotificationsPage() {
         } catch { }
     }
 
+    async function loadGroups() {
+        try {
+            const { data } = await api.get("/admin/groups/");
+            setGroups(Array.isArray(data) ? data : data.results || []);
+        } catch { }
+    }
+
     const [sendingType, setSendingType] = useState(null); // "NOTIF_ONLY" | "NOTIF_EMAIL"
 
     async function handleSendNotification(sendEmail = false) {
@@ -338,6 +368,10 @@ export default function AdminNotificationsPage() {
             }
             if (values.target_type === "COURSE" && selectedCourses.length === 0) {
                 errorToast(null, "Please select at least one course.");
+                return;
+            }
+            if (values.target_type === "GROUP" && selectedGroups.length === 0) {
+                errorToast(null, "Please select at least one group.");
                 return;
             }
 
@@ -352,6 +386,7 @@ export default function AdminNotificationsPage() {
                 };
                 if (values.target_type === "SPECIFIC") payload.student_ids = selectedStudents;
                 else if (values.target_type === "COURSE") payload.course_ids = selectedCourses;
+                else if (values.target_type === "GROUP") payload.group_ids = selectedGroups;
 
                 await api.post("/notifications/", payload);
                 if (sendEmail) {
@@ -362,6 +397,7 @@ export default function AdminNotificationsPage() {
                 reset();
                 setSelectedStudents([]);
                 setSelectedCourses([]);
+                setSelectedGroups([]);
                 loadNotifications();
             } catch (error) {
                 errorToast(error, sendEmail ? "Failed to send notification and emails" : "Failed to send notification");
@@ -373,6 +409,7 @@ export default function AdminNotificationsPage() {
 
     const toggleStudent = (id) => setSelectedStudents((prev) => prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]);
     const toggleCourse = (id) => setSelectedCourses((prev) => prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]);
+    const toggleGroup = (id) => setSelectedGroups((prev) => prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]);
 
     async function viewNotificationHistory(notification) {
         try {
@@ -650,6 +687,7 @@ export default function AdminNotificationsPage() {
                                                     <MenuItem value="ALL">All Students</MenuItem>
                                                     <MenuItem value="SPECIFIC">Specific Students</MenuItem>
                                                     <MenuItem value="COURSE">By Course</MenuItem>
+                                                    <MenuItem value="GROUP">By Group</MenuItem>
                                                 </TextField>
                                             )}
                                         />
@@ -678,6 +716,29 @@ export default function AdminNotificationsPage() {
                                                         {selectedCourses.map((id) => {
                                                             const c = courses.find((c) => c.id === id);
                                                             return <Chip key={id} label={c?.name} onDelete={() => toggleCourse(id)} size="small" />;
+                                                        })}
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                        )}
+                                        {targetType === "GROUP" && (
+                                            <Box>
+                                                <Button variant="outlined" onClick={() => setShowGroupDialog(true)} fullWidth size="small" startIcon={<Groups sx={{ fontSize: 18 }} />}>
+                                                    Select Groups ({selectedGroups.length})
+                                                </Button>
+                                                {selectedGroups.length > 0 && (
+                                                    <Box sx={{ mt: 1.5, display: "flex", flexWrap: "wrap", gap: 1 }}>
+                                                        {selectedGroups.map((id) => {
+                                                            const g = groups.find((grp) => grp.id === id);
+                                                            const count = g?.member_count ?? g?.members_detail?.length ?? 0;
+                                                            return (
+                                                                <Chip
+                                                                    key={id}
+                                                                    label={`${g?.name || `Group #${id}`}${count ? ` (${count} students)` : ''}`}
+                                                                    onDelete={() => toggleGroup(id)}
+                                                                    size="small"
+                                                                />
+                                                            );
                                                         })}
                                                     </Box>
                                                 )}
@@ -777,6 +838,7 @@ export default function AdminNotificationsPage() {
                                          <MenuItem value="ALL_STUDENTS">All Students</MenuItem>
                                          <MenuItem value="SPECIFIC">Specific Students</MenuItem>
                                          <MenuItem value="COURSE">By Course</MenuItem>
+                                         <MenuItem value="GROUP">By Group</MenuItem>
                                      </TextField>
                                  </Stack>
 
@@ -807,7 +869,7 @@ export default function AdminNotificationsPage() {
                                                              <Chip label="Portal Only" size="small" variant="outlined" sx={{ height: 22, fontSize: "0.72rem", color: "text.secondary" }} />
                                                          )}
                                                      </TableCell>
-                                                     <TableCell>{n.target_type}</TableCell>
+                                                     <TableCell>{formatTargetType(n.target_type)}</TableCell>
                                                      <TableCell>{n.recipient_count}</TableCell>
                                                      <TableCell sx={{ whiteSpace: "nowrap" }}>{new Date(n.created_at).toLocaleDateString()}</TableCell>
                                                      <TableCell>
@@ -891,6 +953,65 @@ export default function AdminNotificationsPage() {
                     </Stack>
                 </DialogContent>
                 <DialogActions><Button onClick={() => setShowCourseDialog(false)}>Done</Button></DialogActions>
+            </Dialog>
+
+            {/* GROUP SELECTION DIALOG */}
+            <Dialog open={showGroupDialog} onClose={(e, reason) => { if (reason === 'backdropClick') return; setShowGroupDialog(false); }} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, m: 2, maxHeight: "85vh" } } }}>
+                <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span>Select Student Groups</span>
+                    {selectedGroups.length > 0 && (
+                        <Chip label={`${selectedGroups.length} selected`} size="small" color="primary" />
+                    )}
+                </DialogTitle>
+                <DialogContent sx={{ maxHeight: 400, overflow: "auto" }}>
+                    <TextField
+                        placeholder="Search groups by name or course..."
+                        value={groupSearch}
+                        onChange={(e) => setGroupSearch(e.target.value)}
+                        size="small"
+                        fullWidth
+                        sx={{ mb: 2, mt: 1 }}
+                    />
+                    {filteredGroupsList.length > 0 ? (
+                        <Stack spacing={1}>
+                            {filteredGroupsList.map((g) => {
+                                const count = g.member_count ?? g.members_detail?.length ?? 0;
+                                return (
+                                    <FormControlLabel
+                                        key={g.id}
+                                        control={<Checkbox checked={selectedGroups.includes(g.id)} onChange={() => toggleGroup(g.id)} size="small" />}
+                                        label={
+                                            <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+                                                <Typography component="span" variant="body2" fontWeight={600}>{g.name}</Typography>
+                                                {g.course_name && (
+                                                    <Chip label={g.course_name} size="small" variant="outlined" sx={{ height: 20, fontSize: "0.7rem" }} />
+                                                )}
+                                                <Chip label={`${count} student${count === 1 ? '' : 's'}`} size="small" sx={{ height: 20, fontSize: "0.7rem" }} />
+                                            </Box>
+                                        }
+                                    />
+                                );
+                            })}
+                        </Stack>
+                    ) : (
+                        <Typography color="text.secondary" variant="body2" sx={{ py: 2, textAlign: "center" }}>
+                            No student groups found.
+                        </Typography>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2, justifyContent: "space-between" }}>
+                    <Button
+                        color="inherit"
+                        onClick={() => setSelectedGroups([])}
+                        disabled={selectedGroups.length === 0}
+                        size="small"
+                    >
+                        Clear All
+                    </Button>
+                    <Button onClick={() => setShowGroupDialog(false)} variant="contained" size="small">
+                        Done
+                    </Button>
+                </DialogActions>
             </Dialog>
 
             {/* INCOMING ALERT DETAILS DIALOG */}
@@ -1038,7 +1159,7 @@ export default function AdminNotificationsPage() {
                                 ) : (
                                     <Chip label="Portal Only" size="small" variant="outlined" sx={{ height: 24, fontSize: "0.75rem", color: "text.secondary" }} />
                                 )}
-                                <Chip label={`Target: ${selectedNotification.target_type}`} size="small" variant="outlined" />
+                                <Chip label={`Target: ${formatTargetType(selectedNotification.target_type)}`} size="small" variant="outlined" />
                                 <Typography variant="caption" color="text.disabled" sx={{ ml: "auto" }}>
                                     Sent: {new Date(selectedNotification.created_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
                                 </Typography>
