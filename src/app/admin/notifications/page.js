@@ -652,7 +652,7 @@ export default function AdminNotificationsPage() {
 
             {/* Overview Summary Stat Cards */}
             <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card elevation={0} sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 3, bgcolor: "background.paper", p: 0.5 }}>
                         <CardContent sx={{ display: "flex", alignItems: "center", gap: 2, p: "16px !important" }}>
                             <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: "#f3e8ff", color: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -670,7 +670,7 @@ export default function AdminNotificationsPage() {
                     </Card>
                 </Grid>
 
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card elevation={0} sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 3, bgcolor: "background.paper", p: 0.5 }}>
                         <CardContent sx={{ display: "flex", alignItems: "center", gap: 2, p: "16px !important" }}>
                             <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: "#dcfce7", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -688,7 +688,7 @@ export default function AdminNotificationsPage() {
                     </Card>
                 </Grid>
 
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card elevation={0} sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 3, bgcolor: "background.paper", p: 0.5 }}>
                         <CardContent sx={{ display: "flex", alignItems: "center", gap: 2, p: "16px !important" }}>
                             <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: "#dbeafe", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -706,7 +706,7 @@ export default function AdminNotificationsPage() {
                     </Card>
                 </Grid>
 
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card elevation={0} sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 3, bgcolor: "background.paper", p: 0.5 }}>
                         <CardContent sx={{ display: "flex", alignItems: "center", gap: 2, p: "16px !important" }}>
                             <Box sx={{ width: 44, height: 44, borderRadius: 2.5, bgcolor: "#fef3c7", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -789,8 +789,8 @@ export default function AdminNotificationsPage() {
 
                             {/* Search and Filters Bar */}
                             <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: "grey.50", border: "1px solid", borderColor: "grey.200", borderRadius: 2.5 }}>
-                                <Grid container spacing={1.5} alignItems="center">
-                                    <Grid item xs={12} md={4}>
+                                <Grid container spacing={1.5} sx={{ alignItems: "center" }}>
+                                    <Grid size={{ xs: 12, md: 4 }}>
                                         <TextField
                                             placeholder="Search by student name, username, title..."
                                             value={incomingSearch}
@@ -800,24 +800,26 @@ export default function AdminNotificationsPage() {
                                             }}
                                             size="small"
                                             fullWidth
-                                            InputProps={{
-                                                startAdornment: (
-                                                    <InputAdornment position="start">
-                                                        <Search fontSize="small" sx={{ color: "text.secondary" }} />
-                                                    </InputAdornment>
-                                                ),
-                                                endAdornment: incomingSearch ? (
-                                                    <InputAdornment position="end">
-                                                        <MuiIconButton size="small" onClick={() => { setIncomingSearch(""); setIncomingPage(0); }}>
-                                                            <Close fontSize="small" />
-                                                        </MuiIconButton>
-                                                    </InputAdornment>
-                                                ) : null,
+                                            slotProps={{
+                                                input: {
+                                                    startAdornment: (
+                                                        <InputAdornment position="start">
+                                                            <Search fontSize="small" sx={{ color: "text.secondary" }} />
+                                                        </InputAdornment>
+                                                    ),
+                                                    endAdornment: incomingSearch ? (
+                                                        <InputAdornment position="end">
+                                                            <MuiIconButton size="small" onClick={() => { setIncomingSearch(""); setIncomingPage(0); }}>
+                                                                <Close fontSize="small" />
+                                                            </MuiIconButton>
+                                                        </InputAdornment>
+                                                    ) : null,
+                                                },
                                             }}
                                         />
                                     </Grid>
 
-                                    <Grid item xs={6} sm={4} md={2.5}>
+                                    <Grid size={{ xs: 6, sm: 4, md: 2.5 }}>
                                         <TextField
                                             select
                                             label="Alert Category"
@@ -839,7 +841,7 @@ export default function AdminNotificationsPage() {
                                         </TextField>
                                     </Grid>
 
-                                    <Grid item xs={6} sm={4} md={2}>
+                                    <Grid size={{ xs: 6, sm: 4, md: 2 }}>
                                         <TextField
                                             select
                                             label="Status"
@@ -857,7 +859,7 @@ export default function AdminNotificationsPage() {
                                         </TextField>
                                     </Grid>
 
-                                    <Grid item xs={12} sm={4} md={2.5}>
+                                    <Grid size={{ xs: 12, sm: 4, md: 2.5 }}>
                                         <TextField
                                             select
                                             label="Filter by Student"
@@ -878,7 +880,7 @@ export default function AdminNotificationsPage() {
                                         </TextField>
                                     </Grid>
 
-                                    <Grid item xs={12} md={1} sx={{ display: "flex", justifyContent: "flex-end" }}>
+                                    <Grid size={{ xs: 12, md: 1 }} sx={{ display: "flex", justifyContent: "flex-end" }}>
                                         <MuiTooltip title="Reset all incoming filters">
                                             <Button
                                                 variant="outlined"
@@ -1093,7 +1095,7 @@ export default function AdminNotificationsPage() {
                                             )}
                                         />
                                         <Grid container spacing={2}>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <Controller
                                                     name="type"
                                                     control={control}
@@ -1107,7 +1109,7 @@ export default function AdminNotificationsPage() {
                                                     )}
                                                 />
                                             </Grid>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <Controller
                                                     name="target_type"
                                                     control={control}
@@ -1256,9 +1258,9 @@ export default function AdminNotificationsPage() {
 
                                 {/* Outgoing Filter Bar */}
                                 <Paper elevation={0} sx={{ p: 2, mb: 2.5, bgcolor: "grey.50", border: "1px solid", borderColor: "grey.200", borderRadius: 2.5 }}>
-                                    <Grid container spacing={1.5} alignItems="center">
+                                    <Grid container spacing={1.5} sx={{ alignItems: "center" }}>
                                         {/* Search Input */}
-                                        <Grid item xs={12} md={4}>
+                                        <Grid size={{ xs: 12, md: 4 }}>
                                             <TextField
                                                 placeholder="Search title, message, student name, group..."
                                                 value={outgoingSearch}
@@ -1268,25 +1270,27 @@ export default function AdminNotificationsPage() {
                                                 }}
                                                 size="small"
                                                 fullWidth
-                                                InputProps={{
-                                                    startAdornment: (
-                                                        <InputAdornment position="start">
-                                                            <Search fontSize="small" sx={{ color: "text.secondary" }} />
-                                                        </InputAdornment>
-                                                    ),
-                                                    endAdornment: outgoingSearch ? (
-                                                        <InputAdornment position="end">
-                                                            <MuiIconButton size="small" onClick={() => { setOutgoingSearch(""); setOutgoingPage(0); }}>
-                                                                <Close fontSize="small" />
-                                                            </MuiIconButton>
-                                                        </InputAdornment>
-                                                    ) : null,
+                                                slotProps={{
+                                                    input: {
+                                                        startAdornment: (
+                                                            <InputAdornment position="start">
+                                                                <Search fontSize="small" sx={{ color: "text.secondary" }} />
+                                                            </InputAdornment>
+                                                        ),
+                                                        endAdornment: outgoingSearch ? (
+                                                            <InputAdornment position="end">
+                                                                <MuiIconButton size="small" onClick={() => { setOutgoingSearch(""); setOutgoingPage(0); }}>
+                                                                    <Close fontSize="small" />
+                                                                </MuiIconButton>
+                                                            </InputAdornment>
+                                                        ) : null,
+                                                    },
                                                 }}
                                             />
                                         </Grid>
 
                                         {/* Target Filter */}
-                                        <Grid item xs={6} sm={4} md={2}>
+                                        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
                                             <TextField
                                                 select
                                                 label="Target Type"
@@ -1307,7 +1311,7 @@ export default function AdminNotificationsPage() {
                                         </Grid>
 
                                         {/* Group Filter */}
-                                        <Grid item xs={6} sm={4} md={2}>
+                                        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
                                             <TextField
                                                 select
                                                 label="Filter by Group"
@@ -1329,7 +1333,7 @@ export default function AdminNotificationsPage() {
                                         </Grid>
 
                                         {/* Student Filter */}
-                                        <Grid item xs={6} sm={4} md={2}>
+                                        <Grid size={{ xs: 6, sm: 4, md: 2 }}>
                                             <TextField
                                                 select
                                                 label="Filter by Student"
@@ -1351,7 +1355,7 @@ export default function AdminNotificationsPage() {
                                         </Grid>
 
                                         {/* Channel Filter */}
-                                        <Grid item xs={6} sm={4} md={1.2}>
+                                        <Grid size={{ xs: 6, sm: 4, md: 1.2 }}>
                                             <TextField
                                                 select
                                                 label="Channel"
@@ -1370,7 +1374,7 @@ export default function AdminNotificationsPage() {
                                         </Grid>
 
                                         {/* Type Filter */}
-                                        <Grid item xs={12} sm={4} md={0.8} sx={{ minWidth: 100 }}>
+                                        <Grid size={{ xs: 12, sm: 4, md: 0.8 }} sx={{ minWidth: 100 }}>
                                             <TextField
                                                 select
                                                 label="Type"
@@ -1581,12 +1585,14 @@ export default function AdminNotificationsPage() {
                         size="small"
                         fullWidth
                         sx={{ mb: 2, mt: 1 }}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <Search fontSize="small" sx={{ color: "text.secondary" }} />
-                                </InputAdornment>
-                            ),
+                        slotProps={{
+                            input: {
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Search fontSize="small" sx={{ color: "text.secondary" }} />
+                                    </InputAdornment>
+                                ),
+                            },
                         }}
                     />
                     <Stack spacing={1}>
@@ -1648,12 +1654,14 @@ export default function AdminNotificationsPage() {
                         size="small"
                         fullWidth
                         sx={{ mb: 2, mt: 1 }}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <Search fontSize="small" sx={{ color: "text.secondary" }} />
-                                </InputAdornment>
-                            ),
+                        slotProps={{
+                            input: {
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Search fontSize="small" sx={{ color: "text.secondary" }} />
+                                    </InputAdornment>
+                                ),
+                            },
                         }}
                     />
                     <Stack spacing={1}>
@@ -1704,12 +1712,14 @@ export default function AdminNotificationsPage() {
                         size="small"
                         fullWidth
                         sx={{ mb: 2, mt: 1 }}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <Search fontSize="small" sx={{ color: "text.secondary" }} />
-                                </InputAdornment>
-                            ),
+                        slotProps={{
+                            input: {
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Search fontSize="small" sx={{ color: "text.secondary" }} />
+                                    </InputAdornment>
+                                ),
+                            },
                         }}
                     />
                     {filteredGroupsList.length > 0 ? (
